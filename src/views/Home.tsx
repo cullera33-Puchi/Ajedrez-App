@@ -73,7 +73,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
     void refresh(s)
   }
 
-  const mine = games.filter((g) => g.userColor)
+  // Resumen de partidas reales (las jugadas contra bots tienen su récord en Jugar).
+  const mine = games.filter((g) => g.userColor && g.source !== 'bot')
   const recent = mine.slice(0, 20)
   const tally = { victoria: 0, derrota: 0, tablas: 0 }
   for (const g of recent) {
@@ -85,8 +86,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   const due = duePuzzles().length
 
   // Errores graves del usuario en las partidas ya analizadas.
-  const userBlunders = games
-    .filter((g) => g.userColor && getSummary(g.id))
+  const userBlunders = mine
+    .filter((g) => getSummary(g.id))
     .map((g) => getSummary(g.id)!.counts[g.userColor!].grave)
   const avgBlunders = userBlunders.length ? userBlunders.reduce((s, n) => s + n, 0) / userBlunders.length : undefined
 

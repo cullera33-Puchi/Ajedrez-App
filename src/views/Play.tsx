@@ -6,14 +6,20 @@ import { PromotionPicker } from '../components/PromotionPicker'
 import { setBusy } from '../lib/activity'
 import {
   addToRecord,
+  bestWin,
   type BotGame,
-  BOTS,
   botAcceptsDraw,
-  botById,
   botGameToSummary,
+  type BotStyle,
   chooseBotMove,
+  clampElo,
+  ELO_PRESETS,
+  ELO_STEP,
   loadBotGame,
   loadBotRecord,
+  makeBot,
+  MAX_ELO,
+  MIN_ELO,
   saveBotGame,
 } from '../lib/bots'
 import { getEngine, releaseEngine } from '../lib/engine'
@@ -53,7 +59,8 @@ function endReason(c: Chess): string {
 
 export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
   const [game, setGame] = useState<BotGame | null>(loadBotGame)
-  const [botId, setBotId] = usePersistentState('botChoice', 'lucia')
+  const [elo, setElo] = usePersistentState('botElo', 400)
+  const [style, setStyle] = usePersistentState<BotStyle>('botStyle', 'equilibrado')
   const [colorChoice, setColorChoice] = usePersistentState<ColorChoice>('botColor', 'white')
   const [thinking, setThinking] = useState(false)
   const [finished, setFinished] = useState<Finished | null>(null)
@@ -66,7 +73,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
   const chess = useMemo(() => replay(game?.moves ?? []), [game])
   const fen = chess.fen()
   const turn: Color = chess.turn() === 'w' ? 'white' : 'black'
-  const bot = botById(game?.botId ?? botId)
+  const bot = game ? makeBot(game.elo, game.style) : makeBot(elo, style)
   const userName = settings.chesscomUser || 'Tú'
   const userTurn = Boolean(game && !finished && turn === game.userColor)
 
@@ -81,7 +88,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     const summary = botGameToSummary(g, result, userName, reason)
     onSaveGame(summary)
     const userWon = (result === '1-0') === (g.userColor === 'white') && result !== '1/2-1/2'
-    setRecord(addToRecord(g.botId, result === '1/2-1/2' ? 'd' : userWon ? 'w' : 'l'))
+    setRecord(addToRecord(makeBot(g.elo).id, result === '1/2-1/2' ? 'd' : userWon ? 'w' : 'l'))
     saveBotGame(null)
     setFinished({ result, reason, summaryId: summary.id })
   }
@@ -120,7 +127,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
 
   const start = () => {
     const userColor: Color = colorChoice === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : colorChoice
-    const g: BotGame = { botId, userColor, moves: [], startedAt: Date.now(), undos: 0 }
+    const g: BotGame = { elo: clampElo(elo), style, userColor, moves: [], startedAt: Date.now(), undos: 0 }
     setGame(g)
     saveBotGame(g)
     setFinished(null)
@@ -179,34 +186,60 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
 
   // Elección de rival
   if (!game) {
-    const sel = botById(botId)
+    const r = record[bot.id]
+    const best = bestWin(record)
+    const change = (v: number) => setElo(clampElo(v))
     return (
       <div className="page play-setup">
         <header className="page-head">
           <h1>Jugar</h1>
-          <p className="muted">Elige un rival de tu nivel. Al terminar, la partida se guarda en Mis partidas para analizarla.</p>
+          <p className="muted">Elige el nivel de tu rival, de 50 en 50 puntos. Al terminar, la partida se guarda en Mis partidas, en el apartado Contra bots.</p>
         </header>
-        <section className="card">
-          <div className="bots">
-            {BOTS.map((b) => {
-              const r = record[b.id]
-              return (
-                <button key={b.id} className={`bot-card ${b.id === botId ? 'active' : ''}`} onClick={() => setBotId(b.id)}>
-                  <span className="bot-avatar">{b.avatar}</span>
-                  <span className="bot-info">
-                    <strong>
-                      {b.name} <span className="muted">({b.elo})</span>
-                    </strong>
-                    <span className="muted small">{b.description}</span>
-                    {r && (
-                      <span className="small bot-record">
-                        Ganadas {r.w}, perdidas {r.l}, tablas {r.d}
-                      </span>
-                    )}
-                  </span>
-                </button>
-              )
-            })}
+        <section className="card level-card">
+          <div className="level-head">
+            <span className="bot-avatar">{bot.avatar}</span>
+            <div className="bot-info">
+              <strong className="level-title">
+                {bot.name} <span className="level-elo">{bot.elo}</span>
+              </strong>
+              <span className="muted small">{bot.description}</span>
+            </div>
+          </div>
+          <div className="level-control">
+            <button className="btn" onClick={() => change(elo - ELO_STEP)} disabled={elo <= MIN_ELO} aria-label="Bajar 50 puntos">
+              −50
+            </button>
+            <input
+              type="range"
+              min={MIN_ELO}
+              max={MAX_ELO}
+              step={ELO_STEP}
+              value={clampElo(elo)}
+              onChange={(e) => change(Number(e.target.value))}
+              aria-label="Nivel del rival"
+            />
+            <button className="btn" onClick={() => change(elo + ELO_STEP)} disabled={elo >= MAX_ELO} aria-label="Subir 50 puntos">
+              +50
+            </button>
+          </div>
+          <div className="chips">
+            {ELO_PRESETS.map((p) => (
+              <button key={p} className={`chip ${clampElo(elo) === p ? 'active' : ''}`} onClick={() => change(p)}>
+                {p}
+              </button>
+            ))}
+          </div>
+          <p className="small bot-record">
+            {r ? `Contra ${bot.name} (${bot.elo}): ganadas ${r.w}, perdidas ${r.l}, tablas ${r.d}.` : `Aún no has jugado contra ${bot.name} (${bot.elo}).`}
+            {best ? ` Tu mejor victoria: ${best}.` : ''}
+          </p>
+          <h3>Estilo</h3>
+          <div className="segmented" role="radiogroup" aria-label="Estilo del bot">
+            {(['equilibrado', 'atacante'] as BotStyle[]).map((st) => (
+              <button key={st} role="radio" aria-checked={style === st} className={style === st ? 'active' : ''} onClick={() => setStyle(st)}>
+                {st === 'equilibrado' ? 'Equilibrado' : 'Atacante'}
+              </button>
+            ))}
           </div>
         </section>
         <section className="card start-card">
@@ -219,7 +252,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
             ))}
           </div>
           <button className="btn primary play-start" onClick={start}>
-            Jugar contra {sel.name}
+            Jugar contra {bot.name} ({bot.elo})
           </button>
         </section>
       </div>

@@ -288,7 +288,8 @@ describe('bots', () => {
   const start = new Chess().fen()
 
   it('el bot fuerte casi siempre elige las mejores y el flojo varía más', async () => {
-    const { BOTS, pickMove } = await import('./bots')
+    const { makeBot, pickMove } = await import('./bots')
+    const BOTS = [makeBot(400), makeBot(1500)]
     let seed = 1
     const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
     const count = (botIdx: number) => {
@@ -306,7 +307,8 @@ describe('bots', () => {
   })
 
   it('aprovecha un mate cuando no se despista', async () => {
-    const { BOTS, pickMove } = await import('./bots')
+    const { makeBot, pickMove } = await import('./bots')
+    const BOTS = [makeBot(400)]
     const withMate = [{ move: 'h5f7', mate: 1, pv: ['h5f7'] }, ...lines]
     const noBlunder = () => 0.99 // nunca entra en el despiste y el sorteo cae en la jugada con más peso
     expect(pickMove(start, BOTS[0], withMate, legal, 20, noBlunder)).toBe('h5f7')
@@ -314,7 +316,7 @@ describe('bots', () => {
 
   it('convierte la partida en un PGN válido', async () => {
     const { botGameToSummary } = await import('./bots')
-    const g = { botId: 'lucia', userColor: 'white' as const, moves: ['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6', 'h5f7'], startedAt: Date.UTC(2026, 9, 27), undos: 0 }
+    const g = { elo: 400, style: 'equilibrado' as const, userColor: 'white' as const, moves: ['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6', 'h5f7'], startedAt: Date.UTC(2026, 9, 27), undos: 0 }
     const s = botGameToSummary(g, '1-0', 'Anriqui', 'Jaque mate')
     expect(s.source).toBe('bot')
     expect(s.black.name).toBe('Lucía (bot)')
@@ -418,5 +420,44 @@ describe('enlaces de aprendizaje', () => {
     expect(fork.some((l) => l.href.includes('youtube.com') && l.href.includes('doble%20ataque'))).toBe(true)
     expect(fork.some((l) => l.href.includes('google.com/search'))).toBe(true)
     expect(resourceLinks('raroDesconocido').some((l) => l.href.includes('lichess'))).toBe(false)
+  })
+})
+
+describe('niveles de bot de 50 en 50', () => {
+  it('ajusta el nivel a pasos de 50 y la fuerza crece con el nivel', async () => {
+    const { makeBot, clampElo } = await import('./bots')
+    expect(clampElo(437)).toBe(450)
+    expect(clampElo(10)).toBe(250)
+    expect(clampElo(5000)).toBe(2000)
+    const a = makeBot(550)
+    const b = makeBot(600)
+    expect(a.id).toBe('elo-550')
+    expect(a.name).toBe('Bruno')
+    expect(b.blunder).toBeLessThan(a.blunder)
+    expect(b.temperature).toBeLessThan(a.temperature)
+    expect(makeBot(2000).depth).toBeGreaterThan(makeBot(250).depth)
+    expect(makeBot(1800).name).toBe('La Maestra')
+  })
+
+  it('los despistes no pasan del límite de su nivel', async () => {
+    const { makeBot, pickMove } = await import('./bots')
+    const lines = [
+      { move: 'e2e4', cp: 30, pv: ['e2e4'] },
+      { move: 'd2d4', cp: -100, pv: ['d2d4'] },
+      { move: 'd1h5', cp: -900, pv: ['d1h5'] },
+    ]
+    const strong = makeBot(1600)
+    const alwaysBlunder = () => 0 // siempre entra en el despiste y elige el primero del grupo
+    expect(pickMove(new Chess().fen(), strong, lines, lines.map((l) => l.move), 20, alwaysBlunder)).toBe('d2d4')
+    const onlyHuge = [lines[0], lines[2]]
+    // Si no hay jugadas «razonablemente peores», no regala la dama: juega con normalidad
+    expect(pickMove(new Chess().fen(), strong, onlyHuge, onlyHuge.map((l) => l.move), 20, alwaysBlunder)).toBe('e2e4')
+  })
+
+  it('pasa el récord de la versión anterior a niveles', async () => {
+    const { save } = await import('./storage')
+    const { loadBotRecord } = await import('./bots')
+    save('botRecord', { lucia: { w: 1, l: 2, d: 0 }, 'elo-400': { w: 1, l: 0, d: 0 } })
+    expect(loadBotRecord()).toEqual({ 'elo-400': { w: 2, l: 2, d: 0 } })
   })
 })

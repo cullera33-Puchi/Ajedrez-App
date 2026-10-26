@@ -41,6 +41,14 @@ interface Retry {
   solvedMove?: [string, string]
 }
 
+const SOURCE_BADGE: Record<GameSummary['source'], string> = {
+  chesscom: 'Partida de Chess.com',
+  lichess: 'Partida de Lichess',
+  bot: 'Partida contra bot',
+  pgn: 'PGN importado',
+  demo: 'Partida de ejemplo',
+}
+
 const DEPTHS = [
   { value: 10, label: 'Rápido' },
   { value: 12, label: 'Normal' },
@@ -376,6 +384,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
             </div>
           )}
           <section className="card m-order-5">
+            <span className={`badge src-${game.source}`}>{SOURCE_BADGE[game.source]}</span>
             <h2>
               {game.white.name} contra {game.black.name}
             </h2>

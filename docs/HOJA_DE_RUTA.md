@@ -13,7 +13,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Importación completa del historial de Chess.com (1.2) | Todos los meses la primera vez; después, solo lo nuevo. Con barra de progreso |
 | Almacenamiento en IndexedDB (1.2) | Miles de partidas y análisis; migración automática desde versiones anteriores |
 | Importación de archivo PGN | Admite el archivo con varias partidas que descarga Chess.com |
-| Bots de tu nivel (1.1) | Seis bots de 400 a 1500 en la pestaña *Jugar*; sus partidas van a *Mis partidas* con análisis, recomendaciones y entrenador |
+| Bots de tu nivel (1.1) | Nivel de 250 a 2000 de 50 en 50 puntos, con estilo equilibrado o atacante, en la pestaña *Jugar*. Récord por nivel y mejor victoria |
+| Partidas contra bots separadas | En *Mis partidas*, apartados *Chess.com y Lichess*, *Contra bots* y *Otras*. Se analizan igual, pero no cuentan en las recomendaciones ni en el resumen de Inicio |
 | Elegir pieza al coronar (5.4) | En las partidas contra bots; en los problemas se respeta la subpromoción |
 | Análisis en segundo plano (1.3) | Analiza tus partidas pendientes mientras la app está abierta; se pausa al jugar o analizar a mano |
 | Problemas con tus propios errores (1.4) | Origen *Mis errores* en Problemas, con repaso espaciado |

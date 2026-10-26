@@ -168,7 +168,8 @@ export function recommendThemes(games: GameSummary[], maxGames = 15): Recommenda
   let used = 0
   for (const g of [...games].sort((a, b) => b.date - a.date)) {
     if (used >= maxGames) break
-    if (!g.userColor) continue
+    // Solo partidas reales: las jugadas contra bots no se mezclan con las de Chess.com y Lichess.
+    if (!g.userColor || g.source === 'bot') continue
     const summary = getSummary(g.id)
     if (!summary) continue
     for (const t of summary.themes) counts.set(t.theme, (counts.get(t.theme) ?? 0) + t.count)

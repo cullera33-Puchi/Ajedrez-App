@@ -6,6 +6,7 @@ import { gameFromPgn, gamesFromPgnFile } from '../lib/pgnImport'
 import type { Settings } from '../lib/settings'
 import { getSummary } from '../lib/games'
 import { setBackgroundEnabled, useBackgroundState } from '../lib/background'
+import { usePersistentState } from '../lib/storage'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -18,6 +19,13 @@ interface Props {
 }
 
 type Filter = 'todas' | 'victoria' | 'derrota' | 'tablas'
+
+/** Las partidas reales (Chess.com y Lichess) y las jugadas contra bots se muestran por separado. */
+type GameGroup = 'online' | 'bots' | 'otras'
+
+const GROUP_LABEL: Record<GameGroup, string> = { online: 'Chess.com y Lichess', bots: 'Contra bots', otras: 'Otras' }
+
+const groupOf = (g: GameSummary): GameGroup => (g.source === 'bot' ? 'bots' : g.source === 'chesscom' || g.source === 'lichess' ? 'online' : 'otras')
 
 const SOURCE_LABEL: Record<GameSummary['source'], string> = {
   chesscom: 'Chess.com',
@@ -47,6 +55,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
   const [limit, setLimit] = useState(50)
   const bg = useBackgroundState()
   const [filter, setFilter] = useState<Filter>('todas')
+  const [group, setGroup] = usePersistentState<GameGroup>('gamesGroup', 'online')
   const [showPgn, setShowPgn] = useState(false)
   const [pgn, setPgn] = useState('')
 
@@ -116,7 +125,9 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     }
   }
 
-  const list = games.filter((g) => filter === 'todas' || outcomeFor(g) === filter)
+  const counts = { online: 0, bots: 0, otras: 0 }
+  for (const g of games) counts[groupOf(g)]++
+  const list = games.filter((g) => groupOf(g) === group && (filter === 'todas' || outcomeFor(g) === filter))
   const noAccounts = !settings.chesscomUser && !settings.lichessUser
 
   return (
@@ -225,6 +236,24 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       )}
 
       <section className="card">
+        <div className="segmented groups" role="tablist" aria-label="Tipo de partidas">
+          {(['online', 'bots', 'otras'] as GameGroup[])
+            .filter((g) => g !== 'otras' || counts.otras > 0)
+            .map((g) => (
+              <button
+                key={g}
+                role="tab"
+                aria-selected={group === g}
+                className={group === g ? 'active' : ''}
+                onClick={() => {
+                  setGroup(g)
+                  setLimit(50)
+                }}
+              >
+                {GROUP_LABEL[g]} ({counts[g]})
+              </button>
+            ))}
+        </div>
         <div className="tabs">
           {(['todas', 'victoria', 'derrota', 'tablas'] as Filter[]).map((f) => (
             <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => { setFilter(f); setLimit(50) }}>
@@ -271,7 +300,22 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
             })}
           </tbody>
         </table>
-        {!list.length && <p className="muted">No hay partidas con este filtro.</p>}
+        {!list.length && (
+          <p className="muted">
+            {group === 'bots' && !counts.bots ? (
+              <>
+                Aún no has jugado contra bots.{' '}
+                <button className="link" onClick={() => onNavigate('jugar')}>
+                  Ir a Jugar
+                </button>
+              </>
+            ) : group === 'online' && !counts.online ? (
+              'Aún no has importado partidas de Chess.com o Lichess.'
+            ) : (
+              'No hay partidas con este filtro.'
+            )}
+          </p>
+        )}
         {list.length > limit && (
           <button className="btn more-btn" onClick={() => setLimit((l) => l + 50)}>
             Ver más ({list.length - limit} restantes)
