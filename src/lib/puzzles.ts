@@ -6,7 +6,7 @@ export interface Puzzle {
   moves: string[]
   rating: number
   themes: string[]
-  source: 'local' | 'lichess'
+  source: 'local' | 'lichess' | 'mine'
   url?: string
   /** Última jugada del rival antes del problema, para resaltarla en el tablero. */
   lastMove?: [string, string]

@@ -11,6 +11,7 @@ import { loadAnalysis, saveAnalysis } from '../lib/games'
 import { themeName } from '../lib/puzzles'
 import { buildSummary, themesForGame } from '../lib/recommend'
 import { setBusy } from '../lib/activity'
+import { makePuzzles } from '../lib/background'
 import type { Settings } from '../lib/settings'
 import type { Color, GameSummary } from '../lib/types'
 
@@ -80,6 +81,8 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
         const a = await analyzeGame(parsed, depth, (done, t) => setProgress({ done, total: t }), ctrl.signal)
         setAnalysis(a)
         await saveAnalysis(game.id, a, buildSummary(game, parsed, a))
+        // Problemas con los errores de esta partida (sin esperar).
+        void makePuzzles(game, parsed, a)
       } catch (e) {
         if ((e as Error).name !== 'AbortError') setError((e as Error).message)
       } finally {

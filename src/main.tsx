@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import { initStore } from './lib/games'
+import { initMyPuzzles } from './lib/myPuzzles'
 import { summarizeStored } from './lib/recommend'
 import { applyTheme, loadTheme } from './lib/theme'
 import './styles.css'
@@ -9,7 +10,7 @@ import './styles.css'
 applyTheme(loadTheme())
 
 // Se abre la base de datos (y se migran los datos antiguos) antes de mostrar la app.
-initStore(summarizeStored)
+Promise.all([initStore(summarizeStored), initMyPuzzles()])
   .catch((e) => console.error('No se ha podido abrir el almacenamiento', e))
   .finally(() => {
     createRoot(document.getElementById('root')!).render(

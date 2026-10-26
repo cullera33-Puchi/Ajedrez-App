@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { isBusy } from './activity'
 import { analyzeGame, type GameAnalysis, type ParsedGame, parsePgn } from './analysis'
-import { getGames, getSummary, saveAnalysis } from './games'
+import { getGames, getSummary, loadAnalysis, saveAnalysis, updateSummary } from './games'
+import { generateForGame } from './myPuzzles'
 import { buildSummary } from './recommend'
 import { load, save } from './storage'
 import type { GameSummary } from './types'
@@ -24,12 +25,9 @@ export interface BackgroundState {
   paused?: 'ocupado' | 'oculta'
 }
 
-type AfterAnalysis = (game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis) => Promise<void>
-
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const listeners = new Set<(s: BackgroundState) => void>()
 const failed = new Set<string>()
-const afterHooks: AfterAnalysis[] = []
 let state: BackgroundState = { enabled: load('bgAnalysis', true), pending: 0, analyzed: 0 }
 let started = false
 
@@ -46,9 +44,32 @@ function counts() {
   return { analyzed, pending: mine.length - analyzed - mine.filter((g) => failed.has(g.id) && !getSummary(g.id)).length }
 }
 
-/** Tareas que se ejecutan tras analizar cada partida (por ejemplo, generar problemas con los errores). */
-export function onAnalyzed(hook: AfterAnalysis) {
-  afterHooks.push(hook)
+/** Genera los problemas con los errores de la partida y lo marca en su resumen. */
+export async function makePuzzles(game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis) {
+  try {
+    await generateForGame(game, parsed, analysis)
+    const s = getSummary(game.id)
+    if (s) await updateSummary({ ...s, puzzlesDone: true })
+  } catch {
+    // Se reintentará en otra sesión.
+  }
+}
+
+/** Partidas ya analizadas (por ejemplo, de versiones anteriores) a las que aún no se les han sacado problemas. */
+async function puzzlesForOldGames(): Promise<boolean> {
+  const g = userGames().find((x) => getSummary(x.id) && !getSummary(x.id)!.puzzlesDone && !failed.has(x.id))
+  if (!g) return false
+  const analysis = await loadAnalysis(g.id)
+  if (!analysis) {
+    failed.add(g.id)
+    return true
+  }
+  try {
+    await makePuzzles(g, parsePgn(g.pgn), analysis)
+  } catch {
+    failed.add(g.id)
+  }
+  return true
 }
 
 export function setBackgroundEnabled(enabled: boolean) {
@@ -79,8 +100,9 @@ async function analyzeOne(game: GameSummary) {
       },
       ctrl.signal,
     )
-    await saveAnalysis(game.id, analysis, buildSummary(game, parsed, analysis))
-    for (const hook of afterHooks) await hook(game, parsed, analysis).catch(() => undefined)
+    const summary = buildSummary(game, parsed, analysis)
+    await saveAnalysis(game.id, analysis, summary)
+    await makePuzzles(game, parsed, analysis)
   } catch (e) {
     if ((e as Error).name !== 'AbortError') failed.add(game.id)
   } finally {
@@ -107,7 +129,7 @@ export function startBackgroundAnalysis() {
       if (state.paused) emit({ paused: undefined })
       const next = userGames().find((g) => !getSummary(g.id) && !failed.has(g.id))
       if (!next) {
-        await sleep(4000)
+        if (!(await puzzlesForOldGames())) await sleep(4000)
         continue
       }
       await analyzeOne(next)

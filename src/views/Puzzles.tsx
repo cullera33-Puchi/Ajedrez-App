@@ -14,11 +14,15 @@ import {
 } from '../lib/puzzles'
 import { getGames } from '../lib/games'
 import { recommendThemes } from '../lib/recommend'
+import { allMyPuzzles, duePuzzles, type MyPuzzle, recordResult, toPuzzle } from '../lib/myPuzzles'
 import { usePersistentState } from '../lib/storage'
 import type { Color } from '../lib/types'
 
-type Phase = 'loading' | 'playing' | 'solution' | 'done' | 'error'
-type PuzzleSource = 'local' | 'lichess'
+type Phase = 'loading' | 'playing' | 'solution' | 'done' | 'error' | 'empty'
+type PuzzleSource = 'local' | 'lichess' | 'mine'
+
+/** Valor especial de tema para abrir Problemas directamente en «Mis errores». */
+export const MY_ERRORS = '__mine__'
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easiest', label: 'Muy fácil' },
@@ -30,9 +34,13 @@ const parseUci = (uci: string) => ({ from: uci.slice(0, 2), to: uci.slice(2, 4),
 
 export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [stats, setStats] = usePersistentState<PuzzleStats>('puzzleStats', INITIAL_PUZZLE_STATS)
-  const [source, setSource] = usePersistentState<PuzzleSource>('puzzleSource', 'local')
+  const [storedSource, setSource] = usePersistentState<PuzzleSource>('puzzleSource', 'local')
+  const [forceMine, setForceMine] = useState(initialTheme === MY_ERRORS)
+  const source: PuzzleSource = forceMine && storedSource !== 'mine' ? 'mine' : storedSource
   const [difficulty, setDifficulty] = usePersistentState<Difficulty>('puzzleDifficulty', 'easiest')
-  const [theme, setTheme] = useState(initialTheme)
+  const [theme, setTheme] = useState(initialTheme === MY_ERRORS ? 'mix' : initialTheme)
+  const [mine, setMine] = useState<MyPuzzle | null>(null)
+  const [dueCount, setDueCount] = useState(() => duePuzzles().length)
 
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null)
   const [fen, setFen] = useState('')
@@ -46,7 +54,8 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [notice, setNotice] = useState<string | null>(null)
   const recommendation = useMemo(() => recommendThemes(getGames()), [])
 
-  const begin = (p: Puzzle) => {
+  const begin = (p: Puzzle, own: MyPuzzle | null = null) => {
+    setMine(own)
     setPuzzle(p)
     setFen(p.fen)
     setStep(0)
@@ -54,7 +63,13 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     setArrows([])
     setFlags({ mistake: false, hint: false, rated: false })
     setPhase('playing')
-    setFeedback({ kind: 'info', text: `Juegan las ${p.fen.split(' ')[1] === 'w' ? 'blancas' : 'negras'}. Encuentra la mejor jugada.` })
+    const side = p.fen.split(' ')[1] === 'w' ? 'blancas' : 'negras'
+    setFeedback({
+      kind: 'info',
+      text: own
+        ? `Posición de tu partida contra ${own.opponent}. Juegan las ${side}: encuentra la jugada que se te escapó.`
+        : `Juegan las ${side}. Encuentra la mejor jugada.`,
+    })
   }
 
   const pickLocal = useCallback(
@@ -74,6 +89,19 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     async (t = theme, src = source) => {
       setPhase('loading')
       setNotice(null)
+      if (src === 'mine') {
+        const due = duePuzzles()
+        setDueCount(due.length)
+        if (!due.length) {
+          setPuzzle(null)
+          setMine(null)
+          setPhase('empty')
+          setFeedback(null)
+          return
+        }
+        begin(toPuzzle(due[0]), due[0])
+        return
+      }
       // Si el set sin conexión casi no tiene problemas de ese tema, se usan los de Lichess.
       const sparse = src === 'local' && t !== 'mix' && localPuzzlesFor(t).length < 3 && navigator.onLine
       if (sparse) setNotice(`Hay pocos problemas de ${themeName(t).toLowerCase()} sin conexión: se usan los de Lichess.`)
@@ -97,13 +125,24 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
 
   const rate = (win: boolean) => {
     if (!puzzle || flags.rated) return
-    setStats((s) => updateRating(s, puzzle, win))
+    // Los problemas de tus errores no cambian tu nivel: solo deciden cuándo vuelven a salir.
+    if (puzzle.source === 'mine') void recordResult(puzzle.id, win).then(() => setDueCount(duePuzzles().length))
+    else setStats((s) => updateRating(s, puzzle, win))
     setFlags((f) => ({ ...f, rated: true }))
   }
 
   const finish = (byUser: boolean) => {
     setPhase('done')
     if (!byUser) return
+    if (mine) {
+      const clean = !flags.mistake && !flags.hint
+      if (!flags.rated) rate(clean)
+      setFeedback({
+        kind: 'ok',
+        text: `${clean ? '¡Bien visto!' : 'Resuelto.'} En la partida jugaste ${mine.playedSan}; lo mejor era ${mine.bestSan}. ${clean ? 'Volverá dentro de unos días para repasarlo.' : 'Volverá a salir pronto.'}`,
+      })
+      return
+    }
     if (!flags.mistake && !flags.hint) {
       rate(true)
       setFeedback({ kind: 'ok', text: '¡Correcto! Problema resuelto.' })
@@ -184,6 +223,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     void next(t)
   }
   const changeSource = (s: PuzzleSource) => {
+    setForceMine(false)
     setSource(s)
     void next(theme, s)
   }
@@ -205,7 +245,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
             resetKey={resetKey}
           />
         ) : (
-          <div className="board placeholder">Cargando problema…</div>
+          <div className="board placeholder">{phase === 'empty' ? 'Sin errores pendientes' : 'Cargando problema…'}</div>
         )}
       </div>
       <div className="puzzle-side">
@@ -235,6 +275,19 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
         </section>
 
         <section className="card">
+          {phase === 'empty' && (
+            <div className="msg info">
+              <p>
+                No tienes errores pendientes de repasar.{' '}
+                {allMyPuzzles().length
+                  ? 'Los que ya acertaste volverán en unos días.'
+                  : 'Cuando se analicen tus partidas, aquí aparecerán las posiciones donde fallaste.'}
+              </p>
+              <button className="btn small" onClick={() => changeSource('local')}>
+                Ir a otros problemas
+              </button>
+            </div>
+          )}
           {feedback && <p className={`msg ${feedback.kind}`}>{feedback.text}</p>}
           {notice && <p className="msg info small">{notice}</p>}
           <div className="toolbar">
@@ -256,9 +309,11 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
           </div>
           {phase === 'done' && puzzle && (
             <div className="puzzle-info">
-              <p className="small">
-                Dificultad del problema: <strong>{puzzle.rating}</strong>
-              </p>
+              {puzzle.rating > 0 && (
+                <p className="small">
+                  Dificultad del problema: <strong>{puzzle.rating}</strong>
+                </p>
+              )}
               <div className="chips">
                 {puzzle.themes.map((t) => (
                   <span key={t} className="chip static">
@@ -303,11 +358,12 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
           <label className="field">
             <span>Origen</span>
             <select value={source} onChange={(e) => changeSource(e.target.value as PuzzleSource)}>
+              <option value="mine">Mis errores ({dueCount} pendientes hoy)</option>
               <option value="local">Set de iniciación ({LOCAL_PUZZLES.length} problemas, sin conexión)</option>
               <option value="lichess">Lichess (millones de problemas, requiere conexión)</option>
             </select>
           </label>
-          <label className="field">
+          <label className="field" hidden={source === 'mine'}>
             <span>Tema</span>
             <select value={theme} onChange={(e) => changeTheme(e.target.value)}>
               {BEGINNER_THEMES.map((t) => (

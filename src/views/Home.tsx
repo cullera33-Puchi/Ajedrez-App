@@ -5,6 +5,8 @@ import { type CoachProvider, type CoachStatus, fetchCoachStatus, saveCoachKey, s
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
+import { duePuzzles } from '../lib/myPuzzles'
+import { MY_ERRORS } from './Puzzles'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import type { Settings } from '../lib/settings'
 import { load, save } from '../lib/storage'
@@ -77,6 +79,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   }
   const lastLoss = mine.find((g) => outcomeFor(g) === 'derrota')
   const topTheme = recommendThemes(games).themes[0]
+  const due = duePuzzles().length
 
   // Errores graves del usuario en las partidas ya analizadas.
   const userBlunders = games
@@ -117,6 +120,19 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
         <section className="card">
           <h2>Tu próximo paso</h2>
           <ul className="steps">
+            {due > 0 && (
+              <li>
+                <div>
+                  <strong>Repasa tus errores</strong>
+                  <p className="muted">
+                    {due} {due === 1 ? 'posición' : 'posiciones'} de tus partidas donde se te escapó la buena jugada.
+                  </p>
+                </div>
+                <button className="btn primary" onClick={() => onPractice(MY_ERRORS)}>
+                  Repasar
+                </button>
+              </li>
+            )}
             {!mine.length && (
               <li>
                 <div>

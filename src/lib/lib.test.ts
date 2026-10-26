@@ -350,3 +350,32 @@ describe('almacén de partidas (IndexedDB o memoria)', () => {
     expect(store.mergeGames([newer, g]).map((x) => x.id)).toEqual(['cc-nuevo', 'cc-viejo'])
   })
 })
+
+describe('problemas con tus errores', () => {
+  it('repaso espaciado: acierto alarga el intervalo y fallo lo reinicia', async () => {
+    const { scheduleNext } = await import('./myPuzzles')
+    const DAY = 86400000
+    const p = { id: 'g:9', gameId: 'g', ply: 9, fen: '', moves: ['c4f7'], playedSan: 'Cxf7', bestSan: 'Axf7+', opponent: 'Rival', date: 0, themes: [], srs: { due: 0, interval: 0, reps: 0, lapses: 0 } }
+    const a = scheduleNext(p, true, 0)
+    expect(a.srs).toMatchObject({ interval: 1, reps: 1, due: DAY })
+    const b = scheduleNext(a, true, 0)
+    expect(b.srs.interval).toBe(3)
+    const c = scheduleNext(b, false, 0)
+    expect(c.srs).toMatchObject({ interval: 0, lapses: 1, due: 10 * 60 * 1000 })
+  })
+
+  it('elige como candidatos los errores del usuario', async () => {
+    const { candidatePlies } = await import('./myPuzzles')
+    const parsed = parsePgn(DEMO_GAMES[0].pgn)
+    const positions: PositionEval[] = parsed.fens.map(() => ({ cp: 30, pv: [] }))
+    positions[8] = { cp: 250, best: 'c4f7', pv: ['c4f7', 'e8e7'] }
+    positions[9] = { cp: -600, best: 'g5g2', pv: ['g5g2', 'h1f1'] }
+    positions[12] = { cp: -700, best: 'd1e2', pv: ['d1e2'] }
+    positions[13] = { mate: -1, best: 'd4f3', pv: ['d4f3'] }
+    const a = buildAnalysis(parsed, positions, 12)
+    const plies = candidatePlies({ ...DEMO_GAMES[0], userColor: 'white' }, parsed, a).map((c) => c.ply)
+    expect(plies).toEqual(expect.arrayContaining([9, 13]))
+    expect(plies.every((p) => p % 2 === 1)).toBe(true)
+    expect(candidatePlies({ ...DEMO_GAMES[0], userColor: undefined }, parsed, a)).toEqual([])
+  })
+})
