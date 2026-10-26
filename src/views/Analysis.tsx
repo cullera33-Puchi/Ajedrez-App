@@ -5,7 +5,9 @@ import { CoachPanel } from '../components/CoachPanel'
 import { EvalBar } from '../components/EvalBar'
 import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
-import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan } from '../lib/analysis'
+import { Chess } from 'chess.js'
+import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
+import { getEngine } from '../lib/engine'
 import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
 import { themeName } from '../lib/puzzles'
@@ -21,6 +23,21 @@ interface Props {
   onSettings: (s: Settings) => void
   onNavigate: (v: View) => void
   onPractice: (theme: string) => void
+}
+
+interface Retry {
+  ply: number
+  tries: number
+  status: 'playing' | 'solved' | 'revealed'
+  resetKey: number
+  hint?: boolean
+  checking?: boolean
+  played?: string
+  equal?: boolean
+  lastWrong?: string
+  /** Posición tras la jugada acertada, para dejarla en el tablero. */
+  solvedFen?: string
+  solvedMove?: [string, string]
 }
 
 const DEPTHS = [
@@ -63,11 +80,18 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const [orientation, setOrientation] = useState<Color>(game.userColor ?? 'white')
   const [showBest, setShowBest] = useState(true)
   const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
+  const [retry, setRetry] = useState<Retry | null>(null)
   const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report])
   const abortRef = useRef<AbortController | null>(null)
 
   const total = parsed ? parsed.fens.length - 1 : 0
-  const go = useCallback((p: number) => setPly(Math.max(0, Math.min(total, p))), [total])
+  const go = useCallback(
+    (p: number) => {
+      setRetry(null)
+      setPly(Math.max(0, Math.min(total, p)))
+    },
+    [total],
+  )
 
   const start = useCallback(
     async (depth: number) => {
@@ -152,6 +176,55 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     (m) => (m.classification === 'grave' || m.classification === 'error') && (!userSide || m.color === userSide),
   )
 
+  // «Inténtalo tú»: en un error del usuario, volver a la posición anterior y buscar la buena.
+  const userSideColor = game.userColor === 'white' ? 'w' : game.userColor === 'black' ? 'b' : undefined
+  const bestBefore = analysis && ply > 0 ? analysis.positions[ply - 1]?.best : undefined
+  const canRetry = Boolean(
+    moveAnalysis &&
+      bestBefore &&
+      ['imprecision', 'error', 'grave'].includes(moveAnalysis.classification) &&
+      (!userSideColor || move?.color === userSideColor),
+  )
+
+  const startRetry = () => setRetry({ ply, tries: 0, status: 'playing', resetKey: 0 })
+
+  const onRetryMove = async (from: string, to: string) => {
+    if (!retry || retry.status !== 'playing' || !analysis || !bestBefore) return
+    const before = parsed.fens[retry.ply - 1]
+    const chess = new Chess(before)
+    const piece = chess.get(from as Parameters<typeof chess.get>[0])
+    const promotion = piece?.type === 'p' && (to[1] === '8' || to[1] === '1') ? (bestBefore.slice(0, 4) === from + to && bestBefore[4]) || 'q' : undefined
+    let played
+    try {
+      played = chess.move({ from, to, promotion })
+    } catch {
+      setRetry({ ...retry, resetKey: retry.resetKey + 1 })
+      return
+    }
+    if (played.lan === bestBefore || chess.isCheckmate()) {
+      setRetry({ ...retry, status: 'solved', played: toSpanishSan(played.san), equal: false, solvedFen: chess.fen(), solvedMove: [from, to] })
+      return
+    }
+    // ¿Es igual de buena? Se comprueba con el motor la posición resultante.
+    setRetry({ ...retry, checking: true })
+    const res = await getEngine('main').evaluate(chess.fen(), 10)
+    const sign = played.color === 'w' ? 1 : -1
+    const afterWhite = { cp: res.cp !== undefined ? -res.cp * (played.color === 'w' ? 1 : -1) : undefined, mate: res.mate !== undefined ? -res.mate * (played.color === 'w' ? 1 : -1) : undefined, pv: [] }
+    const toMover = (w: number) => (sign === 1 ? w : 100 - w)
+    const drop = toMover(winPercent(analysis.positions[retry.ply - 1])) - toMover(winPercent(afterWhite))
+    if (drop < 5) {
+      setRetry({ ...retry, status: 'solved', played: toSpanishSan(played.san), equal: true, checking: false, solvedFen: chess.fen(), solvedMove: [from, to] })
+    } else {
+      setRetry({
+        ...retry,
+        tries: retry.tries + 1,
+        resetKey: retry.resetKey + 1,
+        checking: false,
+        lastWrong: `${toSpanishSan(played.san)} deja la evaluación en ${formatEval(afterWhite)}.`,
+      })
+    }
+  }
+
   const viewControls = (
     <div className="view-controls">
       <button className="btn small" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
@@ -179,7 +252,50 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
             )}
             {evalNow && <span className="eval-chip">{formatEval(evalNow)}</span>}
           </div>
-          <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
+          {retry ? (
+            <div className="retry">
+              {retry.status === 'solved' ? (
+                <p className="msg ok">
+                  {retry.equal ? `¡Bien! ${retry.played} también es una buena jugada.` : `¡Correcto! ${retry.played} es la mejor jugada.`} En la partida
+                  jugaste {toSpanishSan(move.san)}.
+                </p>
+              ) : retry.status === 'revealed' ? (
+                <p className="msg info">La mejor era {moveAnalysis?.bestSan ? toSpanishSan(moveAnalysis.bestSan) : ''}.</p>
+              ) : (
+                <p>
+                  {retry.checking
+                    ? 'Comprobando tu jugada…'
+                    : retry.lastWrong
+                      ? `${retry.lastWrong} Prueba otra vez.`
+                      : `Busca una jugada mejor que ${toSpanishSan(move.san)}.`}
+                </p>
+              )}
+              <div className="toolbar">
+                {retry.status === 'playing' && (
+                  <>
+                    <button className="btn small" onClick={() => setRetry({ ...retry, hint: true })} disabled={retry.hint}>
+                      Pista
+                    </button>
+                    <button className="btn small" onClick={() => setRetry({ ...retry, status: 'revealed' })}>
+                      Ver solución
+                    </button>
+                  </>
+                )}
+                <button className="btn small" onClick={() => setRetry(null)}>
+                  {retry.status === 'playing' ? 'Salir' : 'Volver a la partida'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
+              {canRetry && (
+                <button className="btn small primary retry-btn" onClick={startRetry}>
+                  Inténtalo tú
+                </button>
+              )}
+            </>
+          )}
           {coachComment && (
             <p className="coach-comment">
               <strong>Entrenador:</strong> {coachComment}
@@ -199,7 +315,27 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           <PlayerLine player={top} />
           <div className="board-row">
             <EvalBar evaluation={evalNow} orientation={orientation} />
-            <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
+            {retry ? (
+              <Board
+                fen={retry.solvedFen ?? parsed.fens[retry.ply - 1]}
+                orientation={orientation}
+                movableColor={retry.status === 'playing' && !retry.checking ? (parsed.moves[retry.ply - 1].color === 'w' ? 'white' : 'black') : undefined}
+                lastMove={retry.solvedMove ?? (retry.ply > 1 ? [parsed.moves[retry.ply - 2].from, parsed.moves[retry.ply - 2].to] : undefined)}
+                arrows={
+                  retry.status === 'solved'
+                    ? []
+                    : retry.status === 'revealed' && bestBefore
+                    ? [{ orig: bestBefore.slice(0, 2), dest: bestBefore.slice(2, 4), brush: 'green' }]
+                    : retry.hint && bestBefore
+                      ? [{ orig: bestBefore.slice(0, 2), brush: 'green' }]
+                      : []
+                }
+                onMove={onRetryMove}
+                resetKey={retry.resetKey}
+              />
+            ) : (
+              <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
+            )}
           </div>
           <PlayerLine player={bottom} />
         </div>

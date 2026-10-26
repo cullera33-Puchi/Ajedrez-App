@@ -1915,3 +1915,13 @@ label {
 .bg-card p {
   margin: 0.3rem 0 0.4rem;
 }
+
+.retry-btn {
+  margin-top: 0.4rem;
+}
+.retry .toolbar {
+  margin-top: 0.3rem;
+}
+.retry .msg {
+  margin: 0.3rem 0;
+}
