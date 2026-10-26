@@ -23,6 +23,7 @@ const SOURCE_LABEL: Record<GameSummary['source'], string> = {
   lichess: 'Lichess',
   pgn: 'PGN',
   demo: 'Ejemplo',
+  bot: 'Bot',
 }
 
 const TIME_LABEL: Record<string, string> = {

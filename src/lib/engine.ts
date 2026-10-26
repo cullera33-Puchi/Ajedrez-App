@@ -1,3 +1,11 @@
+/** Una línea candidata del motor (con MultiPV hay varias), desde el punto de vista del bando que mueve. */
+export interface EngineLine {
+  move: string
+  cp?: number
+  mate?: number
+  pv: string[]
+}
+
 /** Evaluación devuelta por el motor, desde el punto de vista del bando que mueve. */
 export interface EngineResult {
   cp?: number
@@ -5,12 +13,14 @@ export interface EngineResult {
   best?: string
   pv: string[]
   depth: number
+  /** Líneas candidatas ordenadas de mejor a peor (una sola si multipv = 1). */
+  lines: EngineLine[]
 }
 
 const ENGINE_URL = `${import.meta.env.BASE_URL}engine/stockfish-19-lite-single.js`
 
 /** Envoltorio UCI sobre Stockfish en un Web Worker. Las búsquedas se encolan y se ejecutan de una en una. */
-class Engine {
+export class Engine {
   private worker: Worker
   private listener: ((line: string) => void) | null = null
   private queue: Promise<unknown>
@@ -46,11 +56,11 @@ class Engine {
     await this.waitFor(['setoption name Hash value 32', 'isready'], (l) => l === 'readyok')
   }
 
-  evaluate(fen: string, depth: number): Promise<EngineResult> {
+  evaluate(fen: string, depth: number, multipv = 1): Promise<EngineResult> {
     const run = async (): Promise<EngineResult> => {
-      const result: EngineResult = { pv: [], depth: 0 }
+      const result: EngineResult = { pv: [], depth: 0, lines: [] }
       await this.waitFor(
-        [`position fen ${fen}`, `go depth ${depth}`],
+        [`setoption name MultiPV value ${multipv}`, `position fen ${fen}`, `go depth ${depth}`],
         (l) => l.startsWith('bestmove'),
         (l) => {
           if (l.startsWith('bestmove')) {
@@ -59,29 +69,49 @@ class Engine {
             return
           }
           const m = l.match(/^info .*?depth (\d+) .*?score (cp|mate) (-?\d+)(?:.* pv (.+))?/)
-          if (!m || l.includes('multipv 2')) return
-          result.depth = Number(m[1])
-          if (m[2] === 'cp') {
-            result.cp = Number(m[3])
-            result.mate = undefined
-          } else {
-            result.mate = Number(m[3])
-            result.cp = undefined
+          if (!m || !m[4]) return
+          const k = Number(l.match(/ multipv (\d+)/)?.[1] ?? 1)
+          const pv = m[4].split(' ')
+          const line: EngineLine = { move: pv[0], pv, ...(m[2] === 'cp' ? { cp: Number(m[3]) } : { mate: Number(m[3]) }) }
+          result.lines[k - 1] = line
+          if (k === 1) {
+            result.depth = Number(m[1])
+            result.cp = line.cp
+            result.mate = line.mate
+            result.pv = pv
           }
-          if (m[4]) result.pv = m[4].split(' ')
         },
       )
+      result.lines = result.lines.filter(Boolean)
       return result
     }
     const job = this.queue.then(run)
     this.queue = job.catch(() => undefined)
     return job
   }
+
+  terminate() {
+    this.worker.terminate()
+  }
 }
 
-let instance: Engine | null = null
+const instances = new Map<string, Engine>()
 
-export function getEngine(): Engine {
-  instance ??= new Engine()
-  return instance
+/**
+ * Motor por nombre: «main» para el análisis (interactivo y en segundo plano) y «play» para los bots,
+ * así jugar no espera a que termine un análisis.
+ */
+export function getEngine(name = 'main'): Engine {
+  let e = instances.get(name)
+  if (!e) {
+    e = new Engine()
+    instances.set(name, e)
+  }
+  return e
+}
+
+/** Libera un motor que ya no se usa (en el móvil, cada motor ocupa memoria). */
+export function releaseEngine(name: string) {
+  instances.get(name)?.terminate()
+  instances.delete(name)
 }

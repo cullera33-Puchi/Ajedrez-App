@@ -138,7 +138,9 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     if (!puzzle || phase !== 'playing') return
     const chess = new Chess(fen)
     const piece = chess.get(from as Parameters<typeof chess.get>[0])
-    const promotion = piece?.type === 'p' && (to[1] === '8' || to[1] === '1') ? 'q' : undefined
+    // Si la solución corona en otra pieza (subpromoción), se respeta; si no, dama.
+    const expectedPromo = puzzle.moves[step]?.slice(0, 4) === from + to ? puzzle.moves[step][4] : undefined
+    const promotion = piece?.type === 'p' && (to[1] === '8' || to[1] === '1') ? (expectedPromo ?? 'q') : undefined
     let played
     try {
       played = chess.move({ from, to, promotion })

@@ -1,5 +1,5 @@
 export type Color = 'white' | 'black'
-export type Source = 'chesscom' | 'lichess' | 'pgn' | 'demo'
+export type Source = 'chesscom' | 'lichess' | 'pgn' | 'demo' | 'bot'
 export type Result = '1-0' | '0-1' | '1/2-1/2' | '*'
 
 export interface Player {

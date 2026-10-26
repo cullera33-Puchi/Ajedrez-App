@@ -6,13 +6,15 @@ import { AnalysisView } from './views/Analysis'
 import { GamesView } from './views/Games'
 import { HomeView } from './views/Home'
 import { LearnView } from './views/Learn'
+import { PlayView } from './views/Play'
 import { PuzzlesView } from './views/Puzzles'
 
-export type View = 'inicio' | 'partidas' | 'analisis' | 'problemas' | 'aprender'
+export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender'
 
 const NAV: { id: View; label: string; icon: string }[] = [
   { id: 'inicio', label: 'Inicio', icon: '⌂' },
-  { id: 'partidas', label: 'Mis partidas', icon: '☰' },
+  { id: 'jugar', label: 'Jugar', icon: '♟' },
+  { id: 'partidas', label: 'Partidas', icon: '☰' },
   { id: 'analisis', label: 'Análisis', icon: '♘' },
   { id: 'problemas', label: 'Problemas', icon: '♛' },
   { id: 'aprender', label: 'Aprender', icon: '♙' },
@@ -71,6 +73,7 @@ export default function App() {
         {view === 'inicio' && (
           <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} onPractice={openPuzzles} />
         )}
+        {view === 'jugar' && <PlayView settings={settings} onSaveGame={(g) => addGames([g])} onAnalyze={openGame} />}
         {view === 'partidas' && (
           <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}

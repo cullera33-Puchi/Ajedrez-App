@@ -261,3 +261,50 @@ describe('recomendación de temas por errores', () => {
     expect(res.every((r) => r.themes.length > 0)).toBe(true)
   })
 })
+
+describe('bots', () => {
+  const lines = [
+    { move: 'e2e4', cp: 30, pv: ['e2e4'] },
+    { move: 'd2d4', cp: 25, pv: ['d2d4'] },
+    { move: 'g1h3', cp: -60, pv: ['g1h3'] },
+    { move: 'f2f3', cp: -120, pv: ['f2f3'] },
+  ]
+  const legal = lines.map((l) => l.move)
+  const start = new Chess().fen()
+
+  it('el bot fuerte casi siempre elige las mejores y el flojo varía más', async () => {
+    const { BOTS, pickMove } = await import('./bots')
+    let seed = 1
+    const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
+    const count = (botIdx: number) => {
+      const c: Record<string, number> = {}
+      for (let i = 0; i < 2000; i++) {
+        const m = pickMove(start, BOTS[botIdx], lines, legal, 20, rand)
+        c[m] = (c[m] ?? 0) + 1
+      }
+      return c
+    }
+    const strong = count(BOTS.length - 1)
+    const weak = count(0)
+    expect((strong['e2e4'] ?? 0) + (strong['d2d4'] ?? 0)).toBeGreaterThan(1900)
+    expect((weak['g1h3'] ?? 0) + (weak['f2f3'] ?? 0)).toBeGreaterThan(300)
+  })
+
+  it('aprovecha un mate cuando no se despista', async () => {
+    const { BOTS, pickMove } = await import('./bots')
+    const withMate = [{ move: 'h5f7', mate: 1, pv: ['h5f7'] }, ...lines]
+    const noBlunder = () => 0.99 // nunca entra en el despiste y el sorteo cae en la jugada con más peso
+    expect(pickMove(start, BOTS[0], withMate, legal, 20, noBlunder)).toBe('h5f7')
+  })
+
+  it('convierte la partida en un PGN válido', async () => {
+    const { botGameToSummary } = await import('./bots')
+    const g = { botId: 'lucia', userColor: 'white' as const, moves: ['e2e4', 'e7e5', 'd1h5', 'b8c6', 'f1c4', 'g8f6', 'h5f7'], startedAt: Date.UTC(2026, 9, 27), undos: 0 }
+    const s = botGameToSummary(g, '1-0', 'Anriqui', 'Jaque mate')
+    expect(s.source).toBe('bot')
+    expect(s.black.name).toBe('Lucía (bot)')
+    expect(s.black.rating).toBe(400)
+    expect(parsePgn(s.pgn).moves).toHaveLength(7)
+    expect(s.pgn).toContain('[Result "1-0"]')
+  })
+})
