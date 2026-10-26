@@ -7,7 +7,11 @@ import { normalizeLichessGame, puzzleFromLichess } from './lichess'
 import { gameFromPgn } from './pgnImport'
 import { INITIAL_PUZZLE_STATS, LOCAL_PUZZLES, updateRating } from './puzzles'
 import { dailyStats, mergeLogs, type PuzzleAttempt, ratingChange } from './puzzleLog'
-import { outcomeFor } from './types'
+import { type GameSummary, outcomeFor } from './types'
+import { isOnlineGame, openingStats, ratingSeries, results, score, themeTotals, weeklyAccuracy, weekStart } from './progress'
+import type { AnalysisSummary } from './recommend'
+import { boardToFen, fenToBoard, piecesToBoard } from './scan/scan'
+import { cleanShape, fillHoles } from './scan/features'
 
 describe('problemas locales', () => {
   it.each(LOCAL_PUZZLES.map((p) => [p.id, p] as const))('%s tiene una solución legal', (_id, p) => {
@@ -487,5 +491,99 @@ describe('histórico de problemas', () => {
 
   it('fusiona históricos sin duplicar', () => {
     expect(mergeLogs(log.slice(0, 3), log.slice(1))).toHaveLength(4)
+  })
+})
+
+describe('progreso', () => {
+  const mk = (id: string, days: number, color: 'white' | 'black', result: '1-0' | '0-1' | '1/2-1/2', rating: number, opening: string, source: GameSummary['source'] = 'chesscom'): GameSummary => ({
+    id,
+    source,
+    white: { name: color === 'white' ? 'yo' : 'rival', rating: color === 'white' ? rating : 600 },
+    black: { name: color === 'black' ? 'yo' : 'rival', rating: color === 'black' ? rating : 600 },
+    userColor: color,
+    result,
+    timeClass: 'rapid',
+    date: new Date(2026, 9, days).getTime(),
+    opening,
+    pgn: '',
+  })
+  const games = [
+    mk('a', 1, 'white', '1-0', 500, 'Italian Game: Two Knights'),
+    mk('b', 3, 'white', '0-1', 490, 'Italian Game'),
+    mk('c', 5, 'white', '0-1', 480, 'Italian Game: Giuoco Piano'),
+    mk('d', 8, 'black', '1/2-1/2', 485, 'Sicilian Defense'),
+    mk('e', 9, 'black', '0-1', 500, 'Sicilian Defense'),
+    mk('f', 10, 'black', '0-1', 515, 'Sicilian Defense: Najdorf'),
+    mk('z', 11, 'white', '1-0', 900, 'Italian Game', 'bot'),
+  ]
+
+  it('excluye las partidas contra bots', () => {
+    expect(games.filter(isOnlineGame)).toHaveLength(6)
+  })
+
+  it('cuenta resultados y puntuación', () => {
+    const r = results(games.filter(isOnlineGame))
+    expect(r).toEqual({ n: 6, w: 3, d: 1, l: 2 })
+    expect(score(r)).toBe(58)
+  })
+
+  it('agrupa aperturas por familia y color, de peor a mejor', () => {
+    const o = openingStats(games.filter(isOnlineGame))
+    expect(o.map((x) => [x.opening, x.color, x.score])).toEqual([
+      ['Italian Game', 'white', 33],
+      ['Sicilian Defense', 'black', 83],
+    ])
+  })
+
+  it('ordena el rating por fecha y agrupa la precisión por semana', () => {
+    const online = games.filter(isOnlineGame)
+    expect(ratingSeries(online).map((p) => p.rating)).toEqual([500, 490, 480, 485, 500, 515])
+    const sums = new Map<string, AnalysisSummary>(
+      online.map((g, i) => [g.id, { id: g.id, depth: 12, accuracy: { white: 60 + i, black: 60 + i }, counts: { white: { grave: 1 }, black: { grave: 2 } }, themes: [{ theme: 'fork', count: 1 }], analyzedAt: 0 } as unknown as AnalysisSummary]),
+    )
+    const w = weeklyAccuracy(online, sums)
+    expect(w.reduce((s, x) => s + x.n, 0)).toBe(6)
+    expect(themeTotals(online, sums)).toEqual([{ theme: 'fork', count: 6 }])
+    expect(weekStart(new Date(2026, 9, 29, 15).getTime())).toBe(new Date(2026, 9, 26).getTime())
+  })
+})
+
+describe('escáner', () => {
+  it('pasa de FEN a casillas y vuelve, deduciendo los enroques', () => {
+    const fen = 'r3k2r/pppq1ppp/2n2n2/8/8/2N2N2/PPPQ1PPP/R3K2R b KQkq - 0 1'
+    const b = fenToBoard(fen)!
+    expect(b).toHaveLength(64)
+    expect(boardToFen(b, 'b')).toBe(fen)
+    const noCastle = [...b]
+    noCastle[63] = null
+    expect(boardToFen(noCastle, 'w').split(' ')[2]).toBe('Qkq')
+  })
+
+  it('gira la lectura si las blancas estaban arriba', () => {
+    const b = fenToBoard('4k3/8/8/8/8/8/8/4K3 w - - 0 1')!
+    expect(piecesToBoard([...b].reverse(), true)).toEqual(b)
+  })
+
+  it('rellena los huecos de una silueta y descarta manchas sueltas', () => {
+    // Anillo de 5x5 con hueco y un punto suelto en la esquina.
+    const w = 8
+    const m = new Uint8Array(w * w)
+    for (let y = 1; y <= 5; y++) for (let x = 1; x <= 5; x++) if (y === 1 || y === 5 || x === 1 || x === 5) m[y * w + x] = 1
+    m[7 * w + 7] = 1
+    expect(fillHoles(m, w, w)[3 * w + 3]).toBe(1)
+    const s = cleanShape(m, w, w)!
+    expect(s.box).toEqual({ x0: 1, y0: 1, x1: 5, y1: 5 })
+    expect(s.mask[7 * w + 7]).toBe(0)
+  })
+})
+
+describe('familias de aperturas', () => {
+  it('agrupa nombres de Chess.com y de Lichess', async () => {
+    const { openingFamily } = await import('./progress')
+    expect(openingFamily('Italian Game Two Knights Defense')).toBe('Italian Game')
+    expect(openingFamily('Sicilian Defense: Najdorf Variation')).toBe('Sicilian Defense')
+    expect(openingFamily('Queens Pawn Opening Zukertort')).toBe('Queens Pawn Opening')
+    expect(openingFamily('Kings Gambit Accepted')).toBe('Kings Gambit')
+    expect(openingFamily('Ruy Lopez')).toBe('Ruy Lopez')
   })
 })

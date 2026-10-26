@@ -8,12 +8,13 @@ import { GamesView } from './views/Games'
 import { HomeView } from './views/Home'
 import { LearnView } from './views/Learn'
 import { PlayView } from './views/Play'
+import { ProgressView } from './views/Progress'
 import { PuzzlesView } from './views/Puzzles'
 
 // El escáner (con sus plantillas de piezas) solo se descarga al usarlo.
 const ScanView = lazy(() => import('./views/Scan').then((m) => ({ default: m.ScanView })))
 
-export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear'
+export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear' | 'progreso'
 
 const NAV: { id: View; label: string; icon: string }[] = [
   { id: 'inicio', label: 'Inicio', icon: '⌂' },
@@ -74,7 +75,7 @@ export default function App() {
         </div>
         <nav>
           {NAV.map((n) => (
-            <button key={n.id} className={`nav-item ${view === n.id || (view === 'escanear' && n.id === 'partidas') ? 'active' : ''}`} onClick={() => setView(n.id)}>
+            <button key={n.id} className={`nav-item ${view === n.id || (view === 'escanear' && n.id === 'partidas') || (view === 'progreso' && n.id === 'inicio') ? 'active' : ''}`} onClick={() => setView(n.id)}>
               <span className="nav-icon">{n.icon}</span>
               {n.label}
             </button>
@@ -102,6 +103,7 @@ export default function App() {
         )}
         {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
         {view === 'aprender' && <LearnView onPractice={openPuzzles} />}
+        {view === 'progreso' && <ProgressView games={games} onNavigate={setView} onOpenGame={openGame} onPractice={openPuzzles} />}
         {view === 'escanear' && (
           <Suspense fallback={<p className="muted page">Cargando el escáner…</p>}>
             <ScanView

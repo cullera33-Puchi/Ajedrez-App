@@ -148,6 +148,17 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
                 </button>
               </li>
             )}
+            {mine.length >= 3 && (
+              <li>
+                <div>
+                  <strong>Mira tu progreso</strong>
+                  <p className="muted">Evolución de tu rating y tu precisión, lo que más fallas y tus aperturas.</p>
+                </div>
+                <button className="btn" onClick={() => onNavigate('progreso')}>
+                  Ver
+                </button>
+              </li>
+            )}
             {lastLoss && (
               <li>
                 <div>

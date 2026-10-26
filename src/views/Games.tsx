@@ -325,7 +325,14 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
             Ver más ({list.length - limit} restantes)
           </button>
         )}
-        <p className="muted small">{list.length} partidas.</p>
+        <p className="muted small">
+          {list.length} {list.length === 1 ? 'partida' : 'partidas'}.{' '}
+          {group === 'online' && counts.online >= 3 && (
+            <button className="link" onClick={() => onNavigate('progreso')}>
+              Ver tu progreso
+            </button>
+          )}
+        </p>
       </section>
     </div>
   )

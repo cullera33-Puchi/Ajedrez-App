@@ -2377,3 +2377,32 @@ label {
 :root[data-theme='eink'] .scan-sq.dark {
   background: #bbb;
 }
+
+/* Progreso */
+.progress-page .card h2 {
+  margin-bottom: 0.5rem;
+}
+.big-number {
+  font-size: 1.8rem;
+}
+.good-text {
+  color: var(--c-mejor);
+  font-weight: 600;
+}
+.bad-text {
+  color: var(--c-grave);
+  font-weight: 600;
+}
+.openings-table th:nth-child(1),
+.openings-table td.opening-name {
+  width: 46%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.trend + .trend {
+  margin-top: 0.6rem;
+}
+.bar-win.sel {
+  opacity: 0.7;
+}
