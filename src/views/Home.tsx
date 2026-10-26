@@ -273,8 +273,8 @@ function CoachKeyCard() {
       {status === undefined && <p className="muted">Comprobando…</p>}
       {status === null && (
         <p className="muted">
-          El entrenador integrado necesita el servidor local: arranca la app con iniciar.bat o npm run dev. Mientras tanto puedes usar el botón
-          Abrir en claude.ai desde el análisis de cualquier partida.
+          En la versión web y en el móvil, el entrenador funciona con el botón Abrir en claude.ai desde el análisis de cualquier partida: copia
+          la partida y el análisis para que los pegues en Claude, con tu plan. El entrenador integrado está disponible al arrancar la app en tu PC.
         </p>
       )}
       {status && (

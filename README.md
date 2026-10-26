@@ -55,6 +55,30 @@ Detalles del modo plan:
 - Usa el modelo Opus, sin herramientas, sin servidores MCP y sin tus ajustes personales de Claude Code. Las conversaciones se guardan en `%USERPROFILE%\.ajedrez-app\claude`.
 - Un informe tarda alrededor de un minuto. Puedes ver tu consumo del plan con `/usage` dentro de Claude Code.
 
+## En el móvil
+
+Hay dos formas. Las dos funcionan en Android y en iPhone.
+
+### 1. Versión web (en cualquier sitio)
+
+Abre **https://cullera33-puchi.github.io/ajedrez-app/** en el navegador del móvil e instálala como app:
+
+- **Android (Chrome)**: menú de los tres puntos y luego *Añadir a pantalla de inicio* o *Instalar aplicación*.
+- **iPhone (Safari)**: botón *Compartir* y luego *Añadir a pantalla de inicio*.
+
+Incluye partidas de Chess.com y Lichess, análisis con Stockfish en el propio móvil, problemas y la parte de Aprender. Abre también sin conexión (los problemas de iniciación y las partidas ya importadas). Para el entrenador, el botón **Abrir en claude.ai** copia la partida y el análisis y abre Claude (la app si la tienes instalada). Pegas el texto y la conversación sigue allí, dentro de tu plan.
+
+Los datos se guardan en cada dispositivo: el móvil y el PC no comparten partidas ni nivel de problemas.
+
+La web se actualiza sola en cada cambio que se sube a GitHub (`.github/workflows/pages.yml`).
+
+### 2. Desde el PC, en casa (con el entrenador integrado)
+
+1. En el PC, doble clic en **`iniciar-movil.bat`**. Si Windows pregunta por el firewall, permite el acceso en redes privadas.
+2. En la ventana aparece una dirección *Network*, del tipo `http://192.168.1.20:5173`. Ábrela en el móvil, conectado a la misma wifi.
+
+Así el móvil usa el entrenador integrado con tu plan, a través de Claude Code en el PC. El modo del entrenador y la clave solo se pueden cambiar desde el propio PC.
+
 ## Qué incluye
 
 | Pantalla | Funcionalidad |

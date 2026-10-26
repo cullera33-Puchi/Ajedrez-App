@@ -121,9 +121,14 @@ export function coachPlugin(opts: Options): Plugin {
   const handler = async (req: IncomingMessage, res: ServerResponse, next: () => void) => {
     const url = req.url?.split('?')[0] ?? ''
     if (!url.startsWith('/api/coach/')) return next()
-    const route = routes[`${req.method} ${url}`]
+    const key = `${req.method} ${url}`
+    const route = routes[key]
     try {
       if (!route) throw new HttpError(404, 'Ruta no encontrada.')
+      // Desde el móvil (red local) se puede usar el entrenador, pero la configuración solo desde el propio PC.
+      if (CONFIG_ROUTES.has(key) && !isLoopback(req.socket.remoteAddress)) {
+        throw new HttpError(403, 'Esta opción solo se puede cambiar desde el propio PC.')
+      }
       const body = req.method === 'POST' ? await readJson(req) : {}
       send(res, 200, await route(body))
     } catch (e) {
@@ -143,6 +148,10 @@ export function coachPlugin(opts: Options): Plugin {
     },
   }
 }
+
+const CONFIG_ROUTES = new Set(['POST /api/coach/key', 'POST /api/coach/provider'])
+
+const isLoopback = (addr?: string) => addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1'
 
 async function run(
   client: Anthropic,

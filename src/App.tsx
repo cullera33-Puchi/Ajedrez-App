@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DEMO_GAMES, loadGames, mergeGames } from './lib/games'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import type { GameSummary } from './lib/types'
@@ -24,6 +24,11 @@ export default function App() {
   const [games, setGames] = useState<GameSummary[]>(loadGames)
   const [gameId, setGameId] = useState<string | null>(null)
   const [puzzleTheme, setPuzzleTheme] = useState('mix')
+
+  // Cada pantalla empieza arriba (en el móvil, si no, el tablero puede quedar fuera de la vista).
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [view])
 
   const allGames = [...games, ...DEMO_GAMES.filter((d) => !games.some((g) => g.id === d.id))]
   const currentGame = allGames.find((g) => g.id === gameId) ?? null

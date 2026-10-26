@@ -260,7 +260,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
               )}
             </>
           ) : (
-            <p className="muted">Posición inicial. Usa las flechas del teclado para avanzar por la partida.</p>
+            <p className="muted">Posición inicial. Avanza por la partida con los botones de debajo del tablero (o con las flechas del teclado).</p>
           )}
         </section>
 

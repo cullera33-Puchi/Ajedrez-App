@@ -1,0 +1,17 @@
+{
+  "name": "Ajedrez App",
+  "short_name": "Ajedrez",
+  "description": "Aprende ajedrez: análisis de partidas, problemas y entrenador.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#161512",
+  "theme_color": "#161512",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -934,3 +934,150 @@ code {
   padding: 0.05rem 0.35rem;
   font-size: 0.85em;
 }
+
+/* Móvil: navegación inferior, tablero a todo el ancho y paneles apilados */
+@media (max-width: 800px) {
+  :root {
+    --board: min(calc(100vw - 54px), 560px);
+  }
+  body {
+    font-size: 15px;
+  }
+  .app {
+    display: block;
+  }
+  .sidebar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: auto;
+    z-index: 50;
+    padding: 0.25rem 0.25rem calc(0.25rem + env(safe-area-inset-bottom));
+    border-right: 0;
+    border-top: 1px solid var(--line);
+    flex-direction: row;
+    gap: 0;
+  }
+  .brand,
+  .sidebar-foot {
+    display: none;
+  }
+  .sidebar nav {
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+  }
+  .nav-item {
+    flex-direction: column;
+    gap: 0.1rem;
+    padding: 0.35rem 0.4rem;
+    font-size: 0.68rem;
+    flex: 1;
+    text-align: center;
+  }
+  .nav-icon {
+    font-size: 1.25rem;
+    width: auto;
+  }
+  .content {
+    padding: 0.9rem 12px calc(80px + env(safe-area-inset-bottom));
+  }
+  h1 {
+    font-size: 1.35rem;
+  }
+  .card {
+    padding: 0.9rem;
+    border-radius: 10px;
+  }
+  .analysis,
+  .puzzles {
+    gap: 0.8rem;
+  }
+  .puzzles .board {
+    width: calc(100vw - 24px);
+    height: calc(100vw - 24px);
+    max-width: 560px;
+    max-height: 560px;
+  }
+  .player-line,
+  .controls {
+    padding-left: 30px;
+  }
+  .controls .btn {
+    padding: 0.45rem 0.7rem;
+  }
+  .evalchart {
+    width: calc(var(--board) + 30px);
+    height: 80px;
+  }
+  .steps li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+  .modules,
+  .pieces {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Tabla de partidas: solo las columnas esenciales */
+  table.games {
+    font-size: 0.82rem;
+  }
+  .games th:nth-child(2),
+  .games td:nth-child(2),
+  .games th:nth-child(6),
+  .games td:nth-child(6),
+  .games th:nth-child(7),
+  .games td:nth-child(7) {
+    display: none;
+  }
+  .games td {
+    padding: 0.45rem 0.3rem;
+  }
+  .toolbar .btn {
+    flex: 1 1 auto;
+  }
+  .kpi {
+    min-width: 0;
+    flex: 1;
+  }
+}
+
+.handoff {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+.handoff textarea {
+  font-size: 0.75rem;
+}
+a.btn {
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* Las letras de columna de chessground van desplazadas 24px y se salen del tablero: se alinean dentro */
+.cg-wrap coords.files {
+  left: 0;
+}
+.cg-wrap coords.files coord {
+  text-align: right;
+  padding-right: 3px;
+}
+.content {
+  overflow-x: clip;
+}
+
+@media (max-width: 1200px) {
+  .analysis,
+  .puzzles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+select {
+  max-width: 100%;
+}

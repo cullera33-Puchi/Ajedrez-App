@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { type GameAnalysis, type ParsedGame, toSpanishSan } from '../lib/analysis'
 import {
   askCoach,
+  CLAUDE_AI_URL,
+  type Handoff,
   buildGameContext,
   type CoachChat,
   type CoachReport,
@@ -36,7 +38,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
   const [chat, setChat] = useState<CoachChat | null>(() => loadChat(game.id))
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
-  const [copied, setCopied] = useState<string | null>(null)
+  const [handoff, setHandoff] = useState<Handoff | null>(null)
 
   useEffect(() => {
     fetchCoachStatus().then(setStatus)
@@ -63,13 +65,28 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     const request = withQuestion
       ? `${describePosition(parsed, analysis, ply)}\n\nMi pregunta sobre esta posición: ${question.trim()}`
       : undefined
-    try {
-      await openInClaudeAi(context, request)
-      setCopied('Texto copiado. En la pestaña de Claude que se ha abierto, pega con Ctrl+V y envía.')
-    } catch (e) {
-      setError((e as Error).message)
-    }
+    setHandoff(await openInClaudeAi(context, request))
   }
+
+  const handoffInfo = handoff && (
+    <div className="handoff">
+      {handoff.copied ? (
+        <p className="small">
+          Texto copiado. {handoff.opened ? 'En la pestaña de Claude que se ha abierto, pega el texto y envíalo.' : 'Abre Claude, pega el texto y envíalo.'}
+        </p>
+      ) : (
+        <>
+          <p className="small">No se ha podido copiar automáticamente. Selecciona todo el texto, cópialo y pégalo en Claude:</p>
+          <textarea readOnly rows={5} value={handoff.text} onFocus={(e) => e.currentTarget.select()} />
+        </>
+      )}
+      {(!handoff.opened || !handoff.copied) && (
+        <a className="btn small" href={CLAUDE_AI_URL} target="_blank" rel="noreferrer">
+          Abrir claude.ai
+        </a>
+      )}
+    </div>
+  )
 
   const ask = async () => {
     if (!analysis || !question.trim() || !status) return
@@ -109,7 +126,6 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
       <button className="btn small" onClick={() => openClaudeAi(false)} disabled={!analysis} title="Copia la partida y abre claude.ai">
         Abrir en claude.ai
       </button>
-      {copied && <span className="small muted">{copied}</span>}
     </div>
   )
 
@@ -119,13 +135,16 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
         <h2>Entrenador IA</h2>
         <p className="muted">
           {status === null
-            ? 'El entrenador integrado necesita el servidor local: arranca la app con iniciar.bat o npm run dev.'
+            ? 'En la versión web y en el móvil, lleva la partida a Claude con el botón de abajo. El entrenador integrado funciona al arrancar la app en tu PC.'
             : status.provider === 'plan'
               ? 'Para que Claude comente aquí tus partidas con tu plan, instala Claude Code e inicia sesión (instrucciones en Inicio).'
               : 'Falta la clave de API. Configúrala en Inicio o cambia al modo de tu plan.'}
         </p>
-        <p className="muted">Mientras tanto, puedes llevar la partida a claude.ai: se copia todo el análisis y solo tienes que pegarlo.</p>
+        {status !== null && (
+          <p className="muted">Mientras tanto, puedes llevar la partida a claude.ai: se copia todo el análisis y solo tienes que pegarlo.</p>
+        )}
         {claudeAiButtons}
+        {handoffInfo}
         {error && <p className="msg error">{error}</p>}
       </section>
     )
@@ -145,6 +164,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
             {analysis ? 'Analizar la partida con Claude' : 'Espera a que termine Stockfish'}
           </button>
           {claudeAiButtons}
+          {handoffInfo}
         </>
       )}
       {loading && (
@@ -212,7 +232,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
               Seguir en claude.ai
             </button>
           </div>
-          {copied && <p className="small muted">{copied}</p>}
+          {handoffInfo}
         </div>
       )}
 
@@ -250,6 +270,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
           placeholder={`Sobre la posición tras ${ply ? plyLabel(parsed, ply) : 'el inicio'}. Por ejemplo: ¿por qué es mala esta jugada?`}
           disabled={!analysis || asking}
         />
+        {handoffInfo}
         <div className="toolbar">
           <button className="btn primary small" onClick={ask} disabled={!analysis || asking || !question.trim()}>
             Preguntar

@@ -111,7 +111,11 @@ export interface CoachStatus {
   api: { configured: boolean; model: string }
 }
 
+/** La API local solo existe cuando la app se sirve desde el PC (en la raíz). En GitHub Pages no hay servidor. */
+const hasLocalServer = import.meta.env.BASE_URL === '/'
+
 export async function fetchCoachStatus(): Promise<CoachStatus | null> {
+  if (!hasLocalServer) return null
   try {
     const res = await fetch('/api/coach/status')
     if (!res.ok) return null
@@ -140,19 +144,50 @@ export async function askCoach(chat: CoachChat): Promise<{ turn: ChatTurn; sessi
   return { turn: { role: 'assistant', content: r.content, text: r.text }, sessionId: r.sessionId }
 }
 
-/**
- * Copia al portapapeles el texto para Claude y abre claude.ai en una pestaña nueva.
- * Funciona con cualquier plan y no necesita configuración.
- */
-export async function openInClaudeAi(context: string, request = CLAUDE_AI_REPORT_REQUEST): Promise<void> {
-  const text = claudeAiPrompt(context, request)
+export const CLAUDE_AI_URL = 'https://claude.ai/new'
+
+/** Copia texto al portapapeles. Con http en la red local no hay API de portapapeles y se usa el método antiguo. */
+export async function copyText(text: string): Promise<boolean> {
   try {
-    await navigator.clipboard.writeText(text)
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
   } catch {
-    throw new Error('No se ha podido copiar al portapapeles. Revisa los permisos del navegador.')
-  } finally {
-    window.open('https://claude.ai/new', '_blank', 'noopener')
+    // Se intenta el método alternativo.
   }
+  try {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    ta.remove()
+    return ok
+  } catch {
+    return false
+  }
+}
+
+export interface Handoff {
+  text: string
+  copied: boolean
+  opened: boolean
+}
+
+/**
+ * Copia al portapapeles el texto para Claude y abre claude.ai en una pestaña nueva (en el móvil,
+ * la app de Claude si está instalada). Funciona con cualquier plan y no necesita configuración.
+ */
+export async function openInClaudeAi(context: string, request = CLAUDE_AI_REPORT_REQUEST): Promise<Handoff> {
+  const text = claudeAiPrompt(context, request)
+  const copied = await copyText(text)
+  const win = window.open(CLAUDE_AI_URL, '_blank')
+  if (win) win.opener = null
+  return { text, copied, opened: Boolean(win) }
 }
 
 export const loadReport = (gameId: string) => load<CoachReport | null>(`coach:${gameId}`, null)

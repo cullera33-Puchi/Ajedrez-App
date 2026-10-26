@@ -6,6 +6,8 @@ import { coachPlugin } from './server/coach.ts'
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
+    // En GitHub Pages la app vive en /ajedrez-app/; en el PC, en la raíz.
+    base: env.BASE_PATH || '/',
     plugins: [
       react(),
       coachPlugin({
