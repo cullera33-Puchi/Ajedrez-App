@@ -200,6 +200,21 @@ describe('importación de Chess.com con fetch simulado', () => {
       const games = await fetchChesscomGames('Anriqui ')
       expect(games).toHaveLength(1)
       expect(games[0].userColor).toBe('white')
+      // Historial completo: primera vez todos los meses; la segunda, solo los dos más recientes
+      const { importChesscomHistory } = await import('./chesscom')
+      const got: string[] = []
+      const urls: string[] = []
+      const fetchMock = globalThis.fetch
+      globalThis.fetch = (async (url: string) => {
+        urls.push(url)
+        return fetchMock(url)
+      }) as typeof fetch
+      const first = await importChesscomHistory('anriqui', (g) => got.push(...g.map((x) => x.id)))
+      expect(first).toEqual({ games: 1, months: 3 })
+      urls.length = 0
+      const second = await importChesscomHistory('anriqui', () => undefined)
+      expect(second.months).toBe(2)
+      expect(urls.some((u) => u.endsWith('/2026/02'))).toBe(false)
     } finally {
       globalThis.fetch = original
     }
@@ -306,5 +321,32 @@ describe('bots', () => {
     expect(s.black.rating).toBe(400)
     expect(parsePgn(s.pgn).moves).toHaveLength(7)
     expect(s.pgn).toContain('[Result "1-0"]')
+  })
+})
+
+describe('almacén de partidas (IndexedDB o memoria)', () => {
+  it('migra partidas y análisis del formato anterior y guarda resúmenes', async () => {
+    const { resetDbForTests } = await import('./db')
+    const store = await import('./games')
+    const { save, load, listKeys } = await import('./storage')
+    const { summarizeStored } = await import('./recommend')
+    resetDbForTests()
+    store.resetStoreForTests()
+    const g = { ...DEMO_GAMES[0], id: 'cc-viejo', source: 'chesscom' as const }
+    const parsed = parsePgn(g.pgn)
+    const positions: PositionEval[] = parsed.fens.map(() => ({ cp: 30, pv: [] }))
+    positions[8] = { cp: 250, best: 'c4f7', pv: ['c4f7', 'e8e7'] }
+    positions[9] = { cp: -600, best: 'g5g2', pv: ['g5g2', 'h1f1', 'g2e4', 'c4e2', 'd4f3'] }
+    save('games', [g])
+    save('analysis:cc-viejo', buildAnalysis(parsed, positions, 12))
+    await store.initStore(summarizeStored)
+    expect(store.getGames().map((x) => x.id)).toEqual(['cc-viejo'])
+    expect(store.getSummary('cc-viejo')?.counts.white.grave).toBe(1)
+    expect((await store.loadAnalysis('cc-viejo'))?.depth).toBe(12)
+    expect(load('games', null)).toBeNull()
+    expect(listKeys('analysis:')).toEqual([])
+    // Fusión sin duplicados y ordenada por fecha
+    const newer = { ...g, id: 'cc-nuevo', date: g.date + 1000 }
+    expect(store.mergeGames([newer, g]).map((x) => x.id)).toEqual(['cc-nuevo', 'cc-viejo'])
   })
 })

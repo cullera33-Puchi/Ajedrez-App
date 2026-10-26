@@ -1,28 +1,87 @@
 import type { GameAnalysis } from './analysis'
-import { load, save } from './storage'
+import { db } from './db'
+import type { AnalysisSummary } from './recommend'
+import { listKeys, load, remove } from './storage'
 import type { GameSummary } from './types'
 
-const MAX_GAMES = 300
+/**
+ * Almacén de partidas y análisis en IndexedDB. La lista de partidas y los resúmenes de análisis
+ * se mantienen en memoria para leerlos al instante; el análisis completo se carga al abrir la partida.
+ */
 
-export function loadGames(): GameSummary[] {
-  return load<GameSummary[]>('games', [])
+let games: GameSummary[] = []
+const summaries = new Map<string, AnalysisSummary>()
+
+const byDate = (a: GameSummary, b: GameSummary) => b.date - a.date
+
+export type Summarizer = (game: GameSummary, analysis: GameAnalysis) => AnalysisSummary | null
+
+/** Abre la base de datos, migra lo guardado en versiones anteriores (localStorage) y carga la memoria. */
+export async function initStore(summarize: Summarizer): Promise<void> {
+  const store = await db()
+  // Migración desde localStorage
+  const oldGames = load<GameSummary[] | null>('games', null)
+  if (oldGames?.length) {
+    await store.putMany('games', oldGames.map((g) => [g.id, g]))
+    remove('games')
+  }
+  const loaded = await store.getAll<GameSummary>('games')
+  games = loaded.sort(byDate)
+  for (const key of listKeys('analysis:')) {
+    const id = key.slice('analysis:'.length)
+    const analysis = load<GameAnalysis | null>(key, null)
+    const game = games.find((g) => g.id === id) ?? DEMO_GAMES.find((g) => g.id === id)
+    if (analysis && game) {
+      const s = summarize(game, analysis)
+      await store.putMany('analyses', [[id, analysis]])
+      if (s) await store.putMany('summaries', [[id, s]])
+    }
+    remove(key)
+  }
+  for (const s of await store.getAll<AnalysisSummary>('summaries')) summaries.set(s.id, s)
+  // Pide al navegador que no borre los datos por falta de espacio (sobre todo en iPhone).
+  navigator.storage?.persist?.().catch(() => undefined)
 }
 
-/** Añade partidas nuevas sin duplicar y guarda la lista ordenada por fecha. */
-export function mergeGames(current: GameSummary[], incoming: GameSummary[]): GameSummary[] {
-  const byId = new Map(current.map((g) => [g.id, g]))
+export const getGames = () => games
+
+/** Añade o actualiza partidas sin duplicar. Devuelve la nueva lista (ordenada por fecha). */
+export function mergeGames(incoming: GameSummary[]): GameSummary[] {
+  if (!incoming.length) return games
+  const byId = new Map(games.map((g) => [g.id, g]))
   for (const g of incoming) byId.set(g.id, g)
-  const merged = [...byId.values()].sort((a, b) => b.date - a.date).slice(0, MAX_GAMES)
-  save('games', merged)
-  return merged
+  games = [...byId.values()].sort(byDate)
+  void db().then((s) => s.putMany('games', incoming.map((g) => [g.id, g])))
+  return games
 }
 
-export function saveGames(games: GameSummary[]): void {
-  save('games', games)
+export const getSummary = (id: string) => summaries.get(id)
+export const allSummaries = () => [...summaries.values()]
+
+export async function loadAnalysis(id: string): Promise<GameAnalysis | null> {
+  return (await (await db()).get<GameAnalysis>('analyses', id)) ?? null
 }
 
-export const loadAnalysis = (gameId: string) => load<GameAnalysis | null>(`analysis:${gameId}`, null)
-export const saveAnalysis = (gameId: string, a: GameAnalysis) => save(`analysis:${gameId}`, a)
+export async function saveAnalysis(id: string, analysis: GameAnalysis, summary: AnalysisSummary | null): Promise<void> {
+  const store = await db()
+  await store.putMany('analyses', [[id, analysis]])
+  if (summary) {
+    summaries.set(id, summary)
+    await store.putMany('summaries', [[id, summary]])
+  }
+}
+
+/** Actualiza solo el resumen (por ejemplo, para marcar que ya se generaron sus problemas). */
+export async function updateSummary(summary: AnalysisSummary): Promise<void> {
+  summaries.set(summary.id, summary)
+  await (await db()).putMany('summaries', [[summary.id, summary]])
+}
+
+/** Solo para pruebas. */
+export function resetStoreForTests() {
+  games = []
+  summaries.clear()
+}
 
 export const DEMO_GAMES: GameSummary[] = [
   {

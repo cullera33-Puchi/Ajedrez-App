@@ -7,8 +7,8 @@ import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzle
 import { recommendThemes } from '../lib/recommend'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import type { Settings } from '../lib/settings'
-import { listKeys, load, save } from '../lib/storage'
-import type { GameAnalysis } from '../lib/analysis'
+import { load, save } from '../lib/storage'
+import { getSummary } from '../lib/games'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -79,15 +79,9 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   const topTheme = recommendThemes(games).themes[0]
 
   // Errores graves del usuario en las partidas ya analizadas.
-  const analysed = listKeys('analysis:')
-    .map((k) => ({ id: k.slice('analysis:'.length), a: load<GameAnalysis | null>(k, null) }))
-    .filter((x) => x.a)
-  const userBlunders = analysed
-    .map(({ id, a }) => {
-      const g = games.find((x) => x.id === id)
-      return g?.userColor ? a!.counts[g.userColor].grave : undefined
-    })
-    .filter((n): n is number => n !== undefined)
+  const userBlunders = games
+    .filter((g) => g.userColor && getSummary(g.id))
+    .map((g) => getSummary(g.id)!.counts[g.userColor!].grave)
   const avgBlunders = userBlunders.length ? userBlunders.reduce((s, n) => s + n, 0) / userBlunders.length : undefined
 
   return (

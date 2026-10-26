@@ -1,3 +1,4 @@
+import { load, save } from './storage'
 import type { GameSummary, Result } from './types'
 
 // API pública de Chess.com (solo lectura): https://www.chess.com/news/view/published-data-api
@@ -89,14 +90,63 @@ export function normalizeChesscomGame(g: CcGame, username: string): GameSummary 
   }
 }
 
-/** Descarga las partidas de los últimos meses. Las peticiones van en serie, como pide Chess.com. */
+export interface ImportProgress {
+  done: number
+  total: number
+}
+
+/** Meses ya descargados por usuario, para que las siguientes importaciones solo traigan lo nuevo. */
+type SyncState = Record<string, string[]>
+
+const syncKey = (user: string) => `chesscomSync:${user}`
+
+/**
+ * Importa el historial de Chess.com. La primera vez descarga todos los meses; después, solo los meses
+ * nuevos y los dos más recientes (que pueden tener partidas nuevas). Las peticiones van en serie, como
+ * pide Chess.com, y cada mes se entrega en cuanto llega para no perder lo descargado si algo falla.
+ */
+export async function importChesscomHistory(
+  username: string,
+  onMonth: (games: GameSummary[]) => void,
+  onProgress?: (p: ImportProgress) => void,
+): Promise<{ games: number; months: number }> {
+  const user = username.trim().toLowerCase()
+  const { archives } = await getJson<{ archives: string[] }>(`${BASE}/player/${encodeURIComponent(user)}/games/archives`)
+  const synced = new Set(load<SyncState>('chesscomSync', {})[syncKey(user)] ?? [])
+  const recent = new Set(archives.slice(-2))
+  const pending = archives.filter((url) => !synced.has(url) || recent.has(url)).reverse()
+  let total = 0
+  for (const [i, url] of pending.entries()) {
+    onProgress?.({ done: i, total: pending.length })
+    let data: { games: CcGame[] }
+    try {
+      data = await getJson<{ games: CcGame[] }>(url)
+    } catch (e) {
+      // Si Chess.com pide calma, se espera y se reintenta una vez.
+      if (e instanceof ImportError && e.detail.includes('HTTP 429')) {
+        await new Promise((r) => setTimeout(r, 3000))
+        data = await getJson<{ games: CcGame[] }>(url)
+      } else throw e
+    }
+    const month = data.games.map((g) => normalizeChesscomGame(g, user)).filter((g): g is GameSummary => g !== null)
+    onMonth(month)
+    total += month.length
+    synced.add(url)
+    const state = load<SyncState>('chesscomSync', {})
+    state[syncKey(user)] = [...synced]
+    save('chesscomSync', state)
+  }
+  onProgress?.({ done: pending.length, total: pending.length })
+  return { games: total, months: pending.length }
+}
+
+/** Descarga las partidas de los últimos meses (si no hay recientes, sigue hacia atrás hasta 6 meses). */
 export async function fetchChesscomGames(username: string, months = 2): Promise<GameSummary[]> {
   const user = username.trim().toLowerCase()
   const { archives } = await getJson<{ archives: string[] }>(`${BASE}/player/${encodeURIComponent(user)}/games/archives`)
   const games: GameSummary[] = []
   const recent = archives.slice(-6).reverse()
   for (const [i, url] of recent.entries()) {
-    // Los últimos meses pedidos; si no hay partidas, se sigue hacia atrás hasta 6 meses.
     if (i >= months && games.length) break
     const data = await getJson<{ games: CcGame[] }>(url)
     for (const g of data.games) {

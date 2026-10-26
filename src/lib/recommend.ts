@@ -1,7 +1,7 @@
 import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js'
-import { type GameAnalysis, materialBalance, type ParsedGame, parsePgn, playLine } from './analysis'
+import { type Classification, type GameAnalysis, materialBalance, type ParsedGame, parsePgn, playLine } from './analysis'
 import { loadReport } from './coach'
-import { loadAnalysis } from './games'
+import { getSummary } from './games'
 import type { GameSummary } from './types'
 
 /**
@@ -113,6 +113,41 @@ const sorted = (counts: Map<string, number>): ThemeCount[] =>
 
 const sideOf = (g: GameSummary) => (g.userColor === 'white' ? 'w' : g.userColor === 'black' ? 'b' : undefined)
 
+/** Resumen de un análisis que se guarda aparte para no tener que cargar el análisis completo. */
+export interface AnalysisSummary {
+  id: string
+  depth: number
+  accuracy: { white: number; black: number }
+  counts: { white: Record<Classification, number>; black: Record<Classification, number> }
+  /** Temas deducidos de los errores del usuario (sin contar el informe de Claude). */
+  themes: ThemeCount[]
+  analyzedAt: number
+  /** Ya se generaron los problemas con los errores de esta partida. */
+  puzzlesDone?: boolean
+}
+
+export function buildSummary(game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis): AnalysisSummary {
+  const counts = new Map<string, number>()
+  for (const m of mistakeThemes(parsed, analysis, sideOf(game))) addCounts(counts, m.themes)
+  return {
+    id: game.id,
+    depth: analysis.depth,
+    accuracy: analysis.accuracy,
+    counts: analysis.counts,
+    themes: sorted(counts),
+    analyzedAt: Date.now(),
+  }
+}
+
+/** Para la migración de análisis guardados en versiones anteriores. */
+export function summarizeStored(game: GameSummary, analysis: GameAnalysis): AnalysisSummary | null {
+  try {
+    return buildSummary(game, parsePgn(game.pgn), analysis)
+  } catch {
+    return null
+  }
+}
+
 /** Temas a practicar según los errores de una partida. */
 export function themesForGame(game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis): ThemeCount[] {
   const counts = new Map<string, number>()
@@ -134,15 +169,10 @@ export function recommendThemes(games: GameSummary[], maxGames = 15): Recommenda
   for (const g of [...games].sort((a, b) => b.date - a.date)) {
     if (used >= maxGames) break
     if (!g.userColor) continue
-    const analysis = loadAnalysis(g.id)
-    if (!analysis) continue
-    let parsed: ParsedGame
-    try {
-      parsed = parsePgn(g.pgn)
-    } catch {
-      continue
-    }
-    for (const t of themesForGame(g, parsed, analysis)) counts.set(t.theme, (counts.get(t.theme) ?? 0) + t.count)
+    const summary = getSummary(g.id)
+    if (!summary) continue
+    for (const t of summary.themes) counts.set(t.theme, (counts.get(t.theme) ?? 0) + t.count)
+    addCounts(counts, loadReport(g.id)?.temas ?? [])
     used++
   }
   return { themes: sorted(counts), games: used }

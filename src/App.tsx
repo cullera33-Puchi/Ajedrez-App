@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { DEMO_GAMES, loadGames, mergeGames } from './lib/games'
+import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import type { GameSummary } from './lib/types'
 import { AnalysisView } from './views/Analysis'
@@ -23,7 +23,7 @@ const NAV: { id: View; label: string; icon: string }[] = [
 export default function App() {
   const [view, setView] = useState<View>('inicio')
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
-  const [games, setGames] = useState<GameSummary[]>(loadGames)
+  const [games, setGames] = useState<GameSummary[]>(getGames)
   const [gameId, setGameId] = useState<string | null>(null)
   const [puzzleTheme, setPuzzleTheme] = useState('mix')
 
@@ -39,7 +39,7 @@ export default function App() {
     setSettingsState(s)
     saveSettings(s)
   }
-  const addGames = (incoming: GameSummary[]) => setGames((cur) => mergeGames(cur, incoming))
+  const addGames = (incoming: GameSummary[]) => setGames(mergeGames(incoming))
   const openGame = (id: string) => {
     setGameId(id)
     setView('analisis')

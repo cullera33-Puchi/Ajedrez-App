@@ -9,7 +9,8 @@ import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, 
 import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
 import { themeName } from '../lib/puzzles'
-import { themesForGame } from '../lib/recommend'
+import { buildSummary, themesForGame } from '../lib/recommend'
+import { setBusy } from '../lib/activity'
 import type { Settings } from '../lib/settings'
 import type { Color, GameSummary } from '../lib/types'
 
@@ -54,7 +55,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
       return null
     }
   }, [game.pgn])
-  const [analysis, setAnalysis] = useState<GameAnalysis | null>(() => loadAnalysis(game.id))
+  const [analysis, setAnalysis] = useState<GameAnalysis | null>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ply, setPly] = useState(0)
@@ -78,21 +79,35 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
       try {
         const a = await analyzeGame(parsed, depth, (done, t) => setProgress({ done, total: t }), ctrl.signal)
         setAnalysis(a)
-        saveAnalysis(game.id, a)
+        await saveAnalysis(game.id, a, buildSummary(game, parsed, a))
       } catch (e) {
         if ((e as Error).name !== 'AbortError') setError((e as Error).message)
       } finally {
         if (abortRef.current === ctrl) setProgress(null)
       }
     },
-    [parsed, game.id],
+    [parsed, game],
   )
 
+  // Al abrir la partida: se carga el análisis guardado o, si no hay, se analiza.
   useEffect(() => {
-    if (!analysis && parsed) void start(settings.depth)
-    return () => abortRef.current?.abort()
-    // Solo al abrir la partida.
+    let cancelled = false
+    loadAnalysis(game.id).then((saved) => {
+      if (cancelled) return
+      if (saved) setAnalysis(saved)
+      else if (parsed) void start(settings.depth)
+    })
+    return () => {
+      cancelled = true
+      abortRef.current?.abort()
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Mientras se analiza esta partida, el análisis en segundo plano se para.
+  useEffect(() => {
+    setBusy('analysis', Boolean(progress))
+    return () => setBusy('analysis', false)
+  }, [progress])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

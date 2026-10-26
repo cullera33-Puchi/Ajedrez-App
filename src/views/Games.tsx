@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { View } from '../App'
-import { fetchChesscomGames, ImportError } from '../lib/chesscom'
+import { importChesscomHistory, type ImportProgress, ImportError } from '../lib/chesscom'
 import { fetchLichessGames } from '../lib/lichess'
 import { gameFromPgn, gamesFromPgnFile } from '../lib/pgnImport'
 import type { Settings } from '../lib/settings'
-import { listKeys } from '../lib/storage'
+import { getSummary } from '../lib/games'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -42,10 +42,11 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
   const [busy, setBusy] = useState<string | null>(null)
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string; detail?: string } | null>(null)
   const [ccUser, setCcUser] = useState(settings.chesscomUser)
+  const [progress, setProgress] = useState<ImportProgress | null>(null)
+  const [limit, setLimit] = useState(50)
   const [filter, setFilter] = useState<Filter>('todas')
   const [showPgn, setShowPgn] = useState(false)
   const [pgn, setPgn] = useState('')
-  const analysed = new Set(listKeys('analysis:').map((k) => k.slice('analysis:'.length)))
 
   const run = async (label: string, fn: () => Promise<GameSummary[]>) => {
     setBusy(label)
@@ -61,11 +62,33 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     }
   }
 
-  const importChesscom = () => {
+  const importChesscom = async () => {
     const user = ccUser.trim()
-    if (!user) return
+    if (!user || busy) return
     if (user !== settings.chesscomUser) onSettings({ ...settings, chesscomUser: user })
-    void run('Chess.com', () => fetchChesscomGames(user))
+    setBusy('Chess.com')
+    setMsg(null)
+    try {
+      const r = await importChesscomHistory(user, onAddGames, setProgress)
+      setMsg({
+        kind: 'ok',
+        text: r.games
+          ? `Importadas ${r.games} partidas de Chess.com (${r.months} ${r.months === 1 ? 'mes revisado' : 'meses revisados'}).`
+          : 'No hay partidas nuevas en Chess.com.',
+      })
+    } catch (e) {
+      setMsg({ kind: 'error', text: (e as Error).message, detail: e instanceof ImportError ? e.detail : String(e) })
+    } finally {
+      setBusy(null)
+      setProgress(null)
+    }
+  }
+
+  const importLichess = () => {
+    const user = settings.lichessUser.trim().toLowerCase()
+    const mine = games.filter((g) => g.source === 'lichess' && (g.white.name.toLowerCase() === user || g.black.name.toLowerCase() === user))
+    const since = mine.length ? Math.max(...mine.map((g) => g.date)) : undefined
+    void run('Lichess', () => fetchLichessGames(settings.lichessUser, 300, since))
   }
 
   const importFile = async (file: File | undefined) => {
@@ -121,7 +144,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
           <button
             className="btn primary"
             disabled={!settings.lichessUser || !!busy}
-            onClick={() => run('Lichess', () => fetchLichessGames(settings.lichessUser))}
+            onClick={importLichess}
           >
             {busy === 'Lichess' ? 'Importando…' : 'Importar de Lichess'}
           </button>
@@ -150,6 +173,16 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
             </button>
           </div>
         )}
+        {progress && progress.total > 0 && (
+          <div className="progress">
+            <div className="progress-bar">
+              <div style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+            </div>
+            <span className="small">
+              Descargando de Chess.com: mes {Math.min(progress.done + 1, progress.total)} de {progress.total}
+            </span>
+          </div>
+        )}
         {msg && (
           <div className={`msg ${msg.kind}`}>
             <p>{msg.text}</p>
@@ -166,7 +199,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       <section className="card">
         <div className="tabs">
           {(['todas', 'victoria', 'derrota', 'tablas'] as Filter[]).map((f) => (
-            <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>
+            <button key={f} className={`tab ${filter === f ? 'active' : ''}`} onClick={() => { setFilter(f); setLimit(50) }}>
               {f === 'todas' ? 'Todas' : f === 'victoria' ? 'Victorias' : f === 'derrota' ? 'Derrotas' : 'Tablas'}
             </button>
           ))}
@@ -185,7 +218,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
             </tr>
           </thead>
           <tbody>
-            {list.map((g) => {
+            {list.slice(0, limit).map((g) => {
               const o = outcomeFor(g)
               return (
                 <tr key={g.id} onClick={() => onOpenGame(g.id)}>
@@ -203,7 +236,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
                   <td>{g.timeClass ? (TIME_LABEL[g.timeClass] ?? g.timeClass) : ''}</td>
                   <td className="opening">{g.opening ?? ''}</td>
                   <td>
-                    <button className="btn small">{analysed.has(g.id) ? 'Ver análisis' : 'Analizar'}</button>
+                    <button className="btn small">{getSummary(g.id) ? 'Ver análisis' : 'Analizar'}</button>
                   </td>
                 </tr>
               )
@@ -211,6 +244,12 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
           </tbody>
         </table>
         {!list.length && <p className="muted">No hay partidas con este filtro.</p>}
+        {list.length > limit && (
+          <button className="btn more-btn" onClick={() => setLimit((l) => l + 50)}>
+            Ver más ({list.length - limit} restantes)
+          </button>
+        )}
+        <p className="muted small">{list.length} partidas.</p>
       </section>
     </div>
   )

@@ -64,9 +64,14 @@ export function normalizeLichessGame(g: LiGame, username: string): GameSummary |
   }
 }
 
-export async function fetchLichessGames(username: string, max = 40): Promise<GameSummary[]> {
+/**
+ * Partidas de Lichess. Con `since` (milisegundos) solo trae las posteriores a esa fecha, así las
+ * importaciones siguientes descargan solo lo nuevo.
+ */
+export async function fetchLichessGames(username: string, max = 300, since?: number): Promise<GameSummary[]> {
   const user = username.trim()
   const params = new URLSearchParams({ max: String(max), pgnInJson: 'true', opening: 'true', clocks: 'false', evals: 'false' })
+  if (since) params.set('since', String(since + 1))
   const res = await request(`${BASE}/api/games/user/${encodeURIComponent(user)}?${params}`, {
     headers: { Accept: 'application/x-ndjson' },
   })

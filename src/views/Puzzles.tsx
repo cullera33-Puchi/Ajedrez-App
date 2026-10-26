@@ -12,7 +12,7 @@ import {
   themeName,
   updateRating,
 } from '../lib/puzzles'
-import { loadGames } from '../lib/games'
+import { getGames } from '../lib/games'
 import { recommendThemes } from '../lib/recommend'
 import { usePersistentState } from '../lib/storage'
 import type { Color } from '../lib/types'
@@ -44,7 +44,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [resetKey, setResetKey] = useState(0)
   const [flags, setFlags] = useState({ mistake: false, hint: false, rated: false })
   const [notice, setNotice] = useState<string | null>(null)
-  const recommendation = useMemo(() => recommendThemes(loadGames()), [])
+  const recommendation = useMemo(() => recommendThemes(getGames()), [])
 
   const begin = (p: Puzzle) => {
     setPuzzle(p)

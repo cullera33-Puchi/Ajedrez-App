@@ -1900,3 +1900,8 @@ label {
     display: none;
   }
 }
+
+.more-btn {
+  width: 100%;
+  margin-top: 0.6rem;
+}
