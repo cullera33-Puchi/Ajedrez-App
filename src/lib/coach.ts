@@ -1,4 +1,5 @@
 import { CLASS_LABEL, formatEval, type GameAnalysis, lineToSpanish, type ParsedGame, toSpanishSan } from './analysis'
+import { CLAUDE_AI_REPORT_REQUEST, claudeAiPrompt } from '../../shared/coachPrompts'
 import { load, save } from './storage'
 import { outcomeFor, type GameSummary } from './types'
 
@@ -15,10 +16,15 @@ export interface CoachReport {
 }
 
 /** Turno de conversación. Las respuestas de Claude se guardan completas para reenviarlas sin cambios. */
-export type ChatTurn = { role: 'user'; text: string; ply: number } | { role: 'assistant'; content: unknown[]; text: string }
+export type ChatTurn = { role: 'user'; text: string; ply: number } | { role: 'assistant'; content?: unknown[]; text: string }
+
+export type CoachProvider = 'plan' | 'api'
 
 export interface CoachChat {
   context: string
+  provider: CoachProvider
+  /** Sesión de Claude Code para continuar la conversación (modo plan). */
+  sessionId?: string
   turns: ChatTurn[]
 }
 
@@ -98,8 +104,11 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 export interface CoachStatus {
-  configured: boolean
-  model: string
+  provider: CoachProvider
+  /** true si el modo elegido está listo para usarse. */
+  ready: boolean
+  plan: { installed: boolean; loggedIn: boolean; authMethod?: string; usesApiBilling: boolean }
+  api: { configured: boolean; model: string }
 }
 
 export async function fetchCoachStatus(): Promise<CoachStatus | null> {
@@ -113,15 +122,37 @@ export async function fetchCoachStatus(): Promise<CoachStatus | null> {
 }
 
 export const saveCoachKey = (apiKey: string) => post<CoachStatus>('/api/coach/key', { apiKey })
+export const setCoachProvider = (provider: CoachProvider) => post<CoachStatus>('/api/coach/provider', { provider })
 
 export async function requestReport(context: string): Promise<CoachReport> {
   return (await post<{ report: CoachReport }>('/api/coach/report', { context })).report
 }
 
-export async function askCoach(chat: CoachChat): Promise<ChatTurn> {
-  const history = chat.turns.map((t) => (t.role === 'user' ? { role: 'user', text: t.text } : { role: 'assistant', content: t.content }))
-  const r = await post<{ content: unknown[]; text: string }>('/api/coach/ask', { context: chat.context, history })
-  return { role: 'assistant', content: r.content, text: r.text }
+export async function askCoach(chat: CoachChat): Promise<{ turn: ChatTurn; sessionId?: string }> {
+  const history = chat.turns.map((t) =>
+    t.role === 'user' ? { role: 'user', text: t.text } : { role: 'assistant', content: t.content, text: t.text },
+  )
+  const r = await post<{ content?: unknown[]; text: string; sessionId?: string }>('/api/coach/ask', {
+    context: chat.context,
+    history,
+    sessionId: chat.sessionId,
+  })
+  return { turn: { role: 'assistant', content: r.content, text: r.text }, sessionId: r.sessionId }
+}
+
+/**
+ * Copia al portapapeles el texto para Claude y abre claude.ai en una pestaña nueva.
+ * Funciona con cualquier plan y no necesita configuración.
+ */
+export async function openInClaudeAi(context: string, request = CLAUDE_AI_REPORT_REQUEST): Promise<void> {
+  const text = claudeAiPrompt(context, request)
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch {
+    throw new Error('No se ha podido copiar al portapapeles. Revisa los permisos del navegador.')
+  } finally {
+    window.open('https://claude.ai/new', '_blank', 'noopener')
+  }
 }
 
 export const loadReport = (gameId: string) => load<CoachReport | null>(`coach:${gameId}`, null)

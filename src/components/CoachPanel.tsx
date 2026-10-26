@@ -9,6 +9,7 @@ import {
   describePosition,
   fetchCoachStatus,
   loadChat,
+  openInClaudeAi,
   requestReport,
   saveChat,
   saveReport,
@@ -35,6 +36,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
   const [chat, setChat] = useState<CoachChat | null>(() => loadChat(game.id))
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
 
   useEffect(() => {
     fetchCoachStatus().then(setStatus)
@@ -55,11 +57,26 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     }
   }
 
-  const ask = async () => {
-    if (!analysis || !question.trim()) return
+  const openClaudeAi = async (withQuestion: boolean) => {
+    if (!analysis) return
     const context = buildGameContext(game, parsed, analysis)
-    // Si el análisis ha cambiado, la conversación anterior ya no corresponde a este contexto.
-    const base: CoachChat = chat && chat.context === context ? chat : { context, turns: [] }
+    const request = withQuestion
+      ? `${describePosition(parsed, analysis, ply)}\n\nMi pregunta sobre esta posición: ${question.trim()}`
+      : undefined
+    try {
+      await openInClaudeAi(context, request)
+      setCopied('Texto copiado. En la pestaña de Claude que se ha abierto, pega con Ctrl+V y envía.')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const ask = async () => {
+    if (!analysis || !question.trim() || !status) return
+    const context = buildGameContext(game, parsed, analysis)
+    // Si el análisis o el modo de conexión han cambiado, la conversación anterior ya no sirve.
+    const base: CoachChat =
+      chat && chat.context === context && chat.provider === status.provider ? chat : { context, provider: status.provider, turns: [] }
     const text = `${describePosition(parsed, analysis, ply)}\n\nPregunta del alumno: ${question.trim()}`
     const pending: CoachChat = { ...base, turns: [...base.turns, { role: 'user', text, ply }] }
     setChat(pending)
@@ -67,8 +84,8 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     setAsking(true)
     setError(null)
     try {
-      const answer = await askCoach(pending)
-      const done = { ...pending, turns: [...pending.turns, answer] }
+      const { turn, sessionId } = await askCoach(pending)
+      const done: CoachChat = { ...pending, sessionId: sessionId ?? pending.sessionId, turns: [...pending.turns, turn] }
       setChat(done)
       saveChat(game.id, done)
     } catch (e) {
@@ -86,19 +103,30 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
   }
 
   if (status === undefined) return null
-  if (status === null) {
+
+  const claudeAiButtons = (
+    <div className="toolbar">
+      <button className="btn small" onClick={() => openClaudeAi(false)} disabled={!analysis} title="Copia la partida y abre claude.ai">
+        Abrir en claude.ai
+      </button>
+      {copied && <span className="small muted">{copied}</span>}
+    </div>
+  )
+
+  if (!status || !status.ready) {
     return (
       <section className="card coach">
         <h2>Entrenador IA</h2>
-        <p className="muted">El entrenador necesita el servidor local. Arranca la app con npm run dev (o con iniciar.bat en Windows).</p>
-      </section>
-    )
-  }
-  if (!status.configured) {
-    return (
-      <section className="card coach">
-        <h2>Entrenador IA</h2>
-        <p className="muted">Para que Claude comente tus partidas, guarda tu clave de Anthropic en la pantalla de Inicio.</p>
+        <p className="muted">
+          {status === null
+            ? 'El entrenador integrado necesita el servidor local: arranca la app con iniciar.bat o npm run dev.'
+            : status.provider === 'plan'
+              ? 'Para que Claude comente aquí tus partidas con tu plan, instala Claude Code e inicia sesión (instrucciones en Inicio).'
+              : 'Falta la clave de API. Configúrala en Inicio o cambia al modo de tu plan.'}
+        </p>
+        <p className="muted">Mientras tanto, puedes llevar la partida a claude.ai: se copia todo el análisis y solo tienes que pegarlo.</p>
+        {claudeAiButtons}
+        {error && <p className="msg error">{error}</p>}
       </section>
     )
   }
@@ -107,7 +135,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     <section className="card coach">
       <div className="coach-head">
         <h2>Entrenador IA</h2>
-        <span className="badge">Claude</span>
+        <span className="badge">{status.provider === 'plan' ? 'Claude, con tu plan' : 'Claude, con clave de API'}</span>
       </div>
 
       {!report && !loading && (
@@ -116,6 +144,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
           <button className="btn primary" onClick={generate} disabled={!analysis}>
             {analysis ? 'Analizar la partida con Claude' : 'Espera a que termine Stockfish'}
           </button>
+          {claudeAiButtons}
         </>
       )}
       {loading && (
@@ -175,9 +204,15 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
             </div>
           )}
           <p className="coach-tip">{report.consejo}</p>
-          <button className="btn small" onClick={generate} disabled={loading || !analysis}>
-            Volver a pedir el informe
-          </button>
+          <div className="toolbar">
+            <button className="btn small" onClick={generate} disabled={loading || !analysis}>
+              Volver a pedir el informe
+            </button>
+            <button className="btn small" onClick={() => openClaudeAi(false)} disabled={!analysis}>
+              Seguir en claude.ai
+            </button>
+          </div>
+          {copied && <p className="small muted">{copied}</p>}
         </div>
       )}
 
@@ -218,6 +253,9 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
         <div className="toolbar">
           <button className="btn primary small" onClick={ask} disabled={!analysis || asking || !question.trim()}>
             Preguntar
+          </button>
+          <button className="btn small" onClick={() => openClaudeAi(true)} disabled={!analysis || !question.trim()} title="Copia la partida, la posición y tu pregunta y abre claude.ai">
+            Preguntar en claude.ai
           </button>
           {chat && chat.turns.length > 0 && (
             <button className="btn small" onClick={resetChat}>

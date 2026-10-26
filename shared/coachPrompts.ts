@@ -54,3 +54,16 @@ export const REPORT_SCHEMA = {
   required: ['resumen', 'apertura', 'medio_juego', 'final', 'momentos_clave', 'comentarios', 'lecciones', 'temas', 'consejo'],
   additionalProperties: false,
 }
+
+export const CLAUDE_AI_REPORT_REQUEST = `Escribe el informe de esta partida para mí con estas secciones:
+1. Resumen: cómo fue la partida y qué la decidió.
+2. Momentos clave: entre 2 y 4, con el número de jugada, qué pasó y qué debería haberme preguntado antes de mover.
+3. Apertura, medio juego y final, en pocas frases cada uno.
+4. Tres lecciones concretas para mi próxima partida.
+5. Temas de problemas que debería practicar.
+Después seguiré preguntándote dudas sobre la partida.`
+
+/** Texto completo para pegar en claude.ai: instrucciones del entrenador, partida y petición. */
+export function claudeAiPrompt(context: string, request: string): string {
+  return `${SYSTEM_PROMPT}\n\n---\n\n${context}\n\n---\n\n${request}`
+}

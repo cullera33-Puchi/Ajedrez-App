@@ -8,7 +8,12 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      coachPlugin({ root: process.cwd(), apiKey: env.ANTHROPIC_API_KEY, baseURL: env.ANTHROPIC_BASE_URL || undefined }),
+      coachPlugin({
+        root: process.cwd(),
+        provider: env.COACH_PROVIDER,
+        apiKey: env.ANTHROPIC_API_KEY,
+        baseURL: env.ANTHROPIC_BASE_URL || undefined,
+      }),
     ],
     server: { open: true },
     preview: { open: true },

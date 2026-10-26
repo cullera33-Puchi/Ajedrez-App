@@ -3,16 +3,20 @@ import fs from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import path from 'node:path'
 import type { Plugin } from 'vite'
-import { ASK_INSTRUCTIONS, REPORT_SCHEMA, REPORT_TASK, SYSTEM_PROMPT } from './prompts.ts'
+import { ASK_INSTRUCTIONS, REPORT_SCHEMA, REPORT_TASK, SYSTEM_PROMPT } from '../shared/coachPrompts.ts'
+import { claudeCodeAsk, claudeCodeReport, claudeCodeStatus, CoachCliError } from './claudeCode.ts'
 
 export const COACH_MODEL = 'claude-opus-5-5'
+
+/** plan: Claude Code con la cuenta Pro o Max (sin coste aparte). api: clave de Anthropic (pago por uso). */
+export type CoachProvider = 'plan' | 'api'
 
 type BetaMessage = Anthropic.Beta.Messages.BetaMessage
 type BetaMessageParam = Anthropic.Beta.Messages.BetaMessageParam
 type BetaContentBlockParam = Anthropic.Beta.Messages.BetaContentBlockParam
 
 /** Turno de conversación tal como lo guarda el navegador. Las respuestas de Claude se reenvían sin tocar. */
-type ChatTurn = { role: 'user'; text: string } | { role: 'assistant'; content: BetaContentBlockParam[] }
+type ChatTurn = { role: 'user'; text: string } | { role: 'assistant'; content?: BetaContentBlockParam[]; text?: string }
 
 class HttpError extends Error {
   status: number
@@ -27,6 +31,7 @@ interface Options {
   root: string
   apiKey?: string
   baseURL?: string
+  provider?: string
 }
 
 /**
@@ -36,6 +41,7 @@ interface Options {
 export function coachPlugin(opts: Options): Plugin {
   let apiKey = opts.apiKey
   let client: Anthropic | null = null
+  let provider: CoachProvider = opts.provider === 'api' ? 'api' : 'plan'
 
   const getClient = () => {
     if (!apiKey) throw new HttpError(400, 'Falta la clave de Claude. Configúrala en la pantalla de Inicio.')
@@ -43,20 +49,36 @@ export function coachPlugin(opts: Options): Plugin {
     return client
   }
 
+  const status = async () => {
+    const plan = await claudeCodeStatus()
+    const ready = provider === 'plan' ? plan.installed && plan.loggedIn : Boolean(apiKey)
+    return { provider, ready, plan, api: { configured: Boolean(apiKey), model: COACH_MODEL } }
+  }
+
   const routes: Record<string, (body: Record<string, unknown>) => Promise<unknown>> = {
-    'GET /api/coach/status': async () => ({ configured: Boolean(apiKey), model: COACH_MODEL }),
+    'GET /api/coach/status': status,
+
+    'POST /api/coach/provider': async (body) => {
+      if (body.provider !== 'plan' && body.provider !== 'api') throw new HttpError(400, 'Opción no válida.')
+      provider = body.provider
+      saveEnv(opts.root, 'COACH_PROVIDER', provider)
+      return status()
+    },
 
     'POST /api/coach/key': async (body) => {
       const key = String(body.apiKey ?? '').trim()
       if (!/^sk-ant-[\w-]+$/.test(key)) throw new HttpError(400, 'La clave no tiene el formato esperado (empieza por sk-ant-).')
-      saveKey(opts.root, key)
+      saveEnv(opts.root, 'ANTHROPIC_API_KEY', key)
       apiKey = key
       client = null
-      return { configured: true, model: COACH_MODEL }
+      return status()
     },
 
     'POST /api/coach/report': async (body) => {
       const context = requireString(body.context, 'context')
+      if (provider === 'plan') {
+        return { report: await claudeCodeReport(SYSTEM_PROMPT, `${context}\n\n${REPORT_TASK}`, REPORT_SCHEMA) }
+      }
       const msg = await run(getClient(), {
         effort: 'high',
         format: { type: 'json_schema', schema: REPORT_SCHEMA },
@@ -64,7 +86,7 @@ export function coachPlugin(opts: Options): Plugin {
       })
       const text = textOf(msg)
       try {
-        return { report: JSON.parse(text), usage: msg.usage }
+        return { report: JSON.parse(text) }
       } catch {
         throw new HttpError(502, 'La respuesta de Claude no tiene el formato esperado. Vuelve a intentarlo.')
       }
@@ -74,10 +96,12 @@ export function coachPlugin(opts: Options): Plugin {
       const context = requireString(body.context, 'context')
       const history = body.history as ChatTurn[] | undefined
       if (!Array.isArray(history) || !history.length || history[0].role !== 'user') throw new HttpError(400, 'Conversación vacía.')
+      if (provider === 'plan') return askWithPlan(context, history, typeof body.sessionId === 'string' ? body.sessionId : undefined)
+
       // El historial solo crece por el final: el contexto va siempre igual en el primer mensaje y las
       // respuestas anteriores se reenvían tal cual (incluidos sus bloques de razonamiento).
       const messages: BetaMessageParam[] = history.map((turn, i) => {
-        if (turn.role === 'assistant') return { role: 'assistant', content: turn.content }
+        if (turn.role === 'assistant') return { role: 'assistant', content: turn.content ?? turn.text ?? '' }
         if (i === 0) {
           return {
             role: 'user',
@@ -90,7 +114,7 @@ export function coachPlugin(opts: Options): Plugin {
         return { role: 'user', content: turn.text }
       })
       const msg = await run(getClient(), { effort: 'medium', messages })
-      return { content: msg.content, text: textOf(msg), usage: msg.usage }
+      return { content: msg.content, text: textOf(msg) }
     },
   }
 
@@ -158,6 +182,7 @@ function requireString(v: unknown, name: string): string {
 
 function toHttpError(e: unknown): { status: number; message: string } {
   if (e instanceof HttpError) return { status: e.status, message: e.message }
+  if (e instanceof CoachCliError) return { status: 502, message: e.message }
   if (e instanceof Anthropic.AuthenticationError) return { status: 401, message: 'La clave de Claude no es válida. Revísala en Inicio.' }
   if (e instanceof Anthropic.PermissionDeniedError) return { status: 403, message: 'La clave de Claude no tiene permiso para usar este modelo.' }
   if (e instanceof Anthropic.RateLimitError) return { status: 429, message: 'Has alcanzado el límite de uso de Claude. Espera un poco y vuelve a intentarlo.' }
@@ -192,10 +217,26 @@ function send(res: ServerResponse, status: number, data: unknown) {
   res.end(JSON.stringify(data))
 }
 
-/** Guarda la clave en .env.local (ignorado por git) para que se conserve entre arranques. */
-function saveKey(root: string, key: string) {
+/**
+ * Pregunta usando Claude Code. Con sesión abierta solo se envía la nueva pregunta; si no la hay
+ * (primera pregunta, o la conversación empezó por otra vía) se envía el contexto y lo hablado hasta ahora.
+ */
+async function askWithPlan(context: string, history: ChatTurn[], sessionId?: string) {
+  const last = history[history.length - 1]
+  if (last.role !== 'user') throw new HttpError(400, 'Falta la pregunta.')
+  if (sessionId) return claudeCodeAsk(SYSTEM_PROMPT, last.text, sessionId)
+  const previous = history
+    .slice(0, -1)
+    .map((t) => (t.role === 'user' ? `Alumno: ${t.text}` : `Entrenador: ${t.text ?? ''}`))
+    .join('\n\n')
+  const prompt = [context, ASK_INSTRUCTIONS, previous && `Conversación hasta ahora:\n${previous}`, last.text].filter(Boolean).join('\n\n')
+  return claudeCodeAsk(SYSTEM_PROMPT, prompt)
+}
+
+/** Guarda un valor en .env.local (ignorado por git) para que se conserve entre arranques. */
+function saveEnv(root: string, name: string, value: string) {
   const file = path.join(root, '.env.local')
   const lines = fs.existsSync(file) ? fs.readFileSync(file, 'utf8').split(/\r?\n/) : []
-  const kept = lines.filter((l) => l.trim() && !l.startsWith('ANTHROPIC_API_KEY='))
-  fs.writeFileSync(file, [...kept, `ANTHROPIC_API_KEY=${key}`, ''].join('\n'), { mode: 0o600 })
+  const kept = lines.filter((l) => l.trim() && !l.startsWith(`${name}=`))
+  fs.writeFileSync(file, [...kept, `${name}=${value}`, ''].join('\n'), { mode: 0o600 })
 }

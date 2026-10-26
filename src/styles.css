@@ -898,3 +898,39 @@ td.c-grave,
   margin: 0.3rem 0;
   padding-left: 1.1rem;
 }
+
+.provider-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+.provider {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  cursor: pointer;
+}
+.provider.active {
+  border-color: var(--accent);
+  background: rgba(90, 158, 111, 0.08);
+}
+.provider input {
+  margin-top: 0.25rem;
+}
+.provider p {
+  margin: 0.15rem 0 0;
+}
+.provider-detail ol {
+  margin: 0.3rem 0;
+  padding-left: 1.2rem;
+}
+code {
+  background: var(--bg-2);
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.85em;
+}

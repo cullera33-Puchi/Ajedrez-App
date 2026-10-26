@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { View } from '../App'
 import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
-import { type CoachStatus, fetchCoachStatus, saveCoachKey } from '../lib/coach'
+import { type CoachProvider, type CoachStatus, fetchCoachStatus, saveCoachKey, setCoachProvider } from '../lib/coach'
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats } from '../lib/puzzles'
 import type { Settings } from '../lib/settings'
@@ -236,17 +236,31 @@ function CoachKeyCard() {
   const [status, setStatus] = useState<CoachStatus | null | undefined>(undefined)
   const [key, setKey] = useState('')
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
-  const [editing, setEditing] = useState(false)
+  const [checking, setChecking] = useState(false)
+
+  const refresh = async () => {
+    setChecking(true)
+    setStatus(await fetchCoachStatus())
+    setChecking(false)
+  }
 
   useEffect(() => {
-    fetchCoachStatus().then(setStatus)
+    void refresh()
   }, [])
+
+  const choose = async (provider: CoachProvider) => {
+    try {
+      setStatus(await setCoachProvider(provider))
+      setMsg(null)
+    } catch (e) {
+      setMsg({ kind: 'error', text: (e as Error).message })
+    }
+  }
 
   const saveKey = async () => {
     try {
       setStatus(await saveCoachKey(key))
       setKey('')
-      setEditing(false)
       setMsg({ kind: 'ok', text: 'Clave guardada en este PC (archivo .env.local).' })
     } catch (e) {
       setMsg({ kind: 'error', text: (e as Error).message })
@@ -258,34 +272,99 @@ function CoachKeyCard() {
       <h2>Entrenador IA (Claude)</h2>
       {status === undefined && <p className="muted">Comprobando…</p>}
       {status === null && (
-        <p className="muted">El entrenador necesita el servidor local. Arranca la app con npm run dev o con iniciar.bat.</p>
+        <p className="muted">
+          El entrenador integrado necesita el servidor local: arranca la app con iniciar.bat o npm run dev. Mientras tanto puedes usar el botón
+          Abrir en claude.ai desde el análisis de cualquier partida.
+        </p>
       )}
-      {status && status.configured && !editing && (
+      {status && (
         <>
-          <p>
-            <span className="badge out-victoria">Activo</span> Claude comentará tus partidas desde la pantalla de análisis.
-          </p>
-          <button className="btn small" onClick={() => setEditing(true)}>
-            Cambiar la clave
-          </button>
-        </>
-      )}
-      {status && (!status.configured || editing) && (
-        <>
-          <p className="muted">
-            Pega tu clave de la API de Anthropic. Se consigue en{' '}
-            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
-              console.anthropic.com
-            </a>{' '}
-            y se guarda solo en este PC.
-          </p>
-          <label className="field">
-            <span>Clave de la API</span>
-            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off" />
-          </label>
-          <button className="btn primary" onClick={saveKey} disabled={!key.trim()}>
-            Guardar clave
-          </button>
+          <div className="provider-options">
+            <label className={`provider ${status.provider === 'plan' ? 'active' : ''}`}>
+              <input type="radio" name="provider" checked={status.provider === 'plan'} onChange={() => choose('plan')} />
+              <div>
+                <strong>Con tu plan de Claude (recomendado)</strong>
+                <p className="muted small">Usa Claude Code con tu cuenta Pro o Max. Sin coste aparte; cuenta dentro de los límites de tu plan.</p>
+              </div>
+            </label>
+            <label className={`provider ${status.provider === 'api' ? 'active' : ''}`}>
+              <input type="radio" name="provider" checked={status.provider === 'api'} onChange={() => choose('api')} />
+              <div>
+                <strong>Con clave de API</strong>
+                <p className="muted small">Pago por uso en console.anthropic.com, aparte del plan.</p>
+              </div>
+            </label>
+          </div>
+
+          {status.provider === 'plan' && (
+            <div className="provider-detail">
+              {status.plan.installed && status.plan.loggedIn && !status.plan.usesApiBilling && (
+                <p>
+                  <span className="badge out-victoria">Listo</span> Claude Code está instalado y con la sesión iniciada.
+                </p>
+              )}
+              {status.plan.usesApiBilling && (
+                <p className="msg error">
+                  Claude Code está configurado con una clave de API, así que facturaría aparte. Ejecuta claude en una terminal, escribe /login y entra con tu
+                  cuenta de Claude.
+                </p>
+              )}
+              {status.plan.installed && !status.plan.loggedIn && (
+                <p className="msg info">
+                  Claude Code está instalado pero sin sesión. Abre una terminal, ejecuta <code>claude</code> y entra con tu cuenta Pro o Max. Después pulsa
+                  Comprobar de nuevo.
+                </p>
+              )}
+              {!status.plan.installed && (
+                <div className="msg info">
+                  <p>Falta instalar Claude Code (una sola vez):</p>
+                  <ol>
+                    <li>
+                      Abre PowerShell y ejecuta: <code>irm https://claude.ai/install.ps1 | iex</code>
+                    </li>
+                    <li>
+                      Cierra y vuelve a abrir PowerShell, ejecuta <code>claude</code> e inicia sesión con tu cuenta de Claude.
+                    </li>
+                    <li>Cierra y vuelve a abrir la app (iniciar.bat) y pulsa Comprobar de nuevo.</li>
+                  </ol>
+                  <p className="small">
+                    Instrucciones oficiales:{' '}
+                    <a href="https://code.claude.com/docs/en/setup" target="_blank" rel="noreferrer">
+                      code.claude.com/docs/en/setup
+                    </a>
+                  </p>
+                </div>
+              )}
+              <button className="btn small" onClick={refresh} disabled={checking}>
+                {checking ? 'Comprobando…' : 'Comprobar de nuevo'}
+              </button>
+            </div>
+          )}
+
+          {status.provider === 'api' && (
+            <div className="provider-detail">
+              {status.api.configured ? (
+                <p>
+                  <span className="badge out-victoria">Clave guardada</span> Puedes cambiarla abajo.
+                </p>
+              ) : (
+                <p className="muted">
+                  Crea una clave en{' '}
+                  <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
+                    console.anthropic.com
+                  </a>
+                  . Se guarda solo en este PC.
+                </p>
+              )}
+              <label className="field">
+                <span>Clave de la API</span>
+                <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off" />
+              </label>
+              <button className="btn primary small" onClick={saveKey} disabled={!key.trim()}>
+                Guardar clave
+              </button>
+            </div>
+          )}
         </>
       )}
       {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
