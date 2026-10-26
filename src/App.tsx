@@ -1,0 +1,80 @@
+import { useState } from 'react'
+import { DEMO_GAMES, loadGames, mergeGames } from './lib/games'
+import { loadSettings, saveSettings, type Settings } from './lib/settings'
+import type { GameSummary } from './lib/types'
+import { AnalysisView } from './views/Analysis'
+import { GamesView } from './views/Games'
+import { HomeView } from './views/Home'
+import { LearnView } from './views/Learn'
+import { PuzzlesView } from './views/Puzzles'
+
+export type View = 'inicio' | 'partidas' | 'analisis' | 'problemas' | 'aprender'
+
+const NAV: { id: View; label: string; icon: string }[] = [
+  { id: 'inicio', label: 'Inicio', icon: '⌂' },
+  { id: 'partidas', label: 'Mis partidas', icon: '☰' },
+  { id: 'analisis', label: 'Análisis', icon: '♘' },
+  { id: 'problemas', label: 'Problemas', icon: '♛' },
+  { id: 'aprender', label: 'Aprender', icon: '♙' },
+]
+
+export default function App() {
+  const [view, setView] = useState<View>('inicio')
+  const [settings, setSettingsState] = useState<Settings>(loadSettings)
+  const [games, setGames] = useState<GameSummary[]>(loadGames)
+  const [gameId, setGameId] = useState<string | null>(null)
+  const [puzzleTheme, setPuzzleTheme] = useState('mix')
+
+  const allGames = [...games, ...DEMO_GAMES.filter((d) => !games.some((g) => g.id === d.id))]
+  const currentGame = allGames.find((g) => g.id === gameId) ?? null
+
+  const setSettings = (s: Settings) => {
+    setSettingsState(s)
+    saveSettings(s)
+  }
+  const addGames = (incoming: GameSummary[]) => setGames((cur) => mergeGames(cur, incoming))
+  const openGame = (id: string) => {
+    setGameId(id)
+    setView('analisis')
+  }
+  const openPuzzles = (theme: string) => {
+    setPuzzleTheme(theme)
+    setView('problemas')
+  }
+
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-icon">♞</span>
+          <div>
+            <strong>Ajedrez App</strong>
+            <small>Aprende jugando</small>
+          </div>
+        </div>
+        <nav>
+          {NAV.map((n) => (
+            <button key={n.id} className={`nav-item ${view === n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
+              <span className="nav-icon">{n.icon}</span>
+              {n.label}
+            </button>
+          ))}
+        </nav>
+        <p className="sidebar-foot">Versión de prueba. Los datos se guardan solo en este navegador.</p>
+      </aside>
+      <main className="content">
+        {view === 'inicio' && (
+          <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} />
+        )}
+        {view === 'partidas' && (
+          <GamesView settings={settings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
+        )}
+        {view === 'analisis' && (
+          <AnalysisView key={currentGame?.id ?? 'none'} game={currentGame} settings={settings} onSettings={setSettings} onNavigate={setView} />
+        )}
+        {view === 'problemas' && <PuzzlesView initialTheme={puzzleTheme} />}
+        {view === 'aprender' && <LearnView onPractice={openPuzzles} />}
+      </main>
+    </div>
+  )
+}
