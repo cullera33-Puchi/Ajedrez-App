@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { View } from '../App'
 import { type Arrow, Board } from '../components/Board'
 import { CoachPanel } from '../components/CoachPanel'
+import { ResourceLinks } from '../components/ResourceLinks'
 import { EvalBar } from '../components/EvalBar'
 import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
@@ -467,6 +468,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
                       ))}
                     </div>
                   )}
+                  <ResourceLinks theme={practice[0].theme} />
                 </>
               ) : (
                 <p className="muted small">En esta partida no hay errores claros asociados a un tema de problemas.</p>

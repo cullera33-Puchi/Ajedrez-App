@@ -1,3 +1,5 @@
+import { ResourceLinks } from '../components/ResourceLinks'
+
 interface Props {
   onPractice: (theme: string) => void
 }
@@ -70,6 +72,7 @@ export function LearnView({ onPractice }: Props) {
                 <button className="btn" onClick={() => onPractice(m.theme)}>
                   Practicar
                 </button>
+                <ResourceLinks theme={m.theme} title={false} />
               </div>
             ))}
           </div>

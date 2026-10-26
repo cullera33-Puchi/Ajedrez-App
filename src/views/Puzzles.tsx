@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type Arrow, Board } from '../components/Board'
+import { ResourceLinks } from '../components/ResourceLinks'
 import { type Difficulty, fetchLichessPuzzle } from '../lib/lichess'
 import {
   BEGINNER_THEMES,
@@ -347,6 +348,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
                   </button>
                 ))}
               </div>
+              <ResourceLinks theme={recommendation.themes.some((t) => t.theme === theme) ? theme : recommendation.themes[0].theme} />
             </>
           ) : (
             <p className="muted small">Importa y analiza algunas partidas tuyas y te diré qué temas practicar según tus errores.</p>

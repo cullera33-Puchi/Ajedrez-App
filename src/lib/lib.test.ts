@@ -409,3 +409,14 @@ describe('copia de seguridad', () => {
     expect(() => parseBackup('{"x":1}')).toThrow()
   })
 })
+
+describe('enlaces de aprendizaje', () => {
+  it('prepara enlaces por tema', async () => {
+    const { resourceLinks } = await import('../components/ResourceLinks')
+    const fork = resourceLinks('fork')
+    expect(fork[0].href).toBe('https://lichess.org/training/fork')
+    expect(fork.some((l) => l.href.includes('youtube.com') && l.href.includes('doble%20ataque'))).toBe(true)
+    expect(fork.some((l) => l.href.includes('google.com/search'))).toBe(true)
+    expect(resourceLinks('raroDesconocido').some((l) => l.href.includes('lichess'))).toBe(false)
+  })
+})
