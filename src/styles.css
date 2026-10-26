@@ -1132,3 +1132,95 @@ code.detail {
     flex-direction: column;
   }
 }
+
+/*
+ * Móvil: nada puede ser más ancho que la pantalla. En iOS, si algo se sale, la página entera se
+ * ensancha y todo queda desplazado. Los tableros se dimensionan con el ancho disponible (no con vw).
+ */
+@media (max-width: 800px) {
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  .page,
+  .card,
+  .analysis-board,
+  .analysis-side,
+  .puzzle-board,
+  .puzzle-side {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .board-row {
+    align-items: stretch;
+    width: 100%;
+  }
+  .analysis-board .board {
+    width: auto;
+    height: auto;
+    flex: 1 1 0;
+    min-width: 0;
+    aspect-ratio: 1 / 1;
+  }
+  .evalbar {
+    height: auto;
+    width: 18px;
+    flex-shrink: 0;
+  }
+  .player-line,
+  .controls {
+    padding-left: 26px;
+  }
+  .evalchart {
+    width: 100%;
+  }
+  .puzzles .board {
+    width: 100%;
+    height: auto;
+    max-width: none;
+    max-height: none;
+    aspect-ratio: 1 / 1;
+  }
+  /* Tabla de partidas: ancho fijo al de la pantalla, sin botón (toda la fila se pulsa) */
+  table.games {
+    table-layout: fixed;
+    width: 100%;
+  }
+  .games th:nth-child(8),
+  .games td:nth-child(8) {
+    display: none;
+  }
+  .games th:nth-child(1) {
+    width: 21%;
+  }
+  .games th:nth-child(3),
+  .games th:nth-child(4) {
+    width: 30%;
+  }
+  .games th:nth-child(5) {
+    width: 19%;
+  }
+  .games td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    vertical-align: middle;
+  }
+  .games td .rating {
+    display: block;
+    font-size: 0.75rem;
+  }
+  .games td .badge {
+    padding: 0.1rem 0.35rem;
+    font-size: 0.7rem;
+  }
+  .tabs {
+    flex-wrap: wrap;
+  }
+}
+@media (max-width: 800px) {
+  .evalbar-text {
+    font-size: 0.5rem;
+    letter-spacing: -0.02em;
+  }
+}

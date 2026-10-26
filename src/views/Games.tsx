@@ -188,15 +188,15 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
               const o = outcomeFor(g)
               return (
                 <tr key={g.id} onClick={() => onOpenGame(g.id)}>
-                  <td>{new Date(g.date).toLocaleDateString('es-ES')}</td>
+                  <td className="date">{new Date(g.date).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}</td>
                   <td>
                     <span className={`badge src-${g.source}`}>{SOURCE_LABEL[g.source]}</span>
                   </td>
                   <td className={g.userColor === 'white' ? 'me' : ''}>
-                    {g.white.name} {g.white.rating ? <span className="muted">({g.white.rating})</span> : null}
+                    <span className="pname">{g.white.name}</span> {g.white.rating ? <span className="muted rating">({g.white.rating})</span> : null}
                   </td>
                   <td className={g.userColor === 'black' ? 'me' : ''}>
-                    {g.black.name} {g.black.rating ? <span className="muted">({g.black.rating})</span> : null}
+                    <span className="pname">{g.black.name}</span> {g.black.rating ? <span className="muted rating">({g.black.rating})</span> : null}
                   </td>
                   <td>{o ? <span className={`badge out-${o}`}>{OUTCOME_LABEL[o]}</span> : g.result.replace('1/2-1/2', '½-½')}</td>
                   <td>{g.timeClass ? (TIME_LABEL[g.timeClass] ?? g.timeClass) : ''}</td>
