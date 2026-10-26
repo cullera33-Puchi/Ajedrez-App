@@ -61,7 +61,7 @@ Hay dos formas. Las dos funcionan en Android y en iPhone.
 
 ### 1. Versión web (en cualquier sitio)
 
-Abre **https://cullera33-puchi.github.io/ajedrez-app/** en el navegador del móvil e instálala como app:
+Abre **https://cullera33-puchi.github.io/Ajedrez-App/** en el navegador del móvil e instálala como app:
 
 - **Android (Chrome)**: menú de los tres puntos y luego *Añadir a pantalla de inicio* o *Instalar aplicación*.
 - **iPhone (Safari)**: botón *Compartir* y luego *Añadir a pantalla de inicio*.
