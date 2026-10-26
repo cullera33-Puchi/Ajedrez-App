@@ -2,22 +2,32 @@
 
 Estado de las mejoras identificadas. Se actualiza en cada iteración.
 
-Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita definir el enfoque antes de programar).
+Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque antes de programar).
 
 ## Hecho
 
 | Mejora | Notas |
 |---|---|
 | Análisis de partidas con Stockfish en el navegador | Precisión, clasificación de jugadas, comentarios y momentos clave |
-| Importación de Chess.com y Lichess | Usuario en la propia pantalla, errores con detalle técnico, hasta 6 meses atrás si no hay partidas recientes |
+| Importación de Chess.com y Lichess | Usuario en la propia pantalla, errores con detalle técnico |
+| Importación completa del historial de Chess.com (1.2) | Todos los meses la primera vez; después, solo lo nuevo. Con barra de progreso |
+| Almacenamiento en IndexedDB (1.2) | Miles de partidas y análisis; migración automática desde versiones anteriores |
 | Importación de archivo PGN | Admite el archivo con varias partidas que descarga Chess.com |
-| Entrenador con Claude | Con el plan (Claude Code en el PC), con claude.ai (copiar y pegar) o con clave de API |
+| Bots de tu nivel (1.1) | Seis bots de 400 a 1500 en la pestaña *Jugar*; sus partidas van a *Mis partidas* con análisis, recomendaciones y entrenador |
+| Elegir pieza al coronar (5.4) | En las partidas contra bots; en los problemas se respeta la subpromoción |
+| Análisis en segundo plano (1.3) | Analiza tus partidas pendientes mientras la app está abierta; se pausa al jugar o analizar a mano |
+| Problemas con tus propios errores (1.4) | Origen *Mis errores* en Problemas, con repaso espaciado |
+| Repetir la jugada correcta (4.1) | Botón *Inténtalo tú* en tus errores dentro del análisis |
+| Copia de seguridad entre dispositivos (2.1) | Inicio, *Copia de seguridad*: guardar, compartir e importar fusionando |
+| Enlaces a cursos y libros por tema (6.2, versión sencilla) | Entrenamiento de Lichess, vídeos y búsqueda de libros y cursos junto a cada tema recomendado |
+| Entrenador con Claude | Con el plan (Claude Code en el PC), con claude.ai (copiar y pegar) o con clave de API. Plegado al final del análisis |
 | Versión móvil instalable (PWA) en GitHub Pages | https://cullera33-puchi.github.io/Ajedrez-App/ |
 | Ajustes de iPhone | Isla y zonas seguras, nada más ancho que la pantalla, sin zoom por doble toque |
-| Análisis cómodo en el móvil | Tablero y jugada actual fijos; debajo, una zona propia con la lista (que sigue siempre a la jugada actual) y el resto; barras compactas; la página nunca se mueve |
-| Colores tipo Chess.com con modo día y noche | Automático según el sistema (móvil u ordenador) o fijado a mano en Inicio, en *Apariencia* |
-| Entrenador con Claude plegado al final | Fila pequeña con *Entrenador IA* y *Abrir en claude.ai*; se despliega al pulsar |
-| Problemas recomendados según tus errores | Temas deducidos de tus errores (mates, piezas colgadas, dobles ataques, defensa) y de los informes de Claude. Botón *Practica lo que has fallado* en el análisis y recomendaciones en Problemas e Inicio |
+| Análisis cómodo en el móvil | Tablero y jugada actual fijos; la lista sigue a la jugada actual; barras compactas |
+| Colores tipo Chess.com con modo día y noche | Automático según el sistema o fijado a mano en Inicio, *Apariencia* |
+| Modo tinta electrónica (1.7) | Apariencia *Tinta* para la BOOX: alto contraste, tablero blanco y gris, sin animaciones |
+| Problemas recomendados según tus errores | Temas deducidos de tus errores y de los informes de Claude |
+| Mantenimiento (5.5) | Acciones de GitHub actualizadas y avisos del código resueltos |
 
 ## Pendiente
 
@@ -25,25 +35,15 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 1.1 | Bots de tu nivel (400 a 1500) que cometen errores humanos. Las partidas contra los bots se guardan en *Mis partidas* y tienen el mismo análisis, recomendaciones y entrenador que las de Chess.com | Medio | Alta |
-| 1.2 | Importación completa del historial de Chess.com, con almacenamiento en IndexedDB y descarga solo de lo nuevo | Medio | Alta |
-| 1.3 | Análisis en segundo plano de las partidas importadas | Medio | Alta |
-| 1.4 | Problemas con las posiciones de tus propios errores, con repaso de los fallados (repetición espaciada) | Medio | Alta |
-| 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida | Alto | Media |
+| 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida. Necesita tu cuenta de Lichess y probarlo contigo | Alto | Media |
 | 1.6 | Problemas de Lichess sincronizados con tu cuenta y paquete de problemas de tu nivel para usar sin conexión | Medio | Media |
-
-### 1b. Dispositivos
-
-| # | Mejora | Esfuerzo | Prioridad |
-|---|---|---|---|
-| 1.7 | Tablet de tinta electrónica (BOOX Note Air4 C): la web ya debería abrir en su navegador. Mejoras propuestas: modo «tinta electrónica» con alto contraste, sin animaciones ni degradados, tablero con colores planos y botones grandes; probar el refresco de pantalla al mover piezas | Bajo | Media |
+| 1.8 | Calibrar la fuerza de los bots con tus partidas reales (si alguno resulta demasiado fácil o difícil) | Bajo | Media |
 
 ### 2. Sincronización entre ordenador y móvil
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 2.1 | Copia de seguridad manual: exportar en un dispositivo e importar en el otro | Bajo | Alta |
-| 2.2 | Sincronización automática en la nube (Supabase, gratuito) con inicio de sesión por correo | Medio | Media |
+| 2.2 | Sincronización automática en la nube (Supabase, gratuito) con inicio de sesión por correo. Necesita que crees la cuenta | Medio | Media |
 
 ### 3. Entrenador con Claude
 
@@ -56,7 +56,6 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 4.1 | Repetir la jugada correcta en tus errores antes de ver la solución | Bajo | Alta |
 | 4.2 | Explorar variantes libremente en el tablero de análisis | Medio | Media |
 | 4.3 | Panel de progreso: evolución del rating, temas más fallados y aperturas con peor resultado | Medio | Media |
 | 4.4 | Lecciones interactivas de mates básicos y finales elementales | Alto | Media |
@@ -66,16 +65,16 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 
 | # | Tema | Situación |
 |---|---|---|
-| 5.1 | Importación de Lichess con datos reales | Programada según la documentación; la de Chess.com ya está verificada en el móvil |
+| 5.1 | Importación de Lichess con datos reales | Programada según la documentación; sin probar con datos reales |
 | 5.2 | Problemas online de Lichess con datos reales | Sin verificar |
 | 5.3 | Calibrar profundidad y umbrales del análisis; usar la evaluación en la nube de Lichess para acelerar en el móvil | Pendiente |
-| 5.4 | Elegir pieza al coronar (ahora siempre dama) | Pendiente |
-| 5.5 | Actualizar las acciones de GitHub (aviso de versión obsoleta de Node) y limpiar avisos menores del código | Pendiente |
 | 5.6 | Borrar la rama temporal `diagnostico-chesscom` en GitHub | Hay que hacerlo desde la web de GitHub (*Branches*) |
+| 5.7 | Importación completa de Chess.com con un historial grande | Probada con datos simulados; falta verificarla con tu historial real |
+| 5.8 | Modo Tinta en la BOOX real | Revisado en simulación; falta probar el refresco de la pantalla real |
 
 ## Por analizar
 
 | # | Idea | Primeras notas |
 |---|---|---|
 | 6.1 | **Estudios y cursos de Lichess para estudiar y practicar por temas** | Lichess permite exportar estudios en PGN (públicos y, con tu cuenta, los tuyos y los que te compartan) y listar los estudios de un usuario. Cada capítulo puede ser una lección o un ejercicio con jugadas que adivinar. Enfoque posible: importar un estudio por enlace, mostrar sus capítulos como temario y practicar cada capítulo en modo «adivina la jugada», guardando el progreso. Falta decidir qué estudios usar (propios, de la comunidad o una selección para principiantes) y cómo encaja con los problemas recomendados |
-| 6.2 | **Recomendación de cursos y libros según tus errores** | Para cada tema que más fallas, sugerir recursos: prácticas temáticas de Lichess (lichess.org/practice), estudios de la comunidad y libros o cursos para principiantes. Opción sencilla: un enlace de búsqueda en Google por tema y nivel (por ejemplo, «libro ajedrez clavadas principiantes»), que se puede hacer ya sin coste. Opción más completa: que Claude proponga 2 o 3 recursos concretos en el informe de la partida. Falta decidir si queremos una lista fija revisada por nosotros o recomendaciones dinámicas |
+| 6.2 | **Recomendación de cursos y libros, versión completa** | La versión sencilla (enlaces de búsqueda) ya está hecha. Queda decidir si queremos una lista fija de recursos revisada por nosotros o que Claude proponga 2 o 3 recursos concretos en el informe de cada partida |

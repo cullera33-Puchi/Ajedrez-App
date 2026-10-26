@@ -83,13 +83,14 @@ Así el móvil usa el entrenador integrado con tu plan, a través de Claude Code
 
 | Pantalla | Funcionalidad |
 |---|---|
-| Inicio | Usuarios de Chess.com y Lichess, ratings actuales, conexión del entrenador IA, próximos pasos y resumen de resultados |
-| Mis partidas | Importación de Chess.com (últimos 2 meses) y Lichess (últimas 40), pegar PGN y dos partidas de ejemplo |
-| Análisis | Stockfish 19 en el navegador, barra y gráfico de evaluación, precisión, clasificación de cada jugada, comentarios automáticos, informe y preguntas al entrenador IA, botón para abrir en claude.ai |
-| Problemas | Set de iniciación de 18 problemas verificados con Stockfish (sin conexión) o problemas de Lichess por tema y dificultad, con nivel propio tipo Elo |
-| Aprender | Valor de las piezas, principios de apertura y práctica por temas |
+| Inicio | Próximos pasos (repasar tus errores, practicar tu tema más fallado), cuentas y ratings, apariencia (automático, día, noche, tinta), copia de seguridad y conexión del entrenador IA |
+| Jugar | Seis bots de 400 a 1500 que fallan como humanos; deshacer, tablas, rendirse y elegir pieza al coronar. Las partidas se guardan para analizarlas |
+| Partidas | Historial completo de Chess.com (después, solo lo nuevo), Lichess, PGN pegado o en archivo, y análisis automático en segundo plano |
+| Análisis | Stockfish 19 en el navegador, evaluación, precisión, clasificación y comentarios de cada jugada, *Inténtalo tú* en tus errores, temas a practicar con enlaces para aprender más y entrenador IA |
+| Problemas | Mis errores (posiciones de tus partidas con repaso espaciado), set de iniciación sin conexión y problemas de Lichess por tema, con nivel propio y recomendaciones según tus errores |
+| Aprender | Valor de las piezas, principios de apertura y práctica por temas con enlaces a vídeos y libros |
 
-Los datos (partidas, análisis, informes y nivel en problemas) se guardan en el navegador.
+Los datos se guardan en el navegador de cada dispositivo (IndexedDB). Para pasarlos de uno a otro: Inicio, *Copia de seguridad*.
 
 ## Para desarrollo
 
