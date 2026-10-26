@@ -28,13 +28,12 @@ En macOS o Linux: `./iniciar.sh`.
 
 Stockfish aporta las evaluaciones y las mejores jugadas, y Claude las convierte en explicaciones para tu nivel: resumen, momentos clave con lo que deberías haberte preguntado antes de mover, comentarios por jugada, lecciones y temas de problemas para practicar. También puedes preguntarle por cualquier posición del tablero.
 
-Hay tres formas de conectar con Claude. Ninguna obliga a pagar aparte si tienes plan Pro o Max.
+Hay dos formas de conectar con Claude, las dos con tu plan Pro o Max. La app no usa claves de API ni ningún servicio de IA de pago.
 
 | Modo | Cómo funciona | Coste |
 |---|---|---|
 | **Con tu plan (recomendado)** | La app usa Claude Code instalado en tu PC, con la sesión de tu cuenta Pro o Max. El informe y las respuestas aparecen dentro de la app | Incluido en tu plan; cuenta dentro de sus límites de uso |
 | **Abrir en claude.ai** | Copia la partida y el análisis al portapapeles y abre claude.ai en una pestaña. Pegas con Ctrl+V y sigues la conversación allí | Incluido en tu plan |
-| Con clave de API | La app llama a la API de Anthropic con una clave de console.anthropic.com | Pago por uso, aparte del plan |
 
 ### Instalar Claude Code (una sola vez, para el modo plan)
 
@@ -51,7 +50,7 @@ Instrucciones oficiales: https://code.claude.com/docs/en/setup
 
 Detalles del modo plan:
 
-- La app quita la variable `ANTHROPIC_API_KEY` al llamar a Claude Code, para que use siempre la sesión del plan y no facture por API.
+- La app quita la variable `ANTHROPIC_API_KEY` al llamar a Claude Code, para que use siempre la sesión del plan. Si Claude Code está configurado para facturar por API, la app se niega a llamarlo.
 - Usa el modelo Opus, sin herramientas, sin servidores MCP y sin tus ajustes personales de Claude Code. Las conversaciones se guardan en `%USERPROFILE%\.ajedrez-app\claude`.
 - Un informe tarda alrededor de un minuto. Puedes ver tu consumo del plan con `/usage` dentro de Claude Code.
 
@@ -111,7 +110,7 @@ src/
   lib/          lógica sin interfaz: APIs, motor, análisis, problemas, contexto para Claude
   components/   tablero, barra y gráfico de evaluación, lista de jugadas, panel del entrenador
   views/        una vista por pantalla
-server/         API local del entrenador (plugin de Vite): Claude Code con el plan o API de Anthropic
+server/         API local del entrenador (plugin de Vite): Claude Code con el plan
 shared/         instrucciones del entrenador, comunes al servidor y al navegador
 scripts/        copia del motor a public/engine
 docs/capturas/  capturas de pantalla
@@ -126,15 +125,14 @@ docs/capturas/  capturas de pantalla
 
 ### Llamadas a Claude
 
-- Modo plan: `claude -p` con `--output-format json`, `--model opus`, `--json-schema` para el informe y `--resume` para continuar las preguntas (ver `server/claudeCode.ts`).
-- Modo API: SDK de Anthropic con salida estructurada, razonamiento adaptativo, caché del contexto y reintento en otro modelo si Claude declina (`fallbacks: "default"`).
-- El modo se guarda en `.env.local` (`COACH_PROVIDER=plan` o `api`).
+- `claude -p` con `--output-format json`, `--model opus`, `--json-schema` para el informe y `--resume` para continuar las preguntas (ver `server/claudeCode.ts`).
+- No hay modo de pago por uso: la app nunca llama a la API de Anthropic ni a otros servicios de IA.
 
 ## APIs externas
 
 - **Chess.com**: API pública de solo lectura. No hay login; basta el nombre de usuario.
 - **Lichess**: API abierta para partidas, perfil y problemas.
-- **Claude**: a través de Claude Code (tu plan), de claude.ai o de la API de Anthropic.
+- **Claude**: solo a través de Claude Code (tu plan) o de claude.ai.
 
 ## Licencias
 

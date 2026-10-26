@@ -15,14 +15,11 @@ export interface CoachReport {
   consejo: string
 }
 
-/** Turno de conversación. Las respuestas de Claude se guardan completas para reenviarlas sin cambios. */
-export type ChatTurn = { role: 'user'; text: string; ply: number } | { role: 'assistant'; content?: unknown[]; text: string }
-
-export type CoachProvider = 'plan' | 'api'
+/** Turno de conversación con el entrenador. */
+export type ChatTurn = { role: 'user'; text: string; ply: number } | { role: 'assistant'; text: string }
 
 export interface CoachChat {
   context: string
-  provider: CoachProvider
   /** Sesión de Claude Code para continuar la conversación (modo plan). */
   sessionId?: string
   turns: ChatTurn[]
@@ -104,11 +101,9 @@ async function post<T>(url: string, body: unknown): Promise<T> {
 }
 
 export interface CoachStatus {
-  provider: CoachProvider
-  /** true si el modo elegido está listo para usarse. */
+  /** true si Claude Code está instalado y con la sesión del plan iniciada. */
   ready: boolean
   plan: { installed: boolean; loggedIn: boolean; authMethod?: string; usesApiBilling: boolean }
-  api: { configured: boolean; model: string }
 }
 
 /** La API local solo existe cuando la app se sirve desde el PC (en la raíz). En GitHub Pages no hay servidor. */
@@ -125,8 +120,6 @@ export async function fetchCoachStatus(): Promise<CoachStatus | null> {
   }
 }
 
-export const saveCoachKey = (apiKey: string) => post<CoachStatus>('/api/coach/key', { apiKey })
-export const setCoachProvider = (provider: CoachProvider) => post<CoachStatus>('/api/coach/provider', { provider })
 
 export async function requestReport(context: string): Promise<CoachReport> {
   return (await post<{ report: CoachReport }>('/api/coach/report', { context })).report
@@ -134,14 +127,14 @@ export async function requestReport(context: string): Promise<CoachReport> {
 
 export async function askCoach(chat: CoachChat): Promise<{ turn: ChatTurn; sessionId?: string }> {
   const history = chat.turns.map((t) =>
-    t.role === 'user' ? { role: 'user', text: t.text } : { role: 'assistant', content: t.content, text: t.text },
+    t.role === 'user' ? { role: 'user', text: t.text } : { role: 'assistant', text: t.text },
   )
-  const r = await post<{ content?: unknown[]; text: string; sessionId?: string }>('/api/coach/ask', {
+  const r = await post<{ text: string; sessionId?: string }>('/api/coach/ask', {
     context: chat.context,
     history,
     sessionId: chat.sessionId,
   })
-  return { turn: { role: 'assistant', content: r.content, text: r.text }, sessionId: r.sessionId }
+  return { turn: { role: 'assistant', text: r.text }, sessionId: r.sessionId }
 }
 
 export const CLAUDE_AI_URL = 'https://claude.ai/new'

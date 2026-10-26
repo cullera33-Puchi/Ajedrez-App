@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { View } from '../App'
 import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
-import { type CoachProvider, type CoachStatus, fetchCoachStatus, saveCoachKey, setCoachProvider } from '../lib/coach'
+import { type CoachStatus, fetchCoachStatus } from '../lib/coach'
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
@@ -269,8 +269,6 @@ function Kpi({ label, value, tone }: { label: string; value: number | string; to
 
 function CoachKeyCard() {
   const [status, setStatus] = useState<CoachStatus | null | undefined>(undefined)
-  const [key, setKey] = useState('')
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [checking, setChecking] = useState(false)
 
   const refresh = async () => {
@@ -282,25 +280,6 @@ function CoachKeyCard() {
   useEffect(() => {
     void refresh()
   }, [])
-
-  const choose = async (provider: CoachProvider) => {
-    try {
-      setStatus(await setCoachProvider(provider))
-      setMsg(null)
-    } catch (e) {
-      setMsg({ kind: 'error', text: (e as Error).message })
-    }
-  }
-
-  const saveKey = async () => {
-    try {
-      setStatus(await saveCoachKey(key))
-      setKey('')
-      setMsg({ kind: 'ok', text: 'Clave guardada en este PC (archivo .env.local).' })
-    } catch (e) {
-      setMsg({ kind: 'error', text: (e as Error).message })
-    }
-  }
 
   return (
     <section className="card">
@@ -314,25 +293,11 @@ function CoachKeyCard() {
       )}
       {status && (
         <>
-          <div className="provider-options">
-            <label className={`provider ${status.provider === 'plan' ? 'active' : ''}`}>
-              <input type="radio" name="provider" checked={status.provider === 'plan'} onChange={() => choose('plan')} />
-              <div>
-                <strong>Con tu plan de Claude (recomendado)</strong>
-                <p className="muted small">Usa Claude Code con tu cuenta Pro o Max. Sin coste aparte; cuenta dentro de los límites de tu plan.</p>
-              </div>
-            </label>
-            <label className={`provider ${status.provider === 'api' ? 'active' : ''}`}>
-              <input type="radio" name="provider" checked={status.provider === 'api'} onChange={() => choose('api')} />
-              <div>
-                <strong>Con clave de API</strong>
-                <p className="muted small">Pago por uso en console.anthropic.com, aparte del plan.</p>
-              </div>
-            </label>
-          </div>
-
-          {status.provider === 'plan' && (
-            <div className="provider-detail">
+          <p className="muted small">
+            Usa Claude Code con tu cuenta Pro o Max: sin coste aparte, dentro de los límites de tu plan. La app no usa ninguna clave de API ni
+            servicio de pago.
+          </p>
+          <div className="provider-detail">
               {status.plan.installed && status.plan.loggedIn && !status.plan.usesApiBilling && (
                 <p>
                   <span className="badge out-victoria">Listo</span> Claude Code está instalado y con la sesión iniciada.
@@ -373,36 +338,9 @@ function CoachKeyCard() {
               <button className="btn small" onClick={refresh} disabled={checking}>
                 {checking ? 'Comprobando…' : 'Comprobar de nuevo'}
               </button>
-            </div>
-          )}
-
-          {status.provider === 'api' && (
-            <div className="provider-detail">
-              {status.api.configured ? (
-                <p>
-                  <span className="badge out-victoria">Clave guardada</span> Puedes cambiarla abajo.
-                </p>
-              ) : (
-                <p className="muted">
-                  Crea una clave en{' '}
-                  <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
-                    console.anthropic.com
-                  </a>
-                  . Se guarda solo en este PC.
-                </p>
-              )}
-              <label className="field">
-                <span>Clave de la API</span>
-                <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off" />
-              </label>
-              <button className="btn primary small" onClick={saveKey} disabled={!key.trim()}>
-                Guardar clave
-              </button>
-            </div>
-          )}
+          </div>
         </>
       )}
-      {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
     </section>
   )
 }

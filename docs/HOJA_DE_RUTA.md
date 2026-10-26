@@ -23,7 +23,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Repetir la jugada correcta (4.1) | Botón *Inténtalo tú* en tus errores dentro del análisis |
 | Copia de seguridad entre dispositivos (2.1) | Inicio, *Copia de seguridad*: guardar, compartir e importar fusionando |
 | Enlaces a cursos y libros por tema (6.2, versión sencilla) | Entrenamiento de Lichess, vídeos y búsqueda de libros y cursos junto a cada tema recomendado |
-| Entrenador con Claude | Con el plan (Claude Code en el PC), con claude.ai (copiar y pegar) o con clave de API. Plegado al final del análisis |
+| Entrenador con Claude | Solo con el plan: Claude Code en el PC o claude.ai (copiar y pegar). Sin claves de API ni servicios de pago. Plegado al final del análisis |
 | Versión móvil instalable (PWA) en GitHub Pages | https://cullera33-puchi.github.io/Ajedrez-App/ |
 | Ajustes de iPhone | Isla y zonas seguras, nada más ancho que la pantalla, sin zoom por doble toque |
 | Análisis cómodo en el móvil | Tablero y jugada actual fijos; la lista sigue a la jugada actual; barras compactas |
@@ -52,7 +52,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 3.1 | Entrenador integrado en el móvil fuera de casa (acceso al PC con Tailscale o API de pago) | Medio | Baja |
+| 3.1 | Entrenador integrado en el móvil fuera de casa (acceso al PC con Tailscale; nunca API de pago) | Medio | Baja |
 | 3.2 | Vigilar los cambios de Anthropic en el uso de `claude -p` con los planes | Bajo | Continua |
 
 ### 4. Aprendizaje y seguimiento

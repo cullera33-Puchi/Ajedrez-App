@@ -95,7 +95,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     const context = buildGameContext(game, parsed, analysis)
     // Si el análisis o el modo de conexión han cambiado, la conversación anterior ya no sirve.
     const base: CoachChat =
-      chat && chat.context === context && chat.provider === status.provider ? chat : { context, provider: status.provider, turns: [] }
+      chat && chat.context === context ? chat : { context, turns: [] }
     const text = `${describePosition(parsed, analysis, ply)}\n\nPregunta del alumno: ${question.trim()}`
     const pending: CoachChat = { ...base, turns: [...base.turns, { role: 'user', text, ply }] }
     setChat(pending)
@@ -171,9 +171,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
         <p className="muted">
           {status === null
             ? 'En la versión web y en el móvil, lleva la partida a Claude con el botón de abajo. El entrenador integrado funciona al arrancar la app en tu PC.'
-            : status.provider === 'plan'
-              ? 'Para que Claude comente aquí tus partidas con tu plan, instala Claude Code e inicia sesión (instrucciones en Inicio).'
-              : 'Falta la clave de API. Configúrala en Inicio o cambia al modo de tu plan.'}
+            : 'Para que Claude comente aquí tus partidas con tu plan, instala Claude Code e inicia sesión (instrucciones en Inicio).'}
         </p>
         {status !== null && (
           <p className="muted">Mientras tanto, puedes llevar la partida a claude.ai: se copia todo el análisis y solo tienes que pegarlo.</p>
@@ -189,7 +187,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     <section className="card coach">
       <div className="coach-head">
         <h2>Entrenador IA</h2>
-        <span className="badge">{status.provider === 'plan' ? 'Claude, con tu plan' : 'Claude, con clave de API'}</span>
+        <span className="badge">Claude, con tu plan</span>
         {collapse}
       </div>
 

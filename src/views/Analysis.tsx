@@ -6,6 +6,9 @@ import { ResourceLinks } from '../components/ResourceLinks'
 import { EvalBar } from '../components/EvalBar'
 import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
+import { EngineLines, lineToWhite, useEngineLines } from '../components/EngineLines'
+import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
+import { usePersistentState } from '../lib/storage'
 import { Chess } from 'chess.js'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
 import { getEngine } from '../lib/engine'
@@ -39,6 +42,22 @@ interface Retry {
   /** Posición tras la jugada acertada, para dejarla en el tablero. */
   solvedFen?: string
   solvedMove?: [string, string]
+}
+
+/** Jugada de una variante explorada en el tablero. */
+interface VarMove {
+  san: string
+  uci: string
+  from: string
+  to: string
+  fen: string
+}
+
+/** Variante que sale de la partida en la jugada `base`; `idx` es la jugada de la variante que se ve (0 = la posición de salida). */
+interface Variation {
+  base: number
+  moves: VarMove[]
+  idx: number
 }
 
 const SOURCE_BADGE: Record<GameSummary['source'], string> = {
@@ -90,6 +109,10 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const [showBest, setShowBest] = useState(true)
   const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
   const [retry, setRetry] = useState<Retry | null>(null)
+  const [variation, setVariation] = useState<Variation | null>(null)
+  const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
+  const [boardKey, setBoardKey] = useState(0)
+  const [showLines, setShowLines] = usePersistentState('showEngineLines', false)
   // Se recalcula también al llegar un informe de Claude, porque sus temas se suman (se leen del almacenamiento).
   const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report]) // eslint-disable-line react-hooks/exhaustive-deps
   const abortRef = useRef<AbortController | null>(null)
@@ -98,6 +121,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const go = useCallback(
     (p: number) => {
       setRetry(null)
+      setVariation(null)
       setPly(Math.max(0, Math.min(total, p)))
     },
     [total],
@@ -146,19 +170,47 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     return () => setBusy('analysis', false)
   }, [progress])
 
+  // Navegación: dentro de una variante se mueve por ella; si no, por la partida.
+  const nav = (where: 'start' | 'prev' | 'next' | 'end') => {
+    if (variation) {
+      const len = variation.moves.length
+      if (where === 'prev') {
+        if (variation.idx > 0) setVariation({ ...variation, idx: variation.idx - 1 })
+        else go(variation.base)
+      } else if (where === 'next') setVariation({ ...variation, idx: Math.min(len, variation.idx + 1) })
+      else if (where === 'start') setVariation({ ...variation, idx: 0 })
+      else setVariation({ ...variation, idx: len })
+      return
+    }
+    if (where === 'prev') go(ply - 1)
+    else if (where === 'next') go(ply + 1)
+    else if (where === 'start') go(0)
+    else go(total)
+  }
+
+  const boardFen = parsed ? (variation ? (variation.idx ? variation.moves[variation.idx - 1].fen : parsed.fens[variation.base]) : parsed.fens[ply]) : null
+  const exploring = Boolean(variation) || showLines
+  const live = useEngineLines(exploring && !retry ? boardFen : null)
+
+  // Mientras se exploran variantes, el análisis en segundo plano se para.
+  useEffect(() => {
+    setBusy('explore', exploring)
+    return () => setBusy('explore', false)
+  }, [exploring])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return
-      if (e.key === 'ArrowLeft') go(ply - 1)
-      else if (e.key === 'ArrowRight') go(ply + 1)
-      else if (e.key === 'Home') go(0)
-      else if (e.key === 'End') go(total)
+      if (e.key === 'ArrowLeft') nav('prev')
+      else if (e.key === 'ArrowRight') nav('next')
+      else if (e.key === 'Home') nav('start')
+      else if (e.key === 'End') nav('end')
       else return
       e.preventDefault()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [ply, total, go])
+  })
 
   if (!parsed) {
     return (
@@ -177,6 +229,17 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const coachComment = report?.comentarios.find((c) => c.ply === ply)?.comentario ?? report?.momentos_clave.find((m) => m.ply === ply)?.explicacion
   const bestNow = evalNow?.best
   const arrows: Arrow[] = showBest && bestNow ? [{ orig: bestNow.slice(0, 2), dest: bestNow.slice(2, 4), brush: 'paleBlue' }] : []
+  const liveBest = exploring ? live?.lines[0]?.move : undefined
+  const boardArrows: Arrow[] = variation || showLines ? (showBest && liveBest ? [{ orig: liveBest.slice(0, 2), dest: liveBest.slice(2, 4), brush: 'paleBlue' }] : []) : arrows
+  const varMove = variation && variation.idx ? variation.moves[variation.idx - 1] : undefined
+  const baseMove = variation && variation.base > 0 ? parsed.moves[variation.base - 1] : undefined
+  const boardLastMove: [string, string] | undefined = variation
+    ? varMove
+      ? [varMove.from, varMove.to]
+      : baseMove && [baseMove.from, baseMove.to]
+    : move
+      ? [move.from, move.to]
+      : undefined
   const top = orientation === 'white' ? game.black : game.white
   const bottom = orientation === 'white' ? game.white : game.black
 
@@ -235,6 +298,78 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     }
   }
 
+  // Explorar variantes: cualquier jugada en el tablero. Si coincide con la partida, se sigue la partida.
+  const playMove = (from: string, to: string, promotion?: string) => {
+    if (!boardFen) return
+    const chess = new Chess(boardFen)
+    let m
+    try {
+      m = chess.move({ from, to, promotion })
+    } catch {
+      setBoardKey((k) => k + 1)
+      return
+    }
+    const vm: VarMove = { san: m.san, uci: m.lan, from, to, fen: chess.fen() }
+    if (!variation) {
+      if (parsed.moves[ply]?.uci === m.lan) go(ply + 1)
+      else setVariation({ base: ply, moves: [vm], idx: 1 })
+      return
+    }
+    if (variation.moves[variation.idx]?.uci === m.lan) {
+      setVariation({ ...variation, idx: variation.idx + 1 })
+      return
+    }
+    if (variation.idx === 0 && parsed.moves[variation.base]?.uci === m.lan) {
+      go(variation.base + 1)
+      return
+    }
+    setVariation({ ...variation, moves: [...variation.moves.slice(0, variation.idx), vm], idx: variation.idx + 1 })
+  }
+
+  const onBoardMove = (from: string, to: string) => {
+    if (!boardFen) return
+    const piece = new Chess(boardFen).get(from as Parameters<Chess['get']>[0])
+    if (needsPromotion(boardFen, from, to, piece?.type)) setPromo({ from, to })
+    else playMove(from, to)
+  }
+
+  const playUci = (uci: string) => playMove(uci.slice(0, 2), uci.slice(2, 4), uci[4])
+
+  const variationCard = (variant: string) => {
+    if (!variation || !boardFen) return null
+    const startFen = parsed.fens[variation.base]
+    let n = Number(startFen.split(' ')[5] ?? 1)
+    const items = variation.moves.map((m, i) => {
+      const white = new Chess(i ? variation.moves[i - 1].fen : startFen).turn() === 'w'
+      const label = white ? `${n}. ${toSpanishSan(m.san)}` : i === 0 ? `${n}... ${toSpanishSan(m.san)}` : toSpanishSan(m.san)
+      if (!white) n++
+      return { label, i: i + 1 }
+    })
+    const baseMove = variation.base > 0 ? parsed.moves[variation.base - 1] : undefined
+    return (
+      <section className={`card move-card variation-card ${variant}`}>
+        <div className="move-card-head">
+          <strong>Variante</strong>
+          <span className="muted small">
+            {baseMove ? `desde ${Math.ceil(variation.base / 2)}${baseMove.color === 'w' ? '.' : '...'} ${toSpanishSan(baseMove.san)}` : 'desde el inicio'}
+          </span>
+          {live?.lines[0] && <span className="eval-chip">{formatEval(lineToWhite(boardFen, live.lines[0]))}</span>}
+        </div>
+        <div className="variation-moves">
+          {items.map((it) => (
+            <button key={it.i} className={`var-move ${it.i === variation.idx ? 'active' : ''}`} onClick={() => setVariation({ ...variation, idx: it.i })}>
+              {it.label}
+            </button>
+          ))}
+        </div>
+        <EngineLines fen={boardFen} lines={live} onPlay={playUci} />
+        <button className="btn small" onClick={() => go(variation.base)}>
+          Volver a la partida
+        </button>
+      </section>
+    )
+  }
+
   const viewControls = (
     <div className="view-controls">
       <button className="btn small" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
@@ -242,6 +377,9 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
       </button>
       <label className="check">
         <input type="checkbox" checked={showBest} onChange={(e) => setShowBest(e.target.checked)} /> Mostrar mejor jugada
+      </label>
+      <label className="check">
+        <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} /> Líneas del motor
       </label>
     </div>
   )
@@ -311,9 +449,15 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
               <strong>Entrenador:</strong> {coachComment}
             </p>
           )}
+          {showLines && !retry && <EngineLines fen={fen} lines={live} onPlay={playUci} />}
         </>
       ) : (
-        <p className="muted">Posición inicial. Avanza con los botones de la barra (o con las flechas del teclado).</p>
+        <>
+          <p className="muted">
+            {total ? 'Posición inicial. Avanza con los botones de la barra o mueve una pieza para explorar una variante.' : 'Mueve una pieza para explorar una variante.'}
+          </p>
+          {showLines && !retry && <EngineLines fen={fen} lines={live} onPlay={playUci} />}
+        </>
       )}
     </section>
   )
@@ -324,7 +468,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
         <div className="board-block">
           <PlayerLine player={top} />
           <div className="board-row">
-            <EvalBar evaluation={evalNow} orientation={orientation} />
+            <EvalBar evaluation={exploring && live?.lines[0] && boardFen ? lineToWhite(boardFen, live.lines[0]) : evalNow} orientation={orientation} />
             {retry ? (
               <Board
                 fen={retry.solvedFen ?? parsed.fens[retry.ply - 1]}
@@ -344,23 +488,31 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
                 resetKey={retry.resetKey}
               />
             ) : (
-              <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
+              <Board
+                fen={boardFen ?? fen}
+                orientation={orientation}
+                movableColor={boardFen ? (boardFen.split(' ')[1] === 'w' ? 'white' : 'black') : undefined}
+                lastMove={boardLastMove}
+                arrows={boardArrows}
+                onMove={onBoardMove}
+                resetKey={boardKey}
+              />
             )}
           </div>
           <PlayerLine player={bottom} />
         </div>
         <div className="controls">
           <div className="nav-controls">
-            <button className="btn" onClick={() => go(0)} title="Inicio" aria-label="Inicio">
+            <button className="btn" onClick={() => nav('start')} title="Inicio" aria-label="Inicio">
               ⏮
             </button>
-            <button className="btn" onClick={() => go(ply - 1)} title="Anterior (flecha izquierda)" aria-label="Anterior">
+            <button className="btn" onClick={() => nav('prev')} title="Anterior (flecha izquierda)" aria-label="Anterior">
               ◀
             </button>
-            <button className="btn" onClick={() => go(ply + 1)} title="Siguiente (flecha derecha)" aria-label="Siguiente">
+            <button className="btn" onClick={() => nav('next')} title="Siguiente (flecha derecha)" aria-label="Siguiente">
               ▶
             </button>
-            <button className="btn" onClick={() => go(total)} title="Final" aria-label="Final">
+            <button className="btn" onClick={() => nav('end')} title="Final" aria-label="Final">
               ⏭
             </button>
           </div>
@@ -375,7 +527,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
 
       <div className="analysis-side">
         {/* En el móvil, la jugada actual queda fija y solo se desplaza lo de debajo */}
-        <div className="mobile-only">{moveCard('mobile')}</div>
+        <div className="mobile-only">{variation ? variationCard('mobile') : moveCard('mobile')}</div>
         <div className="side-scroll">
           <div className="mobile-only m-order-6">{viewControls}</div>
           {analysis && (
@@ -486,7 +638,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
             </section>
           )}
 
-          {moveCard('desktop-only')}
+          {variation ? variationCard('desktop-only') : moveCard('desktop-only')}
 
           {keyMoments && keyMoments.length > 0 && (
             <section className="card m-order-2">
@@ -520,6 +672,20 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           </div>
         </div>
       </div>
+      {promo && boardFen && (
+        <PromotionPicker
+          color={boardFen.split(' ')[1] === 'w' ? 'white' : 'black'}
+          onCancel={() => {
+            setPromo(null)
+            setBoardKey((k) => k + 1)
+          }}
+          onPick={(p) => {
+            const { from, to } = promo
+            setPromo(null)
+            playMove(from, to, p)
+          }}
+        />
+      )}
     </div>
   )
 }

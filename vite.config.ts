@@ -10,12 +10,7 @@ export default defineConfig(({ mode }) => {
     base: env.BASE_PATH || '/',
     plugins: [
       react(),
-      coachPlugin({
-        root: process.cwd(),
-        provider: env.COACH_PROVIDER,
-        apiKey: env.ANTHROPIC_API_KEY,
-        baseURL: env.ANTHROPIC_BASE_URL || undefined,
-      }),
+      coachPlugin(),
     ],
     server: { open: true },
     preview: { open: true },
