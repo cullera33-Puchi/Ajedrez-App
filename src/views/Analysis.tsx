@@ -134,6 +134,17 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     (m) => (m.classification === 'grave' || m.classification === 'error') && (!userSide || m.color === userSide),
   )
 
+  const viewControls = (
+    <div className="view-controls">
+      <button className="btn small" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
+        Girar tablero
+      </button>
+      <label className="check">
+        <input type="checkbox" checked={showBest} onChange={(e) => setShowBest(e.target.checked)} /> Mostrar mejor jugada
+      </label>
+    </div>
+  )
+
   const moveCard = (variant: string) => (
 <section className={`card move-card ${variant} ${moveAnalysis ? 'c-' + moveAnalysis.classification : ''}`}>
       {move ? (
@@ -166,13 +177,14 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   return (
     <div className="page analysis">
       <div className="analysis-board">
-        <PlayerLine player={top} />
-        <div className="board-row">
-          <EvalBar evaluation={evalNow} orientation={orientation} />
-          <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
+        <div className="board-block">
+          <PlayerLine player={top} />
+          <div className="board-row">
+            <EvalBar evaluation={evalNow} orientation={orientation} />
+            <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
+          </div>
+          <PlayerLine player={bottom} />
         </div>
-        <PlayerLine player={bottom} />
-        {moveCard('mobile-only')}
         <div className="controls">
           <div className="nav-controls">
             <button className="btn" onClick={() => go(0)} title="Inicio" aria-label="Inicio">
@@ -188,18 +200,26 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
               ⏭
             </button>
           </div>
-          <button className="btn" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
-            Girar tablero
-          </button>
-          <label className="check">
-            <input type="checkbox" checked={showBest} onChange={(e) => setShowBest(e.target.checked)} /> Mostrar mejor jugada
-          </label>
+          <div className="desktop-only">{viewControls}</div>
         </div>
-        {analysis && <EvalChart analysis={analysis} ply={ply} onSelect={go} />}
+        {analysis && (
+          <div className="desktop-only">
+            <EvalChart analysis={analysis} ply={ply} onSelect={go} />
+          </div>
+        )}
       </div>
 
       <div className="analysis-side">
-        <section className="card">
+        <div className="mobile-only m-order-0">
+          {moveCard('mobile')}
+          {viewControls}
+        </div>
+        {analysis && (
+          <div className="mobile-only m-order-4">
+            <EvalChart analysis={analysis} ply={ply} onSelect={go} />
+          </div>
+        )}
+        <section className="card m-order-5">
           <h2>
             {game.white.name} contra {game.black.name}
           </h2>
@@ -273,7 +293,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
         </section>
 
         {analysis && (
-          <section className="card practice">
+          <section className="card practice m-order-3">
             <h3>Practica lo que has fallado</h3>
             {practice.length ? (
               <>
@@ -302,19 +322,8 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
 
         {moveCard('desktop-only')}
 
-        <CoachPanel
-          game={game}
-          parsed={parsed}
-          analysis={analysis}
-          ply={ply}
-          report={report}
-          onReport={setReport}
-          onSelectPly={go}
-          onPractice={onPractice}
-        />
-
         {keyMoments && keyMoments.length > 0 && (
-          <section className="card">
+          <section className="card m-order-2">
             <h3>{userSide ? 'Tus momentos clave' : 'Momentos clave'}</h3>
             <div className="chips">
               {keyMoments.map((m) => (
@@ -327,9 +336,22 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           </section>
         )}
 
-        <section className="card">
+        <section className="card m-order-1">
           <MoveList sans={parsed.moves.map((m) => m.san)} analysis={analysis?.moves} ply={ply} onSelect={go} />
         </section>
+
+        <div className="m-order-9">
+          <CoachPanel
+            game={game}
+            parsed={parsed}
+            analysis={analysis}
+            ply={ply}
+            report={report}
+            onReport={setReport}
+            onSelectPly={go}
+            onPractice={onPractice}
+          />
+        </div>
       </div>
     </div>
   )

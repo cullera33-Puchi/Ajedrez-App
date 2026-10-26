@@ -39,6 +39,8 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
   const [question, setQuestion] = useState('')
   const [asking, setAsking] = useState(false)
   const [handoff, setHandoff] = useState<Handoff | null>(null)
+  // Plegado por defecto para que ocupe poco; se despliega al pulsar.
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     fetchCoachStatus().then(setStatus)
@@ -129,10 +131,43 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
     </div>
   )
 
+  const ready = Boolean(status && status.ready)
+  if (!expanded && !loading && !asking) {
+    return (
+      <section className="card coach-compact">
+        <div className="toolbar">
+          {ready && (
+            <button className="btn small" onClick={() => setExpanded(true)}>
+              Entrenador IA{report ? ' (informe listo)' : ''}
+            </button>
+          )}
+          <button className="btn small" onClick={() => openClaudeAi(false)} disabled={!analysis} title="Copia la partida y abre claude.ai">
+            Abrir en claude.ai
+          </button>
+          {!ready && (
+            <button className="link small" onClick={() => setExpanded(true)}>
+              Más información
+            </button>
+          )}
+        </div>
+        {handoffInfo}
+      </section>
+    )
+  }
+
+  const collapse = (
+    <button className="link small coach-collapse" onClick={() => setExpanded(false)}>
+      Plegar
+    </button>
+  )
+
   if (!status || !status.ready) {
     return (
       <section className="card coach">
-        <h2>Entrenador IA</h2>
+        <div className="coach-head">
+          <h2>Entrenador IA</h2>
+          {collapse}
+        </div>
         <p className="muted">
           {status === null
             ? 'En la versión web y en el móvil, lleva la partida a Claude con el botón de abajo. El entrenador integrado funciona al arrancar la app en tu PC.'
@@ -155,6 +190,7 @@ export function CoachPanel({ game, parsed, analysis, ply, report, onReport, onSe
       <div className="coach-head">
         <h2>Entrenador IA</h2>
         <span className="badge">{status.provider === 'plan' ? 'Claude, con tu plan' : 'Claude, con clave de API'}</span>
+        {collapse}
       </div>
 
       {!report && !loading && (

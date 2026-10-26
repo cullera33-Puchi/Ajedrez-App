@@ -1323,3 +1323,102 @@ cg-board {
 .reco-item.active {
   border-color: var(--accent);
 }
+
+/* Controles de vista (girar tablero, mostrar mejor jugada) */
+.view-controls {
+  display: flex;
+  gap: 0.6rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.coach-compact .toolbar {
+  margin: 0;
+}
+.coach-compact {
+  padding: 0.6rem 0.8rem;
+}
+.coach-head .coach-collapse {
+  margin-left: auto;
+}
+
+/*
+ * Móvil, análisis: la pantalla ocupa el hueco fijo entre la isla y la barra de botones.
+ * El tablero no se mueve nunca; solo se desplaza la zona de abajo (jugada, lista, resumen...).
+ */
+@media (max-width: 800px) {
+  :root {
+    --controls-h: 67px;
+  }
+  .page.analysis {
+    position: fixed;
+    top: var(--safe-top);
+    left: var(--safe-left);
+    right: var(--safe-right);
+    bottom: calc(var(--nav-h) + var(--safe-bottom) + var(--controls-h));
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 6px 12px 0;
+    margin: 0;
+  }
+  .page.analysis .analysis-board {
+    flex: none;
+    display: block;
+    gap: 0;
+  }
+  .page.analysis .analysis-board > .controls {
+    margin: 0;
+    padding: 0;
+  }
+  .page.analysis .board-row {
+    max-width: calc(46dvh + 26px);
+    margin: 0 auto;
+  }
+  .page.analysis .player-line {
+    font-size: 0.85rem;
+    line-height: 1.7;
+    padding-left: 26px;
+    max-width: calc(46dvh + 26px);
+    margin: 0 auto;
+  }
+  .page.analysis .analysis-side {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    padding: 8px 0 12px;
+    border-top: 1px solid var(--line);
+  }
+  .page.analysis .analysis-side .card {
+    margin-bottom: 0.6rem;
+  }
+  .page.analysis .move-card.mobile {
+    min-height: 96px;
+    margin-bottom: 0.5rem;
+    padding: 0.7rem 0.8rem;
+  }
+  .page.analysis .move-card.mobile p {
+    margin: 0.3rem 0 0;
+    font-size: 0.92rem;
+  }
+  .page.analysis .view-controls {
+    margin-bottom: 0.6rem;
+  }
+  .page.analysis .movelist {
+    max-height: 200px;
+  }
+  .page.analysis .evalchart {
+    margin: 0 0 0.6rem;
+  }
+  .m-order-0 { order: 0; }
+  .m-order-1 { order: 1; }
+  .m-order-2 { order: 2; }
+  .m-order-3 { order: 3; }
+  .m-order-4 { order: 4; }
+  .m-order-5 { order: 5; }
+  .m-order-9 { order: 9; }
+}

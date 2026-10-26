@@ -14,7 +14,8 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 | Entrenador con Claude | Con el plan (Claude Code en el PC), con claude.ai (copiar y pegar) o con clave de API |
 | Versión móvil instalable (PWA) en GitHub Pages | https://cullera33-puchi.github.io/Ajedrez-App/ |
 | Ajustes de iPhone | Isla y zonas seguras, nada más ancho que la pantalla, sin zoom por doble toque |
-| Análisis cómodo en el móvil | Comentario bajo el tablero, barra fija de botones grandes, la página ya no salta al avanzar |
+| Análisis cómodo en el móvil | Tablero fijo arriba; debajo, una zona propia que se desplaza con la jugada, la lista y el resumen; barra fija de botones grandes; la página nunca se mueve |
+| Entrenador con Claude plegado al final | Fila pequeña con *Entrenador IA* y *Abrir en claude.ai*; se despliega al pulsar |
 | Problemas recomendados según tus errores | Temas deducidos de tus errores (mates, piezas colgadas, dobles ataques, defensa) y de los informes de Claude. Botón *Practica lo que has fallado* en el análisis y recomendaciones en Problemas e Inicio |
 
 ## Pendiente
@@ -70,3 +71,4 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 | # | Idea | Primeras notas |
 |---|---|---|
 | 6.1 | **Estudios y cursos de Lichess para estudiar y practicar por temas** | Lichess permite exportar estudios en PGN (públicos y, con tu cuenta, los tuyos y los que te compartan) y listar los estudios de un usuario. Cada capítulo puede ser una lección o un ejercicio con jugadas que adivinar. Enfoque posible: importar un estudio por enlace, mostrar sus capítulos como temario y practicar cada capítulo en modo «adivina la jugada», guardando el progreso. Falta decidir qué estudios usar (propios, de la comunidad o una selección para principiantes) y cómo encaja con los problemas recomendados |
+| 6.2 | **Recomendación de cursos y libros según tus errores** | Para cada tema que más fallas, sugerir recursos: prácticas temáticas de Lichess (lichess.org/practice), estudios de la comunidad y libros o cursos para principiantes. Opción sencilla: un enlace de búsqueda en Google por tema y nivel (por ejemplo, «libro ajedrez clavadas principiantes»), que se puede hacer ya sin coste. Opción más completa: que Claude proponga 2 o 3 recursos concretos en el informe de la partida. Falta decidir si queremos una lista fija revisada por nosotros o recomendaciones dinámicas |
