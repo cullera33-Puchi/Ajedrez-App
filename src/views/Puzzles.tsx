@@ -16,6 +16,8 @@ import {
 import { getGames } from '../lib/games'
 import { recommendThemes } from '../lib/recommend'
 import { allMyPuzzles, duePuzzles, type MyPuzzle, recordResult, toPuzzle } from '../lib/myPuzzles'
+import { loadLog, logAttempt } from '../lib/puzzleLog'
+import { PuzzleProgress } from '../components/PuzzleProgress'
 import { usePersistentState } from '../lib/storage'
 import type { Color } from '../lib/types'
 
@@ -42,6 +44,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [theme, setTheme] = useState(initialTheme === MY_ERRORS ? 'mix' : initialTheme)
   const [mine, setMine] = useState<MyPuzzle | null>(null)
   const [dueCount, setDueCount] = useState(() => duePuzzles().length)
+  const [log, setLog] = useState(loadLog)
 
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null)
   const [fen, setFen] = useState('')
@@ -127,8 +130,15 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const rate = (win: boolean) => {
     if (!puzzle || flags.rated) return
     // Los problemas de tus errores no cambian tu nivel: solo deciden cuándo vuelven a salir.
-    if (puzzle.source === 'mine') void recordResult(puzzle.id, win).then(() => setDueCount(duePuzzles().length))
-    else setStats((s) => updateRating(s, puzzle, win))
+    if (puzzle.source === 'mine') {
+      void recordResult(puzzle.id, win).then(() => setDueCount(duePuzzles().length))
+      logAttempt({ t: Date.now(), win, source: 'mine', difficulty: null, prev: null, rating: null })
+    } else {
+      const updated = updateRating(stats, puzzle, win)
+      setStats(updated)
+      logAttempt({ t: Date.now(), win, source: puzzle.source, difficulty: puzzle.rating || null, prev: stats.rating, rating: updated.rating })
+    }
+    setLog(loadLog())
     setFlags((f) => ({ ...f, rated: true }))
   }
 
@@ -273,6 +283,9 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
               <span key={i} className={`dot ${h.win ? 'win' : 'loss'}`} title={h.win ? 'Acertado' : 'Fallado'} />
             ))}
           </div>
+          <a className="small" href="#evolucion" onClick={(e) => (e.preventDefault(), document.getElementById('evolucion')?.scrollIntoView({ behavior: 'smooth' }))}>
+            Ver tu evolución
+          </a>
         </section>
 
         <section className="card">
@@ -354,6 +367,8 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
             <p className="muted small">Importa y analiza algunas partidas tuyas y te diré qué temas practicar según tus errores.</p>
           )}
         </section>
+
+        <PuzzleProgress log={log} rating={stats.rating} />
 
         <section className="card">
           <h3>Opciones</h3>

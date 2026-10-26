@@ -3,6 +3,7 @@ import type { BotRecord } from './bots'
 import { db } from './db'
 import { mergeGames } from './games'
 import type { MyPuzzle } from './myPuzzles'
+import { mergeLogs, type PuzzleAttempt } from './puzzleLog'
 import type { PuzzleStats } from './puzzles'
 import type { AnalysisSummary } from './recommend'
 import { dumpAll, load, save } from './storage'
@@ -69,6 +70,8 @@ function mergeLocal(incoming: Record<string, unknown>) {
     const current = load<unknown>(key, null)
     if (key === 'puzzleStats') {
       if (played(value as PuzzleStats) > played(current as PuzzleStats | null)) save(key, value)
+    } else if (key === 'puzzleLog') {
+      save(key, mergeLogs((current ?? []) as PuzzleAttempt[], value as PuzzleAttempt[]))
     } else if (key === 'botRecord') {
       const a = (current ?? {}) as BotRecord
       const b = value as BotRecord

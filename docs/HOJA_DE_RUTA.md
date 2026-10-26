@@ -15,6 +15,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Importación de archivo PGN | Admite el archivo con varias partidas que descarga Chess.com |
 | Bots de tu nivel (1.1) | Nivel de 250 a 2000 de 50 en 50 puntos, con estilo equilibrado o atacante, en la pestaña *Jugar*. Récord por nivel y mejor victoria |
 | Partidas contra bots separadas | En *Mis partidas*, apartados *Chess.com y Lichess*, *Contra bots* y *Otras*. Se analizan igual, pero no cuentan en las recomendaciones ni en el resumen de Inicio |
+| Descartar una partida contra bot | Botón *Descartar*: sale sin guardar y sin sumar al récord |
+| Evolución de los problemas (4.3, parte de problemas) | Problemas, *Tu evolución*: nivel por día, problemas hechos y acertados, dificultad media; periodos de 7, 30 y 90 días |
 | Elegir pieza al coronar (5.4) | En las partidas contra bots; en los problemas se respeta la subpromoción |
 | Análisis en segundo plano (1.3) | Analiza tus partidas pendientes mientras la app está abierta; se pausa al jugar o analizar a mano |
 | Problemas con tus propios errores (1.4) | Origen *Mis errores* en Problemas, con repaso espaciado |
@@ -38,7 +40,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 |---|---|---|---|
 | 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida. Necesita tu cuenta de Lichess y probarlo contigo | Alto | Media |
 | 1.6 | Problemas de Lichess sincronizados con tu cuenta y paquete de problemas de tu nivel para usar sin conexión | Medio | Media |
-| 1.8 | Calibrar la fuerza de los bots con tus partidas reales (si alguno resulta demasiado fácil o difícil) | Bajo | Media |
+| 1.8 | Calibrar la fuerza de los bots con tus impresiones, registradas en `docs/AJUSTE_BOTS.md` | Bajo | Continua |
 
 ### 2. Sincronización entre ordenador y móvil
 
@@ -58,7 +60,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
 | 4.2 | Explorar variantes libremente en el tablero de análisis | Medio | Media |
-| 4.3 | Panel de progreso: evolución del rating, temas más fallados y aperturas con peor resultado | Medio | Media |
+| 4.3 | Panel de progreso de partidas: evolución del rating en Chess.com, temas más fallados y aperturas con peor resultado (la parte de problemas ya está hecha) | Medio | Media |
 | 4.4 | Lecciones interactivas de mates básicos y finales elementales | Alto | Media |
 | 4.5 | Repertorio de aperturas con repetición espaciada | Alto | Baja |
 

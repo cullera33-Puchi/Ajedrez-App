@@ -6,6 +6,7 @@ import { DEMO_GAMES } from './games'
 import { normalizeLichessGame, puzzleFromLichess } from './lichess'
 import { gameFromPgn } from './pgnImport'
 import { INITIAL_PUZZLE_STATS, LOCAL_PUZZLES, updateRating } from './puzzles'
+import { dailyStats, mergeLogs, type PuzzleAttempt, ratingChange } from './puzzleLog'
 import { outcomeFor } from './types'
 
 describe('problemas locales', () => {
@@ -459,5 +460,32 @@ describe('niveles de bot de 50 en 50', () => {
     const { loadBotRecord } = await import('./bots')
     save('botRecord', { lucia: { w: 1, l: 2, d: 0 }, 'elo-400': { w: 1, l: 0, d: 0 } })
     expect(loadBotRecord()).toEqual({ 'elo-400': { w: 2, l: 2, d: 0 } })
+  })
+})
+
+describe('histórico de problemas', () => {
+  const day = (d: number, h = 12) => new Date(2026, 9, d, h).getTime()
+  const log: PuzzleAttempt[] = [
+    { t: day(20), win: true, source: 'local', difficulty: 500, prev: 600, rating: 620 },
+    { t: day(24), win: false, source: 'lichess', difficulty: 700, prev: 620, rating: 600 },
+    { t: day(24, 18), win: true, source: 'mine', difficulty: null, prev: null, rating: null },
+    { t: day(26), win: true, source: 'local', difficulty: 600, prev: 600, rating: 630 },
+  ]
+
+  it('agrupa por día con días vacíos y arrastra el nivel', () => {
+    const s = dailyStats(log, 5, day(26, 20))
+    expect(s.map((d) => d.total)).toEqual([0, 0, 2, 0, 1])
+    expect(s[0].rating).toBe(620)
+    expect(s[2]).toMatchObject({ wins: 1, avgDifficulty: 700, rating: 600 })
+    expect(s[3].rating).toBe(600)
+    expect(ratingChange(log, s)).toBe(10)
+  })
+
+  it('calcula el cambio desde el primer intento si no hay datos previos', () => {
+    expect(ratingChange(log, dailyStats(log, 30, day(26, 20)))).toBe(30)
+  })
+
+  it('fusiona históricos sin duplicar', () => {
+    expect(mergeLogs(log.slice(0, 3), log.slice(1))).toHaveLength(4)
   })
 })

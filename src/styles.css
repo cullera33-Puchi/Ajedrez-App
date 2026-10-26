@@ -2095,3 +2095,107 @@ label {
 .analysis-side .badge[class*='src-'] {
   margin-bottom: 0.4rem;
 }
+
+/* Evolución de los problemas */
+.evolution .segmented {
+  margin-bottom: 0.7rem;
+}
+.evolution .kpis {
+  grid-template-columns: repeat(4, 1fr);
+}
+.chart-title {
+  margin: 0.9rem 0 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.evo-chart {
+  display: block;
+  width: 100%;
+  height: 110px;
+  background: var(--accent-soft);
+  border-radius: 6px;
+  touch-action: pan-y;
+  cursor: pointer;
+}
+.evo-chart + .chart-axis {
+  margin-top: 0.2rem;
+}
+.chart-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.chart-axis .legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+.sw {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+.sw.win,
+.bar-win {
+  background: var(--c-mejor);
+  fill: var(--c-mejor);
+}
+.sw.fail,
+.bar-fail {
+  background: var(--muted);
+  fill: var(--muted);
+  opacity: 0.6;
+}
+.evo-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.evo-grid {
+  stroke: var(--muted);
+  stroke-dasharray: 4 4;
+  opacity: 0.5;
+}
+.evo-cursor {
+  stroke: var(--text, currentColor);
+  stroke-width: 1;
+  opacity: 0.6;
+}
+.evo-readout {
+  min-height: 2.6em;
+  margin: 0.6rem 0;
+}
+.evo-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+}
+.evo-table th,
+.evo-table td {
+  padding: 0.3rem 0.2rem;
+  text-align: right;
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, 0.2));
+}
+.evo-table th:first-child,
+.evo-table td:first-child {
+  text-align: left;
+}
+.evolution details summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+:root[data-theme='eink'] .bar-win,
+:root[data-theme='eink'] .sw.win {
+  fill: #000;
+  background: #000;
+}
+.chart-note {
+  margin: 0.2rem 0 0;
+}
+.evolution details {
+  margin-top: 0.6rem;
+}

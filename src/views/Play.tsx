@@ -178,6 +178,14 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     finish(game, game.userColor === 'white' ? '0-1' : '1-0', 'Abandono')
   }
 
+  /** Sale de la partida sin guardarla ni sumarla al récord. */
+  const quit = () => {
+    if (!game || finished) return
+    if (game.moves.length && !window.confirm('¿Salir sin guardar? La partida se borra y no cuenta en tu récord.')) return
+    saveBotGame(null)
+    newGame()
+  }
+
   const newGame = () => {
     setGame(null)
     setFinished(null)
@@ -335,6 +343,9 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
           </button>
           <button className="btn" onClick={resign}>
             ⚑ Rendirse
+          </button>
+          <button className="btn" onClick={quit} title="Salir sin guardar la partida">
+            ✕ Descartar
           </button>
         </div>
       )}
