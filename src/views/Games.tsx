@@ -5,6 +5,7 @@ import { fetchLichessGames } from '../lib/lichess'
 import { gameFromPgn, gamesFromPgnFile } from '../lib/pgnImport'
 import type { Settings } from '../lib/settings'
 import { getSummary } from '../lib/games'
+import { setBackgroundEnabled, useBackgroundState } from '../lib/background'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -44,6 +45,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
   const [ccUser, setCcUser] = useState(settings.chesscomUser)
   const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [limit, setLimit] = useState(50)
+  const bg = useBackgroundState()
   const [filter, setFilter] = useState<Filter>('todas')
   const [showPgn, setShowPgn] = useState(false)
   const [pgn, setPgn] = useState('')
@@ -195,6 +197,32 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
           </div>
         )}
       </section>
+
+      {(bg.pending > 0 || bg.current) && (
+        <section className="card bg-card">
+          <div className="bg-head">
+            <strong>Análisis automático</strong>
+            <button className="btn small" onClick={() => setBackgroundEnabled(!bg.enabled)}>
+              {bg.enabled ? 'Pausar' : 'Reanudar'}
+            </button>
+          </div>
+          <p className="muted small">
+            {bg.analyzed} de {bg.analyzed + bg.pending} partidas tuyas analizadas.{' '}
+            {!bg.enabled
+              ? 'En pausa.'
+              : bg.current
+                ? `Analizando la partida contra ${bg.current.userColor === 'white' ? bg.current.black.name : bg.current.white.name}…`
+                : bg.paused === 'ocupado'
+                  ? 'En espera mientras usas el motor.'
+                  : 'Sigue mientras la app esté abierta.'}
+          </p>
+          {bg.progress && (
+            <div className="progress-bar">
+              <div style={{ width: `${(bg.progress.done / bg.progress.total) * 100}%` }} />
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="card">
         <div className="tabs">

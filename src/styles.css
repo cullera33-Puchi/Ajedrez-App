@@ -1905,3 +1905,13 @@ label {
   width: 100%;
   margin-top: 0.6rem;
 }
+
+.bg-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+.bg-card p {
+  margin: 0.3rem 0 0.4rem;
+}

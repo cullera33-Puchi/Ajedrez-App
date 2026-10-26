@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import type { GameSummary } from './lib/types'
@@ -26,6 +27,15 @@ export default function App() {
   const [games, setGames] = useState<GameSummary[]>(getGames)
   const [gameId, setGameId] = useState<string | null>(null)
   const [puzzleTheme, setPuzzleTheme] = useState('mix')
+
+  // Análisis en segundo plano de las partidas pendientes. Cada partida que termina refresca la vista.
+  useEffect(() => {
+    startBackgroundAnalysis()
+  }, [])
+  const bg = useBackgroundState()
+  useEffect(() => {
+    if (!bg.current) setGames(getGames())
+  }, [bg.analyzed, bg.current])
 
   // Cada pantalla empieza arriba (en el móvil, si no, el tablero puede quedar fuera de la vista).
   useEffect(() => {
