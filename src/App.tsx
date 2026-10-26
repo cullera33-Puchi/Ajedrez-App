@@ -35,7 +35,7 @@ export default function App() {
   const bg = useBackgroundState()
   useEffect(() => {
     if (!bg.current) setGames(getGames())
-  }, [bg.analyzed, bg.current])
+  }, [bg.analyzed, bg.current]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cada pantalla empieza arriba (en el móvil, si no, el tablero puede quedar fuera de la vista).
   useEffect(() => {

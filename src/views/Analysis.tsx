@@ -82,7 +82,8 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const [showBest, setShowBest] = useState(true)
   const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
   const [retry, setRetry] = useState<Retry | null>(null)
-  const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report])
+  // Se recalcula también al llegar un informe de Claude, porque sus temas se suman (se leen del almacenamiento).
+  const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report]) // eslint-disable-line react-hooks/exhaustive-deps
   const abortRef = useRef<AbortController | null>(null)
 
   const total = parsed ? parsed.fens.length - 1 : 0

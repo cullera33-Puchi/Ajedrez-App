@@ -65,7 +65,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   useEffect(() => {
     if (settings.chesscomUser || settings.lichessUser) void refresh(settings)
     // Solo al entrar en la pantalla.
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const saveAccounts = () => {
     const s = { ...settings, chesscomUser: cc.trim(), lichessUser: li.trim() }
@@ -410,6 +410,7 @@ const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'auto', label: 'Automático' },
   { value: 'light', label: 'Día' },
   { value: 'dark', label: 'Noche' },
+  { value: 'eink', label: 'Tinta' },
 ]
 
 function ThemeCard() {
@@ -428,7 +429,10 @@ function ThemeCard() {
           </button>
         ))}
       </div>
-      <p className="muted small">Automático usa el modo día o noche que tengas puesto en el móvil o en el ordenador.</p>
+      <p className="muted small">
+        Automático usa el modo día o noche que tengas puesto en el móvil o en el ordenador. Tinta es para tablets de tinta electrónica (como
+        BOOX): alto contraste y sin animaciones.
+      </p>
     </section>
   )
 }

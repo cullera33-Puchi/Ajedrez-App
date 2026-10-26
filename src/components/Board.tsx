@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react'
 import 'chessground/assets/chessground.base.css'
 import 'chessground/assets/chessground.brown.css'
 import 'chessground/assets/chessground.cburnett.css'
+import { isEink } from '../lib/theme'
 import type { Color } from '../lib/types'
 
 export interface Arrow {
@@ -52,7 +53,8 @@ export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove
     api.current = Chessground(el.current, {
       fen: initialFen.current,
       orientation: initialOrientation.current,
-      animation: { enabled: true, duration: 180 },
+      // En tinta electrónica, las animaciones dejan rastros y van lentas.
+      animation: { enabled: !isEink(), duration: 180 },
       highlight: { lastMove: true, check: true },
       premovable: { enabled: false },
       movable: { free: false, showDests: true, events: { after: (o, d) => onMoveRef.current?.(o, d) } },

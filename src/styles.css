@@ -35,7 +35,8 @@
   --coach-bg: rgba(240, 179, 90, 0.1);
   --coach-bubble: rgba(92, 139, 176, 0.22);
   --status-band: #262522;
-  --board: min(calc(100vh - 230px), 640px);
+  /* Tablero: cabe en alto y en ancho (menú lateral, márgenes y barra de evaluación) */
+  --board: min(calc(100vh - 230px), 640px, calc(100vw - 330px));
   /* Zonas seguras del iPhone (isla, hora, indicador de inicio y bordes en horizontal) */
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -1947,4 +1948,88 @@ label {
 }
 .module .resources {
   margin-top: 0.4rem;
+}
+
+/* Tinta electrónica (BOOX y similares): blanco y negro, alto contraste, sin animaciones ni sombras */
+:root[data-theme='eink'] {
+  --bg: #ffffff;
+  --bg-2: #ffffff;
+  --card: #ffffff;
+  --card-2: #e6e6e6;
+  --line: #000000;
+  --text: #000000;
+  --muted: #333333;
+  --accent: #000000;
+  --accent-2: #000000;
+  --accent-soft: #eeeeee;
+  --on-accent: #ffffff;
+  --good: #000000;
+  --bad: #000000;
+  --c-mejor: #000000;
+  --c-buena: #000000;
+  --c-imprecision: #000000;
+  --c-error: #000000;
+  --c-grave: #000000;
+  --err-bg: #ffffff;
+  --err-text: #000000;
+  --ok-bg: #ffffff;
+  --ok-text: #000000;
+  --info-bg: #ffffff;
+  --info-text: #000000;
+  --eval-white: #ffffff;
+  --eval-black: #000000;
+  --stripe: transparent;
+  --coach-line: #000000;
+  --coach-accent: #000000;
+  --coach-bg: #ffffff;
+  --coach-bubble: #f0f0f0;
+  --status-band: #ffffff;
+  color-scheme: light;
+}
+:root[data-theme='eink'] *,
+:root[data-theme='eink'] *::before,
+:root[data-theme='eink'] *::after {
+  transition: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+:root[data-theme='eink'] .card,
+:root[data-theme='eink'] .btn,
+:root[data-theme='eink'] .msg,
+:root[data-theme='eink'] .chip,
+:root[data-theme='eink'] .badge,
+:root[data-theme='eink'] .kpi,
+:root[data-theme='eink'] .resource-link {
+  border: 2px solid #000;
+}
+:root[data-theme='eink'] .btn.primary,
+:root[data-theme='eink'] .segmented button.active,
+:root[data-theme='eink'] .move.active {
+  background: #000;
+  color: #fff;
+}
+:root[data-theme='eink'] .nav-item.active {
+  background: #000;
+  color: #fff;
+}
+:root[data-theme='eink'] .cg-wrap cg-board {
+  background-color: #b5b5b5;
+  background-image: repeating-conic-gradient(#b5b5b5 0 25%, #ffffff 0 50%);
+}
+:root[data-theme='eink'] .cg-wrap cg-board square.last-move,
+:root[data-theme='eink'] .cg-wrap cg-board square.selected {
+  background-color: transparent;
+  box-shadow: inset 0 0 0 4px #000 !important;
+}
+:root[data-theme='eink'] .move-sym,
+:root[data-theme='eink'] .badge {
+  font-weight: 800;
+}
+:root[data-theme='eink'] .spinner {
+  border-top-color: #000;
+}
+
+.brand-icon {
+  color: var(--on-accent);
 }
