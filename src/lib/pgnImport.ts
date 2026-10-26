@@ -37,3 +37,30 @@ function hash(s: string): string {
   for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
   return (h >>> 0).toString(36)
 }
+
+/** Separa un archivo con varias partidas PGN (por ejemplo, el que descarga Chess.com) en partidas sueltas. */
+export function splitPgnFile(text: string): string[] {
+  return text
+    .replace(/\r\n/g, '\n')
+    .split(/\n\s*\n(?=\[Event )/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0)
+}
+
+export function gamesFromPgnFile(text: string, username?: string): { games: GameSummary[]; failed: number } {
+  const games: GameSummary[] = []
+  let failed = 0
+  for (const pgn of splitPgnFile(text)) {
+    try {
+      const g = gameFromPgn(pgn, username)
+      if (/chess\.com/i.test(pgn)) g.source = 'chesscom'
+      else if (/lichess\.org/i.test(pgn)) g.source = 'lichess'
+      const site = header(pgn, 'Link') ?? header(pgn, 'Site')
+      if (site?.startsWith('http')) g.url = site
+      games.push(g)
+    } catch {
+      failed++
+    }
+  }
+  return { games, failed }
+}

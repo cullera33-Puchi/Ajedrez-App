@@ -72,7 +72,7 @@ export default function App() {
           <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} />
         )}
         {view === 'partidas' && (
-          <GamesView settings={settings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
+          <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}
         {view === 'analisis' && (
           <AnalysisView

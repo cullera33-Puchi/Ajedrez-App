@@ -22,17 +22,34 @@ export interface CcGame {
   black: CcPlayer
 }
 
+/** Error de importación con un detalle técnico para diagnosticar desde el móvil. */
+export class ImportError extends Error {
+  detail: string
+  constructor(message: string, detail: string) {
+    super(message)
+    this.detail = detail
+  }
+}
+
 async function getJson<T>(url: string): Promise<T> {
   let res: Response
   try {
     res = await fetch(url)
-  } catch {
-    throw new Error('No se ha podido conectar con Chess.com. Revisa tu conexión.')
+  } catch (e) {
+    throw new ImportError(
+      'El navegador no ha podido leer los datos de Chess.com. Puede ser la conexión o una restricción de seguridad del navegador. Mientras lo resolvemos, puedes importar un archivo PGN.',
+      `fetch ${url}: ${(e as Error).name}: ${(e as Error).message}; online=${navigator.onLine}`,
+    )
   }
-  if (res.status === 404) throw new Error('Usuario no encontrado en Chess.com.')
-  if (res.status === 429) throw new Error('Chess.com está limitando las peticiones. Espera un minuto y vuelve a intentarlo.')
-  if (!res.ok) throw new Error(`Chess.com ha respondido con un error (${res.status}).`)
-  return res.json() as Promise<T>
+  const detail = `GET ${url}: HTTP ${res.status} ${res.statusText}`
+  if (res.status === 404) throw new ImportError('Ese usuario no existe en Chess.com. Revisa cómo está escrito.', detail)
+  if (res.status === 429) throw new ImportError('Chess.com está limitando las peticiones. Espera un minuto y vuelve a intentarlo.', detail)
+  if (!res.ok) throw new ImportError(`Chess.com ha respondido con un error (${res.status}).`, detail)
+  try {
+    return (await res.json()) as T
+  } catch (e) {
+    throw new ImportError('La respuesta de Chess.com no tiene el formato esperado.', `${detail}; ${(e as Error).message}`)
+  }
 }
 
 /** Extrae un nombre de apertura legible de la cabecera ECOUrl del PGN. */
@@ -77,7 +94,10 @@ export async function fetchChesscomGames(username: string, months = 2): Promise<
   const user = username.trim().toLowerCase()
   const { archives } = await getJson<{ archives: string[] }>(`${BASE}/player/${encodeURIComponent(user)}/games/archives`)
   const games: GameSummary[] = []
-  for (const url of archives.slice(-months).reverse()) {
+  const recent = archives.slice(-6).reverse()
+  for (const [i, url] of recent.entries()) {
+    // Los últimos meses pedidos; si no hay partidas, se sigue hacia atrás hasta 6 meses.
+    if (i >= months && games.length) break
     const data = await getJson<{ games: CcGame[] }>(url)
     for (const g of data.games) {
       const n = normalizeChesscomGame(g, user)

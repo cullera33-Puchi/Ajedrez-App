@@ -175,3 +175,61 @@ describe('contexto para el entrenador', () => {
     expect(pos).toContain('Mejor línea según Stockfish: Dxg2')
   })
 })
+
+describe('importación de Chess.com con fetch simulado', () => {
+  const pgn = (w: string, b: string, r: string) =>
+    `[Event "Live Chess"]\n[Site "Chess.com"]\n[White "${w}"]\n[Black "${b}"]\n[Result "${r}"]\n[WhiteElo "500"]\n[BlackElo "510"]\n[Link "https://www.chess.com/game/live/1"]\n\n1. e4 e5 2. Qh5 Nc6 3. Bc4 Nf6 4. Qxf7# ${r}`
+
+  it('descarga el último mes y, si está vacío, sigue hacia atrás', async () => {
+    const { fetchChesscomGames } = await import('./chesscom')
+    const base = 'https://api.chess.com/pub/player/anriqui/games'
+    const responses: Record<string, unknown> = {
+      [`${base}/archives`]: { archives: [`${base}/2026/02`, `${base}/2026/09`, `${base}/2026/10`] },
+      [`${base}/2026/10`]: { games: [] },
+      [`${base}/2026/09`]: { games: [] },
+      [`${base}/2026/02`]: {
+        games: [{ url: 'https://www.chess.com/game/live/9', uuid: 'u9', pgn: pgn('Anriqui', 'Rival', '1-0'), end_time: 1771400000, rules: 'chess', time_class: 'rapid', white: { username: 'Anriqui', rating: 500, result: 'win' }, black: { username: 'Rival', rating: 510, result: 'checkmated' } }],
+      },
+    }
+    const original = globalThis.fetch
+    globalThis.fetch = (async (url: string) => {
+      const body = responses[url]
+      return new Response(JSON.stringify(body ?? {}), { status: body ? 200 : 404 })
+    }) as typeof fetch
+    try {
+      const games = await fetchChesscomGames('Anriqui ')
+      expect(games).toHaveLength(1)
+      expect(games[0].userColor).toBe('white')
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  it('explica los errores con detalle técnico', async () => {
+    const { fetchChesscomGames, ImportError } = await import('./chesscom')
+    const original = globalThis.fetch
+    try {
+      globalThis.fetch = (async () => new Response('{}', { status: 404, statusText: 'Not Found' })) as typeof fetch
+      await expect(fetchChesscomGames('anreki')).rejects.toThrow('no existe')
+      globalThis.fetch = (async () => {
+        throw new TypeError('Load failed')
+      }) as typeof fetch
+      const err = await fetchChesscomGames('anriqui').catch((e) => e)
+      expect(err).toBeInstanceOf(ImportError)
+      expect(err.detail).toContain('TypeError: Load failed')
+    } finally {
+      globalThis.fetch = original
+    }
+  })
+
+  it('lee un archivo PGN con varias partidas', async () => {
+    const { gamesFromPgnFile } = await import('./pgnImport')
+    const text = [pgn('Anriqui', 'A', '1-0'), pgn('B', 'Anriqui', '1-0'), '[Event "Roto"]\n\n1. e4 e9'].join('\n\n')
+    const { games, failed } = gamesFromPgnFile(text, 'anriqui')
+    expect(games).toHaveLength(2)
+    expect(failed).toBe(1)
+    expect(games[0].source).toBe('chesscom')
+    expect(games[1].userColor).toBe('black')
+    expect(games[0].url).toBe('https://www.chess.com/game/live/1')
+  })
+})

@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import type { View } from '../App'
-import { fetchChesscomGames } from '../lib/chesscom'
+import { fetchChesscomGames, ImportError } from '../lib/chesscom'
 import { fetchLichessGames } from '../lib/lichess'
-import { gameFromPgn } from '../lib/pgnImport'
+import { gameFromPgn, gamesFromPgnFile } from '../lib/pgnImport'
 import type { Settings } from '../lib/settings'
 import { listKeys } from '../lib/storage'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
   settings: Settings
+  onSettings: (s: Settings) => void
   games: GameSummary[]
   onAddGames: (g: GameSummary[]) => void
   onOpenGame: (id: string) => void
@@ -36,9 +37,10 @@ const TIME_LABEL: Record<string, string> = {
 
 const OUTCOME_LABEL = { victoria: 'Victoria', derrota: 'Derrota', tablas: 'Tablas' }
 
-export function GamesView({ settings, games, onAddGames, onOpenGame, onNavigate }: Props) {
+export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame, onNavigate }: Props) {
   const [busy, setBusy] = useState<string | null>(null)
-  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string; detail?: string } | null>(null)
+  const [ccUser, setCcUser] = useState(settings.chesscomUser)
   const [filter, setFilter] = useState<Filter>('todas')
   const [showPgn, setShowPgn] = useState(false)
   const [pgn, setPgn] = useState('')
@@ -52,10 +54,28 @@ export function GamesView({ settings, games, onAddGames, onOpenGame, onNavigate 
       onAddGames(g)
       setMsg({ kind: 'ok', text: g.length ? `Importadas ${g.length} partidas de ${label}.` : `No hay partidas recientes en ${label}.` })
     } catch (e) {
-      setMsg({ kind: 'error', text: (e as Error).message })
+      setMsg({ kind: 'error', text: (e as Error).message, detail: e instanceof ImportError ? e.detail : String(e) })
     } finally {
       setBusy(null)
     }
+  }
+
+  const importChesscom = () => {
+    const user = ccUser.trim()
+    if (!user) return
+    if (user !== settings.chesscomUser) onSettings({ ...settings, chesscomUser: user })
+    void run('Chess.com', () => fetchChesscomGames(user))
+  }
+
+  const importFile = async (file: File | undefined) => {
+    if (!file) return
+    const { games: imported, failed } = gamesFromPgnFile(await file.text(), ccUser.trim() || settings.lichessUser)
+    onAddGames(imported)
+    setMsg(
+      imported.length
+        ? { kind: 'ok', text: `Importadas ${imported.length} partidas del archivo${failed ? ` (${failed} no se han podido leer)` : ''}.` }
+        : { kind: 'error', text: 'El archivo no contiene partidas PGN válidas.' },
+    )
   }
 
   const importPgn = () => {
@@ -81,14 +101,22 @@ export function GamesView({ settings, games, onAddGames, onOpenGame, onNavigate 
       </header>
 
       <section className="card">
-        <div className="toolbar">
-          <button
-            className="btn primary"
-            disabled={!settings.chesscomUser || !!busy}
-            onClick={() => run('Chess.com', () => fetchChesscomGames(settings.chesscomUser))}
-          >
+        <div className="import-row">
+          <input
+            value={ccUser}
+            onChange={(e) => setCcUser(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && importChesscom()}
+            placeholder="Usuario de Chess.com"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            aria-label="Usuario de Chess.com"
+          />
+          <button className="btn primary" disabled={!ccUser.trim() || !!busy} onClick={importChesscom}>
             {busy === 'Chess.com' ? 'Importando…' : 'Importar de Chess.com'}
           </button>
+        </div>
+        <div className="toolbar">
           <button
             className="btn primary"
             disabled={!settings.lichessUser || !!busy}
@@ -99,14 +127,18 @@ export function GamesView({ settings, games, onAddGames, onOpenGame, onNavigate 
           <button className="btn" onClick={() => setShowPgn((v) => !v)}>
             Pegar PGN
           </button>
+          <label className="btn file-btn">
+            Importar archivo PGN
+            <input type="file" accept=".pgn,text/plain,application/x-chess-pgn" onChange={(e) => importFile(e.target.files?.[0])} hidden />
+          </label>
         </div>
         {noAccounts && (
           <p className="muted small">
-            Para importar, indica antes tu usuario en{' '}
+            Escribe tu usuario de Chess.com y pulsa Importar. Para Lichess, indica tu usuario en{' '}
             <button className="link" onClick={() => onNavigate('inicio')}>
               Inicio
             </button>
-            . Mientras tanto puedes probar con las partidas de ejemplo.
+            .
           </p>
         )}
         {showPgn && (
@@ -117,7 +149,17 @@ export function GamesView({ settings, games, onAddGames, onOpenGame, onNavigate 
             </button>
           </div>
         )}
-        {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
+        {msg && (
+          <div className={`msg ${msg.kind}`}>
+            <p>{msg.text}</p>
+            {msg.detail && (
+              <details>
+                <summary className="small">Detalle técnico</summary>
+                <code className="detail">{msg.detail}</code>
+              </details>
+            )}
+          </div>
+        )}
       </section>
 
       <section className="card">

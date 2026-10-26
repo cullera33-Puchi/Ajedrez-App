@@ -1104,3 +1104,31 @@ select {
     height: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
   }
 }
+
+.import-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.import-row input {
+  flex: 1;
+  min-width: 0;
+}
+.file-btn {
+  cursor: pointer;
+}
+.msg p {
+  margin: 0;
+}
+code.detail {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+}
+@media (max-width: 800px) {
+  .import-row {
+    flex-direction: column;
+  }
+}
