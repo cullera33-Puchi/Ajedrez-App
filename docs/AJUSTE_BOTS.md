@@ -2,7 +2,7 @@
 
 Registro de tus impresiones sobre los bots para calibrar su fuerza. El objetivo es que cada nivel juegue como un jugador real de ese Elo (referencia: Chess.com, partidas rápidas).
 
-Cómo usarlo: después de jugar, dile a Claude el nivel, el estilo y lo que has notado (demasiado fácil, demasiado difícil, un error de bulto concreto, aperturas raras…). Claude lo apunta aquí y, cuando haya varias observaciones coherentes, ajusta los parámetros.
+Cómo usarlo: al terminar cada partida, valora el bot en la app (fácil, adecuado o difícil, con una nota). En *Jugar*, *Copiar para Claude* copia todas las valoraciones: pégalas en la conversación con Claude. También vale contárselo directamente. Claude lo apunta aquí y, cuando haya varias observaciones coherentes, ajusta los parámetros.
 
 ## Parámetros actuales
 

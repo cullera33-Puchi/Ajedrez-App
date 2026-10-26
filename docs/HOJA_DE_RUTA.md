@@ -16,6 +16,11 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Bots de tu nivel (1.1) | Nivel de 250 a 2000 de 50 en 50 puntos, con estilo equilibrado o atacante, en la pestaña *Jugar*. Récord por nivel y mejor victoria |
 | Partidas contra bots separadas | En *Mis partidas*, apartados *Chess.com y Lichess*, *Contra bots* y *Otras*. Se analizan igual, pero no cuentan en las recomendaciones ni en el resumen de Inicio |
 | Descartar una partida contra bot | Botón *Descartar*: sale sin guardar y sin sumar al récord |
+| Explorar variantes (4.2) | En el análisis se mueve cualquier pieza; tarjeta de variante con las tres mejores líneas de Stockfish. Casilla *Líneas del motor* para cualquier posición |
+| Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
+| Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
+| Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Valorar el bot al terminar (1.8) | Fácil, adecuado o difícil con nota; *Copiar para Claude* en Jugar |
 | Evolución de los problemas (4.3, parte de problemas) | Problemas, *Tu evolución*: nivel por día, problemas hechos y acertados, dificultad media; periodos de 7, 30 y 90 días |
 | Elegir pieza al coronar (5.4) | En las partidas contra bots; en los problemas se respeta la subpromoción |
 | Análisis en segundo plano (1.3) | Analiza tus partidas pendientes mientras la app está abierta; se pausa al jugar o analizar a mano |
@@ -40,7 +45,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 |---|---|---|---|
 | 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida. Necesita tu cuenta de Lichess y probarlo contigo | Alto | Media |
 | 1.6 | Problemas de Lichess sincronizados con tu cuenta y paquete de problemas de tu nivel para usar sin conexión | Medio | Media |
-| 1.8 | Calibrar la fuerza de los bots con tus impresiones, registradas en `docs/AJUSTE_BOTS.md` | Bajo | Continua |
+| 1.8 | Calibrar la fuerza de los bots con tus valoraciones (*Copiar para Claude*), registradas en `docs/AJUSTE_BOTS.md` | Bajo | Continua |
+| 1.9 | Jugar contra un bot o contra Stockfish desde una posición escaneada o desde una lección | Bajo | Media |
 
 ### 2. Sincronización entre ordenador y móvil
 
@@ -59,9 +65,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 4.2 | Explorar variantes libremente en el tablero de análisis | Medio | Media |
-| 4.3 | Panel de progreso de partidas: evolución del rating en Chess.com, temas más fallados y aperturas con peor resultado (la parte de problemas ya está hecha) | Medio | Media |
-| 4.4 | Lecciones interactivas de mates básicos y finales elementales | Alto | Media |
+| 4.6 | Más lecciones: mates de pasillo y de la coz, oposición avanzada, Lucena y Philidor | Medio | Media |
 | 4.5 | Repertorio de aperturas con repetición espaciada | Alto | Baja |
 
 ### 5. Pendiente de verificar o pulir
@@ -74,6 +78,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | 5.6 | Borrar la rama temporal `diagnostico-chesscom` en GitHub | Hay que hacerlo desde la web de GitHub (*Branches*) |
 | 5.7 | Importación completa de Chess.com con un historial grande | Probada con datos simulados; falta verificarla con tu historial real |
 | 5.8 | Modo Tinta en la BOOX real | Revisado en simulación; falta probar el refresco de la pantalla real |
+| 5.9 | Escáner con capturas reales de Chess.com | Probado con capturas simuladas y juegos de piezas no vistos (99,3 % de casillas); falta probarlo con tus capturas |
 
 ## Por analizar
 

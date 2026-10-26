@@ -1,104 +1,107 @@
 # Informe de la ejecución en segundo plano
 
-Fecha: 26 de octubre de 2026, por la noche. Las ocho tareas del paquete están terminadas, probadas y publicadas en https://cullera33-puchi.github.io/Ajedrez-App/.
+Fecha: noche del 26 al 27 de octubre de 2026. Los seis cambios del paquete están terminados, probados y publicados en https://cullera33-puchi.github.io/Ajedrez-App/.
 
 Para ver los cambios en el móvil, cierra la app del todo y vuelve a abrirla (si no cambia, una segunda vez).
 
+El informe de la ejecución anterior (25 y 26 de octubre) queda en el historial de git.
+
 ## Resumen
 
-| # | Tarea | Estado | Dónde verlo |
+| # | Cambio | Estado | Dónde verlo |
 |---|---|---|---|
-| 1 | Bots de tu nivel y elegir pieza al coronar | Hecho | Pestaña **Jugar** |
-| 2 | Almacenamiento en IndexedDB e importación completa de Chess.com | Hecho | **Partidas**, *Importar de Chess.com* |
-| 3 | Análisis en segundo plano | Hecho | **Partidas**, tarjeta *Análisis automático* |
-| 4 | Problemas con tus propios errores y repaso espaciado | Hecho | **Problemas**, origen *Mis errores*; **Inicio**, *Repasa tus errores* |
-| 5 | Repetir la jugada correcta | Hecho | **Análisis**, botón *Inténtalo tú* en tus errores |
-| 6 | Copia de seguridad entre dispositivos | Hecho | **Inicio**, tarjeta *Copia de seguridad* |
-| 7 | Enlaces a cursos y libros por tema | Hecho | **Análisis**, **Problemas** y **Aprender** |
-| 8 | Retoques: modo tinta electrónica, tablero en tablets y mantenimiento | Hecho | **Inicio**, *Apariencia*, opción *Tinta* |
+| 0 | La app solo usa Claude con tu plan | Hecho | **Inicio**, tarjeta *Entrenador IA* (en el PC) |
+| 1 | Explorar variantes en el análisis | Hecho | **Análisis**: mueve cualquier pieza en el tablero |
+| 2 | Escanear una posición desde una captura | Hecho | **Partidas**, botón *Escanear captura* |
+| 3 | Panel de progreso de partidas | Hecho | **Inicio**, *Mira tu progreso*; **Partidas**, *Ver tu progreso* |
+| 4 | Lecciones de finales elementales | Hecho | **Aprender**, *Lecciones prácticas* |
+| 5 | Valorar el bot al terminar | Hecho | **Jugar**, al acabar cada partida |
 
 ## Qué hay de nuevo, en detalle
 
-### 1. Jugar contra bots
+### 0. Sin ningún coste de IA
 
-- Seis rivales: Lucía (400), Bruno (600), Marta (800), Diego (1000, atacante), Elena (1200, sólida) y El Profesor (1500).
-- Cada bot pide a Stockfish varias jugadas candidatas y elige entre ellas con más o menos acierto según su nivel. De vez en cuando se despista y juega una peor, como un humano de ese nivel.
-- Puedes elegir color (blancas, negras o al azar), deshacer jugadas, ofrecer tablas (el bot acepta si no va ganando) y rendirte.
-- La partida en curso se guarda: si cierras la app, sigue donde la dejaste.
-- Al terminar, la partida se guarda en *Mis partidas* con el origen *Bot*. Tiene el mismo análisis, recomendaciones y entrenador que las de Chess.com, y se suma a tu récord contra cada bot.
-- Al coronar un peón aparece la elección de pieza.
+- Eliminado el modo de clave de API y la librería de Anthropic. La app ya no puede llamar a ningún servicio de pago.
+- El entrenador funciona solo de dos formas: con Claude Code y tu plan (en el PC) o con el botón *Abrir en claude.ai*.
+- Si Claude Code estuviera configurado para facturar por API, la app se niega a usarlo y explica cómo entrar con la cuenta del plan.
 
-### 2. Historial completo de Chess.com
+### 1. Explorar variantes
 
-- La primera importación descarga todos los meses de tu historial, con una barra de progreso. Las siguientes solo descargan los meses nuevos y los dos últimos.
-- Los datos pasan a IndexedDB, que admite miles de partidas. Lo que ya tenías se migra solo, sin perder nada.
-- La lista de partidas se muestra de 50 en 50, con un botón *Ver más*.
+- En el análisis puedes mover cualquier pieza. Si la jugada coincide con la partida, avanzas en la partida; si no, se abre una variante.
+- La tarjeta *Variante* muestra las jugadas, la evaluación y las tres mejores líneas de Stockfish. Al tocar una línea se juega su primera jugada.
+- Los botones de la barra se mueven por la variante. *Volver a la partida* la cierra.
+- Nueva casilla *Líneas del motor*: muestra las tres mejores jugadas en cualquier posición de la partida.
 
-### 3. Análisis automático
+### 2. Escanear posición
 
-- Con la app abierta, analiza tus partidas pendientes una a una, de la más reciente a la más antigua.
-- Se pausa cuando juegas contra un bot, cuando analizas una partida a mano o cuando la app no está en pantalla. También puedes pausarlo desde *Mis partidas*.
-- Con cada partida analizada se actualizan las recomendaciones y las estadísticas.
+- Eliges una captura de pantalla (en el iPhone, desde Fotos). En el PC también se puede pegar con Ctrl+V.
+- La app localiza el tablero y reconoce las piezas en el propio dispositivo, sin conexión y sin IA.
+- Para reconocer piezas de estilos distintos usa la forma de las piezas de 22 juegos libres de Lichess. Solo se guardan rasgos de forma, no las imágenes.
+- Las casillas dudosas se marcan en naranja. Las corriges tocando la casilla con la pieza elegida en la paleta. Además, la app aprende de tus correcciones: con tus capturas de Chess.com acertará cada vez más.
+- Si la última jugada está resaltada en la captura, deduce a quién le toca. Si no, lo indicas tú.
+- Si el tablero no se detecta bien, *Ajustar recuadro* permite marcarlo con el dedo.
+- *Analizar posición* la abre en el análisis, donde puedes explorar variantes. Queda guardada en *Mis partidas*, apartado *Otras*.
+- Para fotos de libros o de un tablero real: *Abrir en claude.ai* copia la petición; pegas la petición, adjuntas la foto y copias la FEN que te devuelva Claude.
 
-### 4. Problemas con tus errores
+### 3. Tu progreso
 
-- De cada partida analizada se sacan hasta cuatro posiciones donde fallaste. Solo cuentan las que tienen una solución clara: Stockfish exige 1,5 peones de ventaja sobre la segunda mejor jugada, o un mate.
-- Al resolverlas, la app te recuerda lo que jugaste en la partida y lo que era mejor.
-- Repaso espaciado: si aciertas, la posición vuelve al cabo de 1, 3, 8… días; si fallas, en unos minutos. No afectan a tu nivel de problemas.
+- Solo con partidas de Chess.com y Lichess, nunca las de bots. Periodos de 3 meses, 12 meses o todo.
+- Partidas, porcentaje de victorias y precisión media.
+- Gráfico de tu rating por ritmo (rápidas, blitz…). Al tocar un punto ves la partida.
+- Precisión y errores graves por semana.
+- Lo que más fallas, con acceso directo a practicar cada tema.
+- Aperturas con peor y mejor resultado, agrupadas por familia y color, y un botón para revisar tu última derrota con la peor.
 
-### 5. Inténtalo tú
+### 4. Lecciones prácticas
 
-- En tus imprecisiones y errores, el botón *Inténtalo tú* vuelve a la posición anterior para que busques la buena.
-- Se acepta la mejor jugada, cualquier mate o cualquier jugada que Stockfish considere igual de buena. Si fallas, te dice cómo queda la evaluación. Hay pista y solución.
+Seis lecciones contra Stockfish, que defiende lo mejor posible:
 
-### 6. Copia de seguridad
+| Lección | Objetivo |
+|---|---|
+| Mate con dos torres | La escalera |
+| Mate con dama y rey | Encerrar sin ahogar y rematar con el rey |
+| Mate con torre y rey | Oposición y jaque lateral |
+| La regla del cuadrado | Alcanzar un peón con el rey |
+| Rey y peón: ganar | Coronar con el rey por delante |
+| Rey y peón: defender | Hacer tablas con negras |
 
-- *Guardar copia* crea un archivo con partidas, análisis, problemas propios, nivel, récord contra bots, informes de Claude y ajustes. En el móvil, *Compartir* permite enviarlo por AirDrop o guardarlo en Archivos.
-- *Importar copia* fusiona con lo que ya hay y no borra nada.
-- Uso típico: guardar en el móvil, pasar el archivo al PC e importarlo allí, o al revés.
+Cada lección tiene la explicación paso a paso, pista, la distancia al mate que ve Stockfish y tu mejor marca. Si fallas (ahogado, pieza perdida, demasiadas jugadas), te explica por qué.
 
-### 7. Aprender más por tema
+### 5. Valorar el bot
 
-- Junto a cada tema recomendado: *Entrenar en Lichess* (problemas de ese tema), *Vídeos* (YouTube) y *Libros y cursos* (búsqueda en Google). Las búsquedas van preparadas en español y para principiantes.
-
-### 8. Retoques
-
-- Apariencia *Tinta* para la BOOX: blanco y negro, alto contraste, tablero blanco y gris y sin animaciones.
-- Corregido: en pantallas de entre 800 y 1000 píxeles de ancho (tablets o ventanas medianas), el tablero se salía por la derecha.
-- Acciones de GitHub actualizadas y avisos del código resueltos.
+- Al terminar una partida contra un bot: *Fácil*, *Adecuado* o *Difícil*, con una nota opcional.
+- En la pantalla de elegir rival, *Copiar para Claude* copia todas tus valoraciones como texto. Pégalo en la conversación conmigo y ajusto los bots (registro en `docs/AJUSTE_BOTS.md`).
 
 ## Cómo se ha probado
 
-- **Pruebas automáticas**: 47, todas correctas. Cubren la elección de jugadas de los bots, el guardado de partidas, la importación incremental, la migración de datos, el repaso espaciado, la copia de seguridad y los enlaces.
-- **Pruebas en navegador** (iPhone 17 simulado, tablet de 820 px y escritorio):
-  - partida completa contra Lucía: jugar, deshacer, recargar y continuar, rendirse y analizar;
-  - migración de datos de la versión anterior;
-  - análisis automático de tres partidas;
-  - generación y resolución de un problema propio;
-  - *Inténtalo tú* con un fallo y un acierto;
-  - copia guardada en un «dispositivo» e importada en otro;
-  - modo Tinta.
-- **Revisión final**: todas las pestañas en los cuatro formatos (móvil en día y en noche, tablet y escritorio), sin errores ni elementos que se salgan de la pantalla.
+- **Pruebas automáticas**: 62, todas correctas. Nuevas: escáner (FEN, enroques, siluetas), progreso (resultados, aperturas, semanas), valoraciones y familias de aperturas.
+- **Escáner**:
+  - capturas simuladas de estilo Chess.com, Lichess y tablero azul, en móvil y en escritorio, con coordenadas y la última jugada resaltada;
+  - con juegos de piezas que el escáner no conocía (como pasará con los de Chess.com), acierta el 99,3 % de las casillas y el tablero en el 100 % de los casos;
+  - el turno se deduce bien en el 98 % de las capturas con la última jugada resaltada.
+- **Lecciones**: las seis posiciones comprobadas con Stockfish a profundidad 22, que confirma que las ganadas son ganadas y la de defensa es tablas. La regla del cuadrado se ha jugado entera en el navegador.
+- **Progreso**: importación simulada de 80 partidas de Chess.com en cuatro meses, con análisis automático.
+- **Variantes**: jugada fuera de la partida, líneas del motor, navegación por la variante y vuelta a la partida.
+- **Revisión final**: todas las pantallas en cinco formatos (móvil de noche, móvil de día, tablet, escritorio y tinta electrónica), sin errores ni elementos que se salgan de la pantalla.
 
 ## Lo que conviene que pruebes tú
 
-1. **Importar tu historial completo de Chess.com** con *anriqui*. Está probado con datos simulados, porque desde aquí no hay acceso a chess.com. Puede tardar un poco la primera vez.
-2. **Jugar contra Lucía y Bruno** y decirme si su nivel te parece adecuado. Su fuerza es aproximada y se puede ajustar.
-3. **Dejar la app abierta unos minutos** en *Mis partidas* para ver el análisis automático. Después, revisar *Mis errores* en Problemas.
-4. **En la BOOX**, abrir la web y elegir *Tinta* en Inicio, *Apariencia*.
-5. **Probar la copia de seguridad** del móvil al PC.
+1. **Escanear una captura real de Chess.com**: haz una captura de una partida en la app de Chess.com y escanéala. Si alguna pieza sale mal, corrígela y pulsa *Analizar*: así aprende tu estilo de piezas. Dime qué tal.
+2. **Mover piezas en el análisis** de una de tus partidas para ver qué habría pasado con otra jugada.
+3. **Tu progreso**, desde Inicio, con tu historial real.
+4. **La lección de dos torres** y la de dama.
+5. **Valorar un par de bots** y pasarme el texto con *Copiar para Claude*.
 
 ## Incidencias y notas
 
-- No ha habido bloqueos del sistema de permisos en esta ejecución.
-- Sigue en GitHub la rama temporal `diagnostico-chesscom`. Hay que borrarla desde la web de GitHub, en *Branches*.
-- GitHub muestra dos avisos de versión de Node en piezas internas de sus propias acciones de publicación. No dependen de nosotros y la publicación funciona.
-- Los problemas con tus errores se generan con la app abierta, a medida que se analizan las partidas. Con un historial grande, el análisis completo llevará varias sesiones.
+- No ha habido bloqueos del sistema de permisos.
+- Desde aquí no hay acceso a chess.com, así que el escáner se ha probado con capturas simuladas, no con capturas reales de su app. Por eso el aprendizaje con tus correcciones es importante.
+- La rama temporal `diagnostico-chesscom` sigue en GitHub; hay que borrarla desde la web (*Branches*).
 
 ## Siguientes pasos propuestos
 
 Detalle en `docs/HOJA_DE_RUTA.md`. Lo más valioso que queda:
 
-1. Jugar online en Lichess y sincronizar sus problemas (1.5 y 1.6). Mejor hacerlo contigo, porque necesita tu cuenta.
-2. Panel de progreso (4.3).
-3. Sincronización automática en la nube (2.2), si la copia manual se queda corta.
+1. Ajustar los bots con tus valoraciones (1.8).
+2. Jugar online en Lichess (1.5), mejor contigo porque necesita tu cuenta.
+3. Jugar contra un bot desde una posición escaneada o desde una lección.
