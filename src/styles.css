@@ -15,6 +15,11 @@
   --c-error: #e69a3d;
   --c-grave: #e0524c;
   --board: min(calc(100vh - 230px), 640px);
+  /* Zonas seguras del iPhone (isla, hora, indicador de inicio y bordes en horizontal) */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   color-scheme: dark;
 }
 
@@ -938,7 +943,7 @@ code {
 /* Móvil: navegación inferior, tablero a todo el ancho y paneles apilados */
 @media (max-width: 800px) {
   :root {
-    --board: min(calc(100vw - 54px), 560px);
+    --board: min(calc(100vw - 54px - var(--safe-left) - var(--safe-right)), 560px);
   }
   body {
     font-size: 15px;
@@ -954,7 +959,7 @@ code {
     right: 0;
     height: auto;
     z-index: 50;
-    padding: 0.25rem 0.25rem calc(0.25rem + env(safe-area-inset-bottom));
+    padding: 0.25rem calc(0.25rem + var(--safe-right)) calc(0.25rem + var(--safe-bottom)) calc(0.25rem + var(--safe-left));
     border-right: 0;
     border-top: 1px solid var(--line);
     flex-direction: row;
@@ -982,7 +987,7 @@ code {
     width: auto;
   }
   .content {
-    padding: 0.9rem 12px calc(80px + env(safe-area-inset-bottom));
+    padding: calc(0.9rem + var(--safe-top)) calc(12px + var(--safe-right)) calc(80px + var(--safe-bottom)) calc(12px + var(--safe-left));
   }
   h1 {
     font-size: 1.35rem;
@@ -1080,4 +1085,22 @@ a.btn {
 }
 select {
   max-width: 100%;
+}
+
+/* Franja fija bajo la hora y la isla: el contenido no se ve por detrás al desplazarse */
+@media (max-width: 800px) {
+  .app::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--safe-top);
+    background: var(--bg);
+    z-index: 60;
+  }
+  .puzzles .board {
+    width: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
+    height: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
+  }
 }
