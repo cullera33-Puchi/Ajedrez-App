@@ -24,6 +24,8 @@ import {
 } from '../lib/bots'
 import { getEngine, releaseEngine } from '../lib/engine'
 import type { Settings } from '../lib/settings'
+import { addFeedback, type BotFeel, FEEL_LABEL, feedbackReport, loadFeedback } from '../lib/botFeedback'
+import { copyText } from '../lib/coach'
 import { usePersistentState } from '../lib/storage'
 import type { Color, GameSummary, Result } from '../lib/types'
 
@@ -241,6 +243,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
             {r ? `Contra ${bot.name} (${bot.elo}): ganadas ${r.w}, perdidas ${r.l}, tablas ${r.d}.` : `Aún no has jugado contra ${bot.name} (${bot.elo}).`}
             {best ? ` Tu mejor victoria: ${best}.` : ''}
           </p>
+          <FeedbackCopy />
           <h3>Estilo</h3>
           <div className="segmented" role="radiogroup" aria-label="Estilo del bot">
             {(['equilibrado', 'atacante'] as BotStyle[]).map((st) => (
@@ -295,6 +298,22 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
           <section className={`card play-result ${userWon ? 'win' : finished.result === '1/2-1/2' ? 'draw' : 'loss'}`}>
             <h2>{userWon ? '¡Has ganado!' : finished.result === '1/2-1/2' ? 'Tablas' : `Ha ganado ${bot.name}`}</h2>
             <p className="muted">{finished.reason}. La partida está guardada en Mis partidas.</p>
+            <BotFeedbackForm
+              key={finished.summaryId}
+              onSave={(feel, note) =>
+                addFeedback({
+                  t: Date.now(),
+                  gameId: finished.summaryId,
+                  elo: game.elo,
+                  style: game.style,
+                  feel,
+                  note: note || undefined,
+                  result: finished.result,
+                  userColor: game.userColor,
+                  plies: game.moves.length,
+                })
+              }
+            />
             <div className="toolbar">
               <button className="btn primary" onClick={() => onAnalyze(finished.summaryId)}>
                 Analizar la partida
@@ -365,5 +384,63 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
         />
       )}
     </div>
+  )
+}
+
+/** Valoración del bot al terminar: sirve para ajustar su fuerza con Claude. */
+function BotFeedbackForm({ onSave }: { onSave: (feel: BotFeel, note: string) => void }) {
+  const [feel, setFeel] = useState<BotFeel | null>(null)
+  const [note, setNote] = useState('')
+  const [saved, setSaved] = useState(false)
+  if (saved) return <p className="msg ok small">Valoración guardada. Gracias: con estas notas se ajustan los bots.</p>
+  return (
+    <div className="bot-feedback">
+      <p className="small">¿Qué te ha parecido el bot?</p>
+      <div className="segmented" role="group" aria-label="Dificultad del bot">
+        {(Object.keys(FEEL_LABEL) as BotFeel[]).map((f) => (
+          <button key={f} className={feel === f ? 'active' : ''} onClick={() => setFeel(f)}>
+            {FEEL_LABEL[f]}
+          </button>
+        ))}
+      </div>
+      {feel && (
+        <>
+          <textarea
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            rows={2}
+            placeholder="Opcional: algo que te haya llamado la atención (un error de bulto, una apertura rara…)"
+          />
+          <button
+            className="btn small"
+            onClick={() => {
+              onSave(feel, note.trim())
+              setSaved(true)
+            }}
+          >
+            Guardar valoración
+          </button>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Copia las valoraciones como texto para pegarlas en la conversación con Claude. */
+function FeedbackCopy() {
+  const [msg, setMsg] = useState<string | null>(null)
+  const list = loadFeedback()
+  if (!list.length) return null
+  return (
+    <p className="small muted">
+      Tienes {list.length} {list.length === 1 ? 'valoración' : 'valoraciones'} de bots.{' '}
+      <button
+        className="link"
+        onClick={() => void copyText(feedbackReport(list)).then((ok) => setMsg(ok ? 'Copiadas. Pégalas en tu conversación con Claude para ajustar los bots.' : 'No se han podido copiar.'))}
+      >
+        Copiar para Claude
+      </button>
+      {msg && <span className="feedback-msg"> {msg}</span>}
+    </p>
   )
 }

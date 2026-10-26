@@ -587,3 +587,14 @@ describe('familias de aperturas', () => {
     expect(openingFamily('Ruy Lopez')).toBe('Ruy Lopez')
   })
 })
+
+describe('valoraciones de bots', () => {
+  it('genera el texto para Claude y fusiona sin duplicar partidas', async () => {
+    const { feedbackReport, mergeFeedback } = await import('./botFeedback')
+    const f = { t: new Date(2026, 9, 26).getTime(), gameId: 'bot-1', elo: 550, style: 'equilibrado' as const, feel: 'dificil' as const, note: 'Me ganó la dama en la jugada 8', result: '0-1' as const, userColor: 'white' as const, plies: 41 }
+    const text = feedbackReport([f])
+    expect(text).toContain('bot 550 equilibrado, perdí con blancas en 21 jugadas: difícil. Nota: Me ganó la dama en la jugada 8')
+    expect(mergeFeedback([f], [{ ...f, t: f.t + 1, feel: 'adecuado' }])).toHaveLength(1)
+    expect(mergeFeedback([f], [{ ...f, t: f.t + 1, feel: 'adecuado' }])[0].feel).toBe('adecuado')
+  })
+})

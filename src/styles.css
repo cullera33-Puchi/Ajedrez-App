@@ -2460,3 +2460,28 @@ label {
 .lesson-steps-head h3 {
   margin: 0;
 }
+
+/* Valoración de bots */
+.bot-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.6rem 0;
+}
+.bot-feedback p {
+  margin: 0;
+}
+.bot-feedback textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg, transparent);
+  color: inherit;
+}
+.bot-feedback .btn {
+  align-self: flex-start;
+}
