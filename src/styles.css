@@ -1617,3 +1617,77 @@ cg-board {
 .evalbar {
   box-shadow: inset 0 0 0 1px var(--line);
 }
+
+/* Móvil compacto: barras más bajas, tarjeta de jugada fija y lista que sigue a la jugada actual */
+@media (max-width: 800px) {
+  :root {
+    --nav-h: 50px;
+    --controls-h: 54px;
+  }
+  .sidebar {
+    padding-top: 2px;
+    padding-bottom: calc(2px + var(--safe-bottom));
+  }
+  .nav-item {
+    height: 46px;
+    padding: 0.2rem 0.2rem;
+    font-size: 0.62rem;
+    gap: 0.05rem;
+    border-radius: 8px;
+  }
+  .nav-icon {
+    font-size: 1.05rem;
+  }
+  .analysis .nav-controls {
+    padding: 6px calc(12px + var(--safe-right)) 6px calc(12px + var(--safe-left));
+    gap: 6px;
+  }
+  .analysis .nav-controls .btn {
+    height: 42px;
+    font-size: 1.1rem;
+  }
+  .content {
+    padding-bottom: calc(66px + var(--safe-bottom));
+  }
+  .page.analysis .analysis-side {
+    overflow: hidden;
+    padding: 6px 0 0;
+  }
+  .page.analysis .side-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 10px;
+  }
+  .page.analysis .move-card.mobile {
+    min-height: 74px;
+    margin-bottom: 6px;
+    padding: 0.5rem 0.7rem;
+  }
+  .page.analysis .move-card.mobile .move-card-head {
+    font-size: 0.95rem;
+    gap: 0.4rem;
+  }
+  .page.analysis .move-card.mobile p {
+    font-size: 0.86rem;
+    line-height: 1.35;
+    margin-top: 0.2rem;
+  }
+  .page.analysis .movelist {
+    max-height: none;
+    overflow: visible;
+  }
+  .page.analysis .side-scroll > .card.m-order-1 {
+    padding: 0.4rem 0.5rem;
+  }
+  .page.analysis .player-line {
+    line-height: 1.5;
+  }
+  .m-order-6 {
+    order: 6;
+  }
+}

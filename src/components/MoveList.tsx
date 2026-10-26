@@ -11,15 +11,11 @@ interface Props {
 export function MoveList({ sans, analysis, ply, onSelect }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
-  // Desplaza solo la lista (no la página) para que la jugada actual quede visible.
+  // Mantiene visible la jugada actual desplazando solo los contenedores con scroll propio
+  // (la lista y, en el móvil, la zona bajo el tablero), nunca la página entera.
   useEffect(() => {
-    const box = ref.current
-    const el = box?.querySelector<HTMLElement>('.move.active')
-    if (!box || !el) return
-    const b = box.getBoundingClientRect()
-    const e = el.getBoundingClientRect()
-    if (e.top < b.top) box.scrollTop -= b.top - e.top
-    else if (e.bottom > b.bottom) box.scrollTop += e.bottom - b.bottom
+    const el = ref.current?.querySelector<HTMLElement>('.move.active')
+    if (el) keepVisible(el)
   }, [ply])
 
   const rows = []
@@ -45,4 +41,15 @@ export function MoveList({ sans, analysis, ply, onSelect }: Props) {
       {rows.length ? rows : <p className="muted">La partida no tiene jugadas.</p>}
     </div>
   )
+}
+
+function keepVisible(el: HTMLElement, margin = 8) {
+  for (let box = el.parentElement; box && box !== document.body; box = box.parentElement) {
+    const oy = getComputedStyle(box).overflowY
+    if ((oy !== 'auto' && oy !== 'scroll') || box.scrollHeight <= box.clientHeight) continue
+    const b = box.getBoundingClientRect()
+    const e = el.getBoundingClientRect()
+    if (e.top < b.top + margin) box.scrollTop -= b.top + margin - e.top
+    else if (e.bottom > b.bottom - margin) box.scrollTop += e.bottom - (b.bottom - margin)
+  }
 }

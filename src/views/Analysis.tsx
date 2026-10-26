@@ -210,147 +210,148 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
       </div>
 
       <div className="analysis-side">
-        <div className="mobile-only m-order-0">
-          {moveCard('mobile')}
-          {viewControls}
-        </div>
-        {analysis && (
-          <div className="mobile-only m-order-4">
-            <EvalChart analysis={analysis} ply={ply} onSelect={go} />
-          </div>
-        )}
-        <section className="card m-order-5">
-          <h2>
-            {game.white.name} contra {game.black.name}
-          </h2>
-          <p className="muted small">
-            {new Date(game.date).toLocaleDateString('es-ES')}
-            {game.opening ? `, ${game.opening}` : ''}{' '}
-            {game.url && (
-              <a href={game.url} target="_blank" rel="noreferrer">
-                Ver original
-              </a>
-            )}
-          </p>
-          {progress && (
-            <div className="progress">
-              <div className="progress-bar">
-                <div style={{ width: `${(progress.done / progress.total) * 100}%` }} />
-              </div>
-              <span className="small">
-                Analizando con Stockfish: {progress.done} de {progress.total} posiciones
-              </span>
-              <button className="btn small" onClick={() => abortRef.current?.abort()}>
-                Cancelar
-              </button>
-            </div>
-          )}
-          {error && <p className="msg error">{error}</p>}
+        {/* En el móvil, la jugada actual queda fija y solo se desplaza lo de debajo */}
+        <div className="mobile-only">{moveCard('mobile')}</div>
+        <div className="side-scroll">
+          <div className="mobile-only m-order-6">{viewControls}</div>
           {analysis && (
-            <table className="summary">
-              <thead>
-                <tr>
-                  <th />
-                  <th>Precisión</th>
-                  <th title="Imprecisiones">?!</th>
-                  <th title="Errores">?</th>
-                  <th title="Errores graves">??</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(['white', 'black'] as const).map((side) => (
-                  <tr key={side} className={game.userColor === side ? 'me' : ''}>
-                    <td>{side === 'white' ? game.white.name : game.black.name}</td>
-                    <td>
-                      <strong>{analysis.accuracy[side].toFixed(0)}%</strong>
-                    </td>
-                    <td className="c-imprecision">{analysis.counts[side].imprecision}</td>
-                    <td className="c-error">{analysis.counts[side].error}</td>
-                    <td className="c-grave">{analysis.counts[side].grave}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {!progress && (
-            <div className="toolbar small-gap">
-              <select
-                value={settings.depth}
-                onChange={(e) => onSettings({ ...settings, depth: Number(e.target.value) })}
-                aria-label="Profundidad de análisis"
-              >
-                {DEPTHS.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label} (profundidad {d.value})
-                  </option>
-                ))}
-              </select>
-              <button className="btn small" onClick={() => start(settings.depth)}>
-                {analysis ? 'Volver a analizar' : 'Analizar'}
-              </button>
+            <div className="mobile-only m-order-4">
+              <EvalChart analysis={analysis} ply={ply} onSelect={go} />
             </div>
           )}
-        </section>
-
-        {analysis && (
-          <section className="card practice m-order-3">
-            <h3>Practica lo que has fallado</h3>
-            {practice.length ? (
-              <>
-                <p className="muted small">
-                  {game.userColor ? 'Tus errores en esta partida' : 'Los errores de esta partida'} tienen que ver con estos temas. Practícalos para
-                  que no se repitan:
-                </p>
-                <button className="btn primary" onClick={() => onPractice(practice[0].theme)}>
-                  Practicar: {themeName(practice[0].theme)}
+          <section className="card m-order-5">
+            <h2>
+              {game.white.name} contra {game.black.name}
+            </h2>
+            <p className="muted small">
+              {new Date(game.date).toLocaleDateString('es-ES')}
+              {game.opening ? `, ${game.opening}` : ''}{' '}
+              {game.url && (
+                <a href={game.url} target="_blank" rel="noreferrer">
+                  Ver original
+                </a>
+              )}
+            </p>
+            {progress && (
+              <div className="progress">
+                <div className="progress-bar">
+                  <div style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+                </div>
+                <span className="small">
+                  Analizando con Stockfish: {progress.done} de {progress.total} posiciones
+                </span>
+                <button className="btn small" onClick={() => abortRef.current?.abort()}>
+                  Cancelar
                 </button>
-                {practice.length > 1 && (
-                  <div className="chips">
-                    {practice.map((t) => (
-                      <button key={t.theme} className="chip" onClick={() => onPractice(t.theme)}>
-                        {themeName(t.theme)} ({t.count})
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p className="muted small">En esta partida no hay errores claros asociados a un tema de problemas.</p>
+              </div>
+            )}
+            {error && <p className="msg error">{error}</p>}
+            {analysis && (
+              <table className="summary">
+                <thead>
+                  <tr>
+                    <th />
+                    <th>Precisión</th>
+                    <th title="Imprecisiones">?!</th>
+                    <th title="Errores">?</th>
+                    <th title="Errores graves">??</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(['white', 'black'] as const).map((side) => (
+                    <tr key={side} className={game.userColor === side ? 'me' : ''}>
+                      <td>{side === 'white' ? game.white.name : game.black.name}</td>
+                      <td>
+                        <strong>{analysis.accuracy[side].toFixed(0)}%</strong>
+                      </td>
+                      <td className="c-imprecision">{analysis.counts[side].imprecision}</td>
+                      <td className="c-error">{analysis.counts[side].error}</td>
+                      <td className="c-grave">{analysis.counts[side].grave}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {!progress && (
+              <div className="toolbar small-gap">
+                <select
+                  value={settings.depth}
+                  onChange={(e) => onSettings({ ...settings, depth: Number(e.target.value) })}
+                  aria-label="Profundidad de análisis"
+                >
+                  {DEPTHS.map((d) => (
+                    <option key={d.value} value={d.value}>
+                      {d.label} (profundidad {d.value})
+                    </option>
+                  ))}
+                </select>
+                <button className="btn small" onClick={() => start(settings.depth)}>
+                  {analysis ? 'Volver a analizar' : 'Analizar'}
+                </button>
+              </div>
             )}
           </section>
-        )}
 
-        {moveCard('desktop-only')}
+          {analysis && (
+            <section className="card practice m-order-3">
+              <h3>Practica lo que has fallado</h3>
+              {practice.length ? (
+                <>
+                  <p className="muted small">
+                    {game.userColor ? 'Tus errores en esta partida' : 'Los errores de esta partida'} tienen que ver con estos temas. Practícalos para
+                    que no se repitan:
+                  </p>
+                  <button className="btn primary" onClick={() => onPractice(practice[0].theme)}>
+                    Practicar: {themeName(practice[0].theme)}
+                  </button>
+                  {practice.length > 1 && (
+                    <div className="chips">
+                      {practice.map((t) => (
+                        <button key={t.theme} className="chip" onClick={() => onPractice(t.theme)}>
+                          {themeName(t.theme)} ({t.count})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="muted small">En esta partida no hay errores claros asociados a un tema de problemas.</p>
+              )}
+            </section>
+          )}
 
-        {keyMoments && keyMoments.length > 0 && (
-          <section className="card m-order-2">
-            <h3>{userSide ? 'Tus momentos clave' : 'Momentos clave'}</h3>
-            <div className="chips">
-              {keyMoments.map((m) => (
-                <button key={m.ply} className={`chip cls-${m.classification}`} onClick={() => go(m.ply)}>
-                  {Math.ceil(m.ply / 2)}
-                  {m.color === 'w' ? '.' : '...'} {toSpanishSan(m.san)} {CLASS_SYMBOL[m.classification]}
-                </button>
-              ))}
-            </div>
+          {moveCard('desktop-only')}
+
+          {keyMoments && keyMoments.length > 0 && (
+            <section className="card m-order-2">
+              <h3>{userSide ? 'Tus momentos clave' : 'Momentos clave'}</h3>
+              <div className="chips">
+                {keyMoments.map((m) => (
+                  <button key={m.ply} className={`chip cls-${m.classification}`} onClick={() => go(m.ply)}>
+                    {Math.ceil(m.ply / 2)}
+                    {m.color === 'w' ? '.' : '...'} {toSpanishSan(m.san)} {CLASS_SYMBOL[m.classification]}
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <section className="card m-order-1">
+            <MoveList sans={parsed.moves.map((m) => m.san)} analysis={analysis?.moves} ply={ply} onSelect={go} />
           </section>
-        )}
 
-        <section className="card m-order-1">
-          <MoveList sans={parsed.moves.map((m) => m.san)} analysis={analysis?.moves} ply={ply} onSelect={go} />
-        </section>
-
-        <div className="m-order-9">
-          <CoachPanel
-            game={game}
-            parsed={parsed}
-            analysis={analysis}
-            ply={ply}
-            report={report}
-            onReport={setReport}
-            onSelectPly={go}
-            onPractice={onPractice}
-          />
+          <div className="m-order-9">
+            <CoachPanel
+              game={game}
+              parsed={parsed}
+              analysis={analysis}
+              ply={ply}
+              report={report}
+              onReport={setReport}
+              onSelectPly={go}
+              onPractice={onPractice}
+            />
+          </div>
         </div>
       </div>
     </div>

@@ -14,7 +14,7 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 | Entrenador con Claude | Con el plan (Claude Code en el PC), con claude.ai (copiar y pegar) o con clave de API |
 | Versión móvil instalable (PWA) en GitHub Pages | https://cullera33-puchi.github.io/Ajedrez-App/ |
 | Ajustes de iPhone | Isla y zonas seguras, nada más ancho que la pantalla, sin zoom por doble toque |
-| Análisis cómodo en el móvil | Tablero fijo arriba; debajo, una zona propia que se desplaza con la jugada, la lista y el resumen; barra fija de botones grandes; la página nunca se mueve |
+| Análisis cómodo en el móvil | Tablero y jugada actual fijos; debajo, una zona propia con la lista (que sigue siempre a la jugada actual) y el resto; barras compactas; la página nunca se mueve |
 | Colores tipo Chess.com con modo día y noche | Automático según el sistema (móvil u ordenador) o fijado a mano en Inicio, en *Apariencia* |
 | Entrenador con Claude plegado al final | Fila pequeña con *Entrenador IA* y *Abrir en claude.ai*; se despliega al pulsar |
 | Problemas recomendados según tus errores | Temas deducidos de tus errores (mates, piezas colgadas, dobles ataques, defensa) y de los informes de Claude. Botón *Practica lo que has fallado* en el análisis y recomendaciones en Problemas e Inicio |
