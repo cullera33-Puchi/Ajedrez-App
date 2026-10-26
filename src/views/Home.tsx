@@ -8,6 +8,9 @@ import { recommendThemes } from '../lib/recommend'
 import { duePuzzles } from '../lib/myPuzzles'
 import { MY_ERRORS } from './Puzzles'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
+import { backupFileName, exportBackup, importBackup, parseBackup } from '../lib/backup'
+import { allSummaries } from '../lib/games'
+import { allMyPuzzles } from '../lib/myPuzzles'
 import type { Settings } from '../lib/settings'
 import { load, save } from '../lib/storage'
 import { getSummary } from '../lib/games'
@@ -194,6 +197,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
         </section>
 
         <ThemeCard />
+
+        <BackupCard gamesCount={games.length} />
 
         <CoachKeyCard />
 
@@ -424,6 +429,99 @@ function ThemeCard() {
         ))}
       </div>
       <p className="muted small">Automático usa el modo día o noche que tengas puesto en el móvil o en el ordenador.</p>
+    </section>
+  )
+}
+
+function BackupCard({ gamesCount }: { gamesCount: number }) {
+  const [withAnalyses, setWithAnalyses] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const canShareFiles = typeof navigator !== 'undefined' && typeof navigator.canShare === 'function'
+
+  const makeFile = async () => {
+    const backup = await exportBackup(withAnalyses)
+    return new File([JSON.stringify(backup)], backupFileName(), { type: 'application/json' })
+  }
+
+  const download = async () => {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const file = await makeFile()
+      const url = URL.createObjectURL(file)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = file.name
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      const size = file.size < 1024 * 1024 ? `${Math.max(1, Math.round(file.size / 1024))} KB` : `${(file.size / 1024 / 1024).toFixed(1).replace('.', ',')} MB`
+      setMsg({ kind: 'ok', text: `Copia guardada (${size}). Ábrela en el otro dispositivo con Importar copia.` })
+    } catch (e) {
+      setMsg({ kind: 'error', text: `No se ha podido crear la copia: ${(e as Error).message}` })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const share = async () => {
+    setBusy(true)
+    setMsg(null)
+    try {
+      const file = await makeFile()
+      if (!navigator.canShare?.({ files: [file] })) return download()
+      await navigator.share({ files: [file], title: 'Copia de Ajedrez App' })
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setMsg({ kind: 'error', text: `No se ha podido compartir: ${(e as Error).message}` })
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const restore = async (file: File | undefined) => {
+    if (!file) return
+    setBusy(true)
+    setMsg(null)
+    try {
+      const r = await importBackup(parseBackup(await file.text()))
+      setMsg({
+        kind: 'ok',
+        text: `Copia importada: ${r.games} partidas, ${r.analyses} análisis nuevos y ${r.puzzles} problemas propios. Recargando…`,
+      })
+      setTimeout(() => window.location.reload(), 1500)
+    } catch (e) {
+      setMsg({ kind: 'error', text: (e as Error).message })
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Copia de seguridad</h2>
+      <p className="muted small">
+        Pasa tus datos entre el móvil, el ordenador y la tablet con un archivo: {gamesCount} partidas, {allSummaries().length} análisis y{' '}
+        {allMyPuzzles().length} problemas con tus errores, además de tu nivel y tus récords. Al importar no se borra nada.
+      </p>
+      <label className="check">
+        <input type="checkbox" checked={withAnalyses} onChange={(e) => setWithAnalyses(e.target.checked)} /> Incluir los análisis (archivo más grande)
+      </label>
+      <div className="toolbar">
+        <button className="btn primary" onClick={download} disabled={busy}>
+          Guardar copia
+        </button>
+        {canShareFiles && (
+          <button className="btn" onClick={share} disabled={busy}>
+            Compartir
+          </button>
+        )}
+        <label className="btn file-btn">
+          Importar copia
+          <input type="file" accept=".json,application/json" hidden onChange={(e) => restore(e.target.files?.[0])} />
+        </label>
+      </div>
+      {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
     </section>
   )
 }

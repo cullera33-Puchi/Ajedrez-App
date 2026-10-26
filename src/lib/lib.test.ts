@@ -379,3 +379,33 @@ describe('problemas con tus errores', () => {
     expect(candidatePlies({ ...DEMO_GAMES[0], userColor: undefined }, parsed, a)).toEqual([])
   })
 })
+
+describe('copia de seguridad', () => {
+  it('exporta e importa fusionando sin perder datos', async () => {
+    const { resetDbForTests } = await import('./db')
+    const store = await import('./games')
+    const { save, load } = await import('./storage')
+    const { exportBackup, importBackup, parseBackup } = await import('./backup')
+    resetDbForTests()
+    store.resetStoreForTests()
+    const g1 = { ...DEMO_GAMES[0], id: 'cc-a', source: 'chesscom' as const }
+    store.mergeGames([g1])
+    save('puzzleStats', { rating: 700, solved: 10, failed: 5, streak: 2, history: [] })
+    save('botRecord', { lucia: { w: 1, l: 2, d: 0 } })
+    const backup = parseBackup(JSON.stringify(await exportBackup()))
+    expect(backup.games.map((g) => g.id)).toEqual(['cc-a'])
+
+    // Otro dispositivo: otra partida y menos problemas resueltos
+    resetDbForTests()
+    store.resetStoreForTests()
+    store.mergeGames([{ ...g1, id: 'cc-b' }])
+    save('puzzleStats', { rating: 600, solved: 1, failed: 0, streak: 1, history: [] })
+    save('botRecord', { bruno: { w: 3, l: 0, d: 0 } })
+    const r = await importBackup(backup)
+    expect(r.games).toBe(1)
+    expect(store.getGames().map((g) => g.id).sort()).toEqual(['cc-a', 'cc-b'])
+    expect(load<{ rating: number }>('puzzleStats', { rating: 0 }).rating).toBe(700)
+    expect(Object.keys(load('botRecord', {})).sort()).toEqual(['bruno', 'lucia'])
+    expect(() => parseBackup('{"x":1}')).toThrow()
+  })
+})
