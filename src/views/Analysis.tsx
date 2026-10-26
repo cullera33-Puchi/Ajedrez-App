@@ -8,6 +8,7 @@ import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
 import { EngineLines, lineToWhite, useEngineLines } from '../components/EngineLines'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
+import { useBackHandler } from '../lib/nav'
 import { usePersistentState } from '../lib/storage'
 import { Chess } from 'chess.js'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
@@ -193,6 +194,12 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     else if (where === 'start') go(0)
     else go(total)
   }
+
+  // Ir atrás cierra primero la variante o el «Inténtalo tú».
+  useBackHandler(Boolean(variation || retry), () => {
+    if (variation) go(variation.base)
+    else setRetry(null)
+  })
 
   const boardFen = parsed ? (variation ? (variation.idx ? variation.moves[variation.idx - 1].fen : parsed.fens[variation.base]) : parsed.fens[ply]) : null
   const exploring = Boolean(variation) || showLines

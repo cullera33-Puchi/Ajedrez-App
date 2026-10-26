@@ -4,6 +4,7 @@ import { type Arrow, Board } from '../components/Board'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
 import { setBusy } from '../lib/activity'
 import { getEngine } from '../lib/engine'
+import { useBackGuard, useBackHandler } from '../lib/nav'
 import { checkLesson, type Lesson, lessonColor, type LessonStatus, LESSONS, loadLessonProgress, recordLesson } from '../lib/lessons'
 
 /** Lista de lecciones prácticas para la pantalla Aprender. */
@@ -51,6 +52,9 @@ export function LessonPlayer({ lesson, onBack, onNext }: { lesson: Lesson; onBac
   const [resetKey, setResetKey] = useState(0)
   const [showSteps, setShowSteps] = useState(true)
   const startPieces = useRef(countPieces(new Chess(lesson.fen)))
+  // Con la lección empezada, ir atrás no la abandona; si no, vuelve a la lista.
+  useBackGuard(status.state === 'playing' && userMoves > 0, 'Lección en curso. Para salir, pulsa Volver a las lecciones.')
+  useBackHandler(true, onBack)
   const alive = useRef(true)
 
   useEffect(() => {

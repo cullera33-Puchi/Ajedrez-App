@@ -26,6 +26,7 @@ import { getEngine, releaseEngine } from '../lib/engine'
 import type { Settings } from '../lib/settings'
 import { addFeedback, type BotFeel, FEEL_LABEL, feedbackReport, loadFeedback } from '../lib/botFeedback'
 import { copyText } from '../lib/coach'
+import { useBackGuard } from '../lib/nav'
 import { usePersistentState } from '../lib/storage'
 import type { Color, GameSummary, Result } from '../lib/types'
 
@@ -85,6 +86,8 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     return () => setBusy('play', false)
   }, [game, finished])
   useEffect(() => () => releaseEngine('play'), [])
+  // Ir atrás no saca de una partida en marcha (se puede salir con las pestañas y continuar después).
+  useBackGuard(Boolean(game && !finished), 'Partida en curso. Se guarda sola: sal con las pestañas de abajo y continúala cuando quieras.')
 
   const finish = (g: BotGame, result: Result, reason: string) => {
     const summary = botGameToSummary(g, result, userName, reason)
@@ -340,6 +343,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
               )}
             </p>
             {msg && <p className="muted small">{msg}</p>}
+            {!msg && <p className="muted small">La partida se guarda sola: puedes salir y continuarla más tarde.</p>}
           </section>
         )}
         <section className="card">

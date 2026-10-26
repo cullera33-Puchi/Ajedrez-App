@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { View } from '../App'
 import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
 import { type CoachStatus, fetchCoachStatus } from '../lib/coach'
+import { loadBotGame, makeBot } from '../lib/bots'
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
@@ -84,6 +85,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   const lastLoss = mine.find((g) => outcomeFor(g) === 'derrota')
   const topTheme = recommendThemes(games).themes[0]
   const due = duePuzzles().length
+  const pending = loadBotGame()
+  const pendingBot = pending ? makeBot(pending.elo, pending.style) : null
 
   // Errores graves del usuario en las partidas ya analizadas.
   const userBlunders = mine
@@ -124,6 +127,19 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
         <section className="card">
           <h2>Tu próximo paso</h2>
           <ul className="steps">
+            {pending && pendingBot && (
+              <li>
+                <div>
+                  <strong>Partida a medias</strong>
+                  <p className="muted">
+                    Contra {pendingBot.name} ({pendingBot.elo}), {Math.ceil(pending.moves.length / 2)} {Math.ceil(pending.moves.length / 2) === 1 ? "jugada" : "jugadas"}. Está tal como la dejaste.
+                  </p>
+                </div>
+                <button className="btn primary" onClick={() => onNavigate('jugar')}>
+                  Continuar
+                </button>
+              </li>
+            )}
             {due > 0 && (
               <li>
                 <div>

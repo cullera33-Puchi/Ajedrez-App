@@ -20,6 +20,9 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Volver atrás deslizando (5.10) | Gesto desde el borde izquierdo en la app del iPhone y botón atrás del sistema. No saca de una partida en marcha; en el análisis cierra antes la variante |
+| Partida contra bot a medias | Se guarda sola; aviso en Inicio con *Continuar* y punto en la pestaña Jugar |
+| Uso sin conexión completo | Corregida la caché para que la app abra sin red; el escáner y el motor también funcionan sin conexión |
 | Valorar el bot al terminar (1.8) | Fácil, adecuado o difícil con nota; *Copiar para Claude* en Jugar |
 | Evolución de los problemas (4.3, parte de problemas) | Problemas, *Tu evolución*: nivel por día, problemas hechos y acertados, dificultad media; periodos de 7, 30 y 90 días |
 | Elegir pieza al coronar (5.4) | En las partidas contra bots; en los problemas se respeta la subpromoción |

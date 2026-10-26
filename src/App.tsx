@@ -1,6 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
+import { loadBotGame } from './lib/bots'
+import { installBackNavigation, onToast, setViewBack } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import type { GameSummary } from './lib/types'
 import { AnalysisView } from './views/Analysis'
@@ -25,12 +27,56 @@ const NAV: { id: View; label: string; icon: string }[] = [
   { id: 'aprender', label: 'Aprender', icon: '♙' },
 ]
 
+/** Estado de navegación que se recupera al volver atrás. */
+interface NavState {
+  view: View
+  gameId: string | null
+  puzzleTheme: string
+}
+
 export default function App() {
-  const [view, setView] = useState<View>('inicio')
+  const [nav, setNav] = useState<NavState>({ view: 'inicio', gameId: null, puzzleTheme: 'mix' })
+  const { view, gameId, puzzleTheme } = nav
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [games, setGames] = useState<GameSummary[]>(getGames)
-  const [gameId, setGameId] = useState<string | null>(null)
-  const [puzzleTheme, setPuzzleTheme] = useState('mix')
+  const [toast, setToast] = useState<string | null>(null)
+  const history = useRef<NavState[]>([])
+  const navRef = useRef(nav)
+  const indicator = useRef<HTMLDivElement>(null)
+
+  /** Cambia de pantalla guardando la actual para poder volver con el gesto atrás. */
+  const go = (next: Partial<NavState>) => {
+    const cur = navRef.current
+    const merged = { ...cur, ...next }
+    if (merged.view === cur.view && merged.gameId === cur.gameId && merged.puzzleTheme === cur.puzzleTheme) return
+    history.current = [...history.current, cur].slice(-30)
+    navRef.current = merged
+    setNav(merged)
+  }
+  const setView = (v: View) => go({ view: v })
+
+  // Gesto y botón atrás: vuelven a la pantalla anterior (las pantallas pueden interceptarlo).
+  useEffect(() => {
+    setViewBack(() => {
+      const prev = history.current.pop()
+      if (!prev) return false
+      navRef.current = prev
+      setNav(prev)
+      return true
+    })
+    onToast((msg) => setToast(msg))
+    const remove = installBackNavigation(indicator.current!)
+    return () => {
+      remove()
+      setViewBack(null)
+      onToast(null)
+    }
+  }, [])
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3000)
+    return () => clearTimeout(t)
+  }, [toast])
 
   // Análisis en segundo plano de las partidas pendientes. Cada partida que termina refresca la vista.
   useEffect(() => {
@@ -54,14 +100,9 @@ export default function App() {
     saveSettings(s)
   }
   const addGames = (incoming: GameSummary[]) => setGames(mergeGames(incoming))
-  const openGame = (id: string) => {
-    setGameId(id)
-    setView('analisis')
-  }
-  const openPuzzles = (theme: string) => {
-    setPuzzleTheme(theme)
-    setView('problemas')
-  }
+  const openGame = (id: string) => go({ view: 'analisis', gameId: id })
+  const openPuzzles = (theme: string) => go({ view: 'problemas', puzzleTheme: theme })
+  const pendingBotGame = view !== 'jugar' && Boolean(loadBotGame())
 
   return (
     <div className="app">
@@ -78,6 +119,7 @@ export default function App() {
             <button key={n.id} className={`nav-item ${view === n.id || (view === 'escanear' && n.id === 'partidas') || (view === 'progreso' && n.id === 'inicio') ? 'active' : ''}`} onClick={() => setView(n.id)}>
               <span className="nav-icon">{n.icon}</span>
               {n.label}
+              {n.id === 'jugar' && pendingBotGame && <span className="nav-dot" aria-label="Partida a medias" />}
             </button>
           ))}
         </nav>
@@ -116,6 +158,14 @@ export default function App() {
           </Suspense>
         )}
       </main>
+      <div ref={indicator} className="back-indicator" aria-hidden="true">
+        ‹
+      </div>
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }

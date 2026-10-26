@@ -45,6 +45,8 @@ Reglas de negocio a respetar:
 
 - Las partidas contra bots se guardan y analizan, pero van separadas (apartado *Contra bots* en Partidas) y no cuentan en recomendaciones ni en el resumen de Inicio.
 - Los problemas de *Mis errores* no cambian el nivel de problemas.
+- Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección) antes de cambiar de pantalla.
+- El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión.
 
 ## Comandos
 
