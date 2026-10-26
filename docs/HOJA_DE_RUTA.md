@@ -15,6 +15,7 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 | Versión móvil instalable (PWA) en GitHub Pages | https://cullera33-puchi.github.io/Ajedrez-App/ |
 | Ajustes de iPhone | Isla y zonas seguras, nada más ancho que la pantalla, sin zoom por doble toque |
 | Análisis cómodo en el móvil | Tablero fijo arriba; debajo, una zona propia que se desplaza con la jugada, la lista y el resumen; barra fija de botones grandes; la página nunca se mueve |
+| Colores tipo Chess.com con modo día y noche | Automático según el sistema (móvil u ordenador) o fijado a mano en Inicio, en *Apariencia* |
 | Entrenador con Claude plegado al final | Fila pequeña con *Entrenador IA* y *Abrir en claude.ai*; se despliega al pulsar |
 | Problemas recomendados según tus errores | Temas deducidos de tus errores (mates, piezas colgadas, dobles ataques, defensa) y de los informes de Claude. Botón *Practica lo que has fallado* en el análisis y recomendaciones en Problemas e Inicio |
 
@@ -24,12 +25,18 @@ Leyenda: **Hecho**, **En curso**, **Pendiente**, **Por analizar** (necesita defi
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 1.1 | Bots de tu nivel (400 a 1500) que cometen errores humanos | Medio | Alta |
+| 1.1 | Bots de tu nivel (400 a 1500) que cometen errores humanos. Las partidas contra los bots se guardan en *Mis partidas* y tienen el mismo análisis, recomendaciones y entrenador que las de Chess.com | Medio | Alta |
 | 1.2 | Importación completa del historial de Chess.com, con almacenamiento en IndexedDB y descarga solo de lo nuevo | Medio | Alta |
 | 1.3 | Análisis en segundo plano de las partidas importadas | Medio | Alta |
 | 1.4 | Problemas con las posiciones de tus propios errores, con repaso de los fallados (repetición espaciada) | Medio | Alta |
 | 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida | Alto | Media |
 | 1.6 | Problemas de Lichess sincronizados con tu cuenta y paquete de problemas de tu nivel para usar sin conexión | Medio | Media |
+
+### 1b. Dispositivos
+
+| # | Mejora | Esfuerzo | Prioridad |
+|---|---|---|---|
+| 1.7 | Tablet de tinta electrónica (BOOX Note Air4 C): la web ya debería abrir en su navegador. Mejoras propuestas: modo «tinta electrónica» con alto contraste, sin animaciones ni degradados, tablero con colores planos y botones grandes; probar el refresco de pantalla al mover piezas | Bajo | Media |
 
 ### 2. Sincronización entre ordenador y móvil
 

@@ -5,6 +5,7 @@ import { type CoachProvider, type CoachStatus, fetchCoachStatus, saveCoachKey, s
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
+import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import type { Settings } from '../lib/settings'
 import { listKeys, load, save } from '../lib/storage'
 import type { GameAnalysis } from '../lib/analysis'
@@ -181,6 +182,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
             </li>
           </ul>
         </section>
+
+        <ThemeCard />
 
         <CoachKeyCard />
 
@@ -384,6 +387,33 @@ function CoachKeyCard() {
         </>
       )}
       {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
+    </section>
+  )
+}
+
+const THEMES: { value: ThemeChoice; label: string }[] = [
+  { value: 'auto', label: 'Automático' },
+  { value: 'light', label: 'Día' },
+  { value: 'dark', label: 'Noche' },
+]
+
+function ThemeCard() {
+  const [choice, setChoice] = useState<ThemeChoice>(loadTheme)
+  const pick = (t: ThemeChoice) => {
+    setChoice(t)
+    setTheme(t)
+  }
+  return (
+    <section className="card">
+      <h2>Apariencia</h2>
+      <div className="segmented" role="radiogroup" aria-label="Modo de color">
+        {THEMES.map((t) => (
+          <button key={t.value} role="radio" aria-checked={choice === t.value} className={choice === t.value ? 'active' : ''} onClick={() => pick(t.value)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">Automático usa el modo día o noche que tengas puesto en el móvil o en el ordenador.</p>
     </section>
   )
 }

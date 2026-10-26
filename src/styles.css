@@ -1,19 +1,40 @@
+/*
+ * Tema inspirado en Chess.com. Modo noche por defecto; modo día si el sistema lo pide
+ * (o si se elige a mano en Inicio, que pone data-theme en <html>).
+ */
 :root {
-  --bg: #161512;
-  --bg-2: #1f1e1b;
-  --card: #262421;
-  --card-2: #2f2d29;
-  --line: #3a3833;
-  --text: #e8e6e3;
-  --muted: #9b978f;
-  --accent: #5a9e6f;
-  --accent-2: #3f7f55;
-  --good: #6fbf73;
-  --bad: #e06666;
-  --c-mejor: #5fb4e6;
-  --c-imprecision: #e6c34d;
-  --c-error: #e69a3d;
-  --c-grave: #e0524c;
+  --bg: #312e2b;
+  --bg-2: #262522;
+  --card: #262522;
+  --card-2: #3c3a37;
+  --line: #45423e;
+  --text: #ffffff;
+  --muted: #a7a6a2;
+  --accent: #81b64c;
+  --accent-2: #45753c;
+  --accent-soft: rgba(129, 182, 76, 0.12);
+  --on-accent: #ffffff;
+  --good: #81b64c;
+  --bad: #fa412d;
+  --c-mejor: #81b64c;
+  --c-buena: #95b776;
+  --c-imprecision: #f7c631;
+  --c-error: #ffa459;
+  --c-grave: #fa412d;
+  --err-bg: rgba(250, 65, 45, 0.16);
+  --err-text: #ffaba2;
+  --ok-bg: rgba(129, 182, 76, 0.18);
+  --ok-text: #c3e4a0;
+  --info-bg: rgba(92, 139, 176, 0.2);
+  --info-text: #b9d6ee;
+  --eval-white: #f0f0f0;
+  --eval-black: #403d39;
+  --stripe: rgba(255, 255, 255, 0.03);
+  --coach-line: #5c8bb0;
+  --coach-accent: #f0b35a;
+  --coach-bg: rgba(240, 179, 90, 0.1);
+  --coach-bubble: rgba(92, 139, 176, 0.22);
+  --status-band: #262522;
   --board: min(calc(100vh - 230px), 640px);
   /* Zonas seguras del iPhone (isla, hora, indicador de inicio y bordes en horizontal) */
   --safe-top: env(safe-area-inset-top, 0px);
@@ -21,6 +42,68 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --bg: #f1f1ee;
+    --bg-2: #ffffff;
+    --card: #ffffff;
+    --card-2: #ebebe8;
+    --line: #dcdbd6;
+    --text: #312e2b;
+    --muted: #6f6c67;
+    --accent-soft: rgba(129, 182, 76, 0.14);
+    --good: #5d8f2e;
+    --bad: #d33a28;
+    --c-mejor: #5d8f2e;
+    --c-buena: #6f9a4f;
+    --c-imprecision: #c99a00;
+    --c-error: #e07b21;
+    --c-grave: #d33a28;
+    --err-bg: rgba(211, 58, 40, 0.1);
+    --err-text: #a42a1b;
+    --ok-bg: rgba(93, 143, 46, 0.12);
+    --ok-text: #3f6b19;
+    --info-bg: rgba(92, 139, 176, 0.14);
+    --info-text: #2f5f86;
+    --eval-black: #5a5754;
+    --stripe: rgba(0, 0, 0, 0.025);
+    --coach-accent: #b8741b;
+    --coach-bg: rgba(184, 116, 27, 0.09);
+    --coach-bubble: rgba(92, 139, 176, 0.14);
+    color-scheme: light;
+  }
+}
+
+:root[data-theme='light'] {
+  --bg: #f1f1ee;
+  --bg-2: #ffffff;
+  --card: #ffffff;
+  --card-2: #ebebe8;
+  --line: #dcdbd6;
+  --text: #312e2b;
+  --muted: #6f6c67;
+  --accent-soft: rgba(129, 182, 76, 0.14);
+  --good: #5d8f2e;
+  --bad: #d33a28;
+  --c-mejor: #5d8f2e;
+  --c-buena: #6f9a4f;
+  --c-imprecision: #c99a00;
+  --c-error: #e07b21;
+  --c-grave: #d33a28;
+  --err-bg: rgba(211, 58, 40, 0.1);
+  --err-text: #a42a1b;
+  --ok-bg: rgba(93, 143, 46, 0.12);
+  --ok-text: #3f6b19;
+  --info-bg: rgba(92, 139, 176, 0.14);
+  --info-text: #2f5f86;
+  --eval-black: #5a5754;
+  --stripe: rgba(0, 0, 0, 0.025);
+  --coach-accent: #b8741b;
+  --coach-bg: rgba(184, 116, 27, 0.09);
+  --coach-bubble: rgba(92, 139, 176, 0.14);
+  color-scheme: light;
 }
 
 * {
@@ -257,16 +340,16 @@ textarea {
   margin: 0.6rem 0;
 }
 .msg.error {
-  background: rgba(224, 82, 76, 0.15);
-  color: #f2a29e;
+  background: var(--err-bg);
+  color: var(--err-text);
 }
 .msg.ok {
-  background: rgba(111, 191, 115, 0.15);
-  color: #a9dfab;
+  background: var(--ok-bg);
+  color: var(--ok-text);
 }
 .msg.info {
-  background: rgba(95, 180, 230, 0.12);
-  color: #a9d6f0;
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 
 /* Indicadores */
@@ -396,10 +479,10 @@ table.games {
   white-space: nowrap;
 }
 .src-chesscom {
-  color: #9fd27a;
+  color: var(--accent);
 }
 .src-lichess {
-  color: #e8e6e3;
+  color: var(--text);
 }
 .src-demo {
   color: var(--c-imprecision);
@@ -462,7 +545,7 @@ cg-board {
 .evalbar {
   width: 22px;
   height: var(--board);
-  background: #403d39;
+  background: var(--eval-black);
   border-radius: 4px;
   position: relative;
   overflow: hidden;
@@ -473,7 +556,7 @@ cg-board {
   flex-direction: column;
 }
 .evalbar-white {
-  background: #f0eee9;
+  background: var(--eval-white);
   transition: height 0.3s ease;
 }
 .evalbar-text {
@@ -508,13 +591,13 @@ cg-board {
   border-radius: 6px;
 }
 .evalchart-bg {
-  fill: #403d39;
+  fill: var(--eval-black);
 }
 .evalchart-area {
-  fill: #e8e6e3;
+  fill: var(--eval-white);
 }
 .evalchart-mid {
-  stroke: #888;
+  stroke: var(--muted);
   stroke-dasharray: 4 4;
   stroke-width: 1;
 }
@@ -671,7 +754,7 @@ td.c-grave,
   align-items: center;
 }
 .move-row:nth-child(odd) {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--stripe);
 }
 .move-num {
   color: var(--muted);
@@ -785,7 +868,7 @@ td.c-grave,
 
 /* Entrenador IA */
 .coach {
-  border-color: #4a5d78;
+  border-color: var(--coach-line);
 }
 .coach-head {
   display: flex;
@@ -796,7 +879,7 @@ td.c-grave,
   margin: 0;
 }
 .coach-head .badge {
-  color: #d9a679;
+  color: var(--coach-accent);
 }
 .coach h3 {
   margin-top: 1rem;
@@ -827,7 +910,7 @@ td.c-grave,
   width: 16px;
   height: 16px;
   border: 2px solid var(--line);
-  border-top-color: #d9a679;
+  border-top-color: var(--coach-accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   flex-shrink: 0;
@@ -848,14 +931,14 @@ td.c-grave,
   margin-bottom: 0.6rem;
 }
 .moments li.active {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--stripe);
 }
 .moments .link {
   font-weight: 600;
   text-decoration: none;
 }
 .idea {
-  color: #a9d6f0;
+  color: var(--info-text);
 }
 .lessons {
   padding-left: 1.2rem;
@@ -866,15 +949,15 @@ td.c-grave,
 }
 .coach-tip {
   font-style: italic;
-  color: #d9a679;
+  color: var(--coach-accent);
 }
 .coach-comment {
-  background: rgba(217, 166, 121, 0.1);
+  background: var(--coach-bg);
   border-radius: 6px;
   padding: 0.45rem 0.6rem;
 }
 .coach-comment strong {
-  color: #d9a679;
+  color: var(--coach-accent);
 }
 .coach-chat {
   margin-top: 1rem;
@@ -897,7 +980,7 @@ td.c-grave,
   max-width: 90%;
 }
 .bubble.coach-answer {
-  background: rgba(74, 93, 120, 0.25);
+  background: var(--coach-bubble);
 }
 .rich ul {
   margin: 0.3rem 0;
@@ -921,7 +1004,7 @@ td.c-grave,
 }
 .provider.active {
   border-color: var(--accent);
-  background: rgba(90, 158, 111, 0.08);
+  background: var(--accent-soft);
 }
 .provider input {
   margin-top: 0.25rem;
@@ -1421,4 +1504,116 @@ cg-board {
   .m-order-4 { order: 4; }
   .m-order-5 { order: 5; }
   .m-order-9 { order: 9; }
+}
+
+/* Estilo Chess.com: botones con relieve, verde de acción y tablero verde y crema */
+.btn {
+  background: var(--card-2);
+  border: 0;
+  border-radius: 6px;
+  font-weight: 600;
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+  box-shadow: inset 0 -4px 0 var(--accent-2);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+.btn.primary:hover:not(:disabled) {
+  background: #95c95f;
+}
+.brand-icon {
+  background: var(--accent);
+}
+.nav-item.active {
+  background: var(--card-2);
+}
+.card {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.12);
+}
+.move.active {
+  background: var(--accent);
+  color: var(--on-accent);
+}
+.tab.active,
+.provider.active,
+.reco-item.active {
+  border-color: var(--accent);
+}
+.progress-bar div {
+  background: var(--accent);
+}
+.dot.win {
+  background: var(--good);
+}
+.cls-buena,
+.move-card.c-buena {
+  color: inherit;
+}
+.cls-buena {
+  color: var(--c-buena);
+}
+.move-card.c-buena {
+  border-left-color: var(--c-buena);
+}
+.evalchart-cursor {
+  stroke: var(--accent);
+}
+
+/* Tablero verde y crema; última jugada y casilla elegida en amarillo */
+.cg-wrap cg-board {
+  background-color: #779556;
+  background-image: repeating-conic-gradient(#779556 0 25%, #ebecd0 0 50%);
+  background-size: 25% 25%;
+}
+.cg-wrap cg-board square.last-move {
+  background-color: rgba(255, 255, 51, 0.45);
+}
+.cg-wrap cg-board square.selected {
+  background-color: rgba(255, 255, 51, 0.55);
+}
+.cg-wrap coords coord {
+  color: rgba(0, 0, 0, 0.5) !important;
+  font-weight: 700;
+}
+
+/* La franja bajo la hora del iPhone es siempre oscura para que la hora (en blanco) se lea en ambos modos */
+@media (max-width: 800px) {
+  .app::before {
+    background: var(--status-band);
+  }
+}
+
+.segmented {
+  display: flex;
+  background: var(--card-2);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+  margin: 0.3rem 0 0.5rem;
+}
+.segmented button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.segmented button.active {
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: inset 0 -3px 0 var(--accent-2);
+}
+
+.evalbar {
+  box-shadow: inset 0 0 0 1px var(--line);
 }
