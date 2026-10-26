@@ -128,6 +128,11 @@ function playLine(fen: string, line: string[], plies: number): { fen: string; sa
   return { fen: chess.fen(), sans }
 }
 
+/** Línea del motor en notación española, a partir de una posición. */
+export function lineToSpanish(fen: string, line: string[], plies: number): string {
+  return playLine(fen, line, plies).sans.map(toSpanishSan).join(' ')
+}
+
 export function uciToSan(fen: string, uci: string | undefined): string | undefined {
   if (!uci) return undefined
   return playLine(fen, [uci], 1).sans[0]

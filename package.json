@@ -13,6 +13,7 @@
     "lint": "oxlint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
     "chess.js": "^1.4.0",
     "chessground": "^9.2.1",
     "react": "^19.3.1",

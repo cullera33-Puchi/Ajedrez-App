@@ -777,3 +777,124 @@ td.c-grave,
     grid-column: auto;
   }
 }
+
+/* Entrenador IA */
+.coach {
+  border-color: #4a5d78;
+}
+.coach-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.coach-head h2 {
+  margin: 0;
+}
+.coach-head .badge {
+  color: #d9a679;
+}
+.coach h3 {
+  margin-top: 1rem;
+}
+.coach h4 {
+  margin: 0.7rem 0 0.2rem;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.coach details {
+  margin-top: 0.8rem;
+  background: var(--bg-2);
+  border-radius: 8px;
+  padding: 0.5rem 0.8rem;
+}
+.coach summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.coach-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  margin: 0.6rem 0;
+}
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line);
+  border-top-color: #d9a679;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.moments {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.moments li {
+  border-left: 3px solid var(--c-grave);
+  padding: 0.3rem 0 0.3rem 0.7rem;
+  margin-bottom: 0.6rem;
+}
+.moments li.active {
+  background: rgba(255, 255, 255, 0.03);
+}
+.moments .link {
+  font-weight: 600;
+  text-decoration: none;
+}
+.idea {
+  color: #a9d6f0;
+}
+.lessons {
+  padding-left: 1.2rem;
+  margin: 0.3rem 0;
+}
+.lessons li {
+  margin-bottom: 0.35rem;
+}
+.coach-tip {
+  font-style: italic;
+  color: #d9a679;
+}
+.coach-comment {
+  background: rgba(217, 166, 121, 0.1);
+  border-radius: 6px;
+  padding: 0.45rem 0.6rem;
+}
+.coach-comment strong {
+  color: #d9a679;
+}
+.coach-chat {
+  margin-top: 1rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.bubble {
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+.bubble p {
+  margin: 0.2rem 0;
+}
+.bubble.user {
+  background: var(--card-2);
+  align-self: flex-end;
+  max-width: 90%;
+}
+.bubble.coach-answer {
+  background: rgba(74, 93, 120, 0.25);
+}
+.rich ul {
+  margin: 0.3rem 0;
+  padding-left: 1.1rem;
+}

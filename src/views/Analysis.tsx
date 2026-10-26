@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { View } from '../App'
 import { type Arrow, Board } from '../components/Board'
+import { CoachPanel } from '../components/CoachPanel'
 import { EvalBar } from '../components/EvalBar'
 import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan } from '../lib/analysis'
+import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
 import type { Settings } from '../lib/settings'
 import type { Color, GameSummary } from '../lib/types'
@@ -14,6 +16,7 @@ interface Props {
   settings: Settings
   onSettings: (s: Settings) => void
   onNavigate: (v: View) => void
+  onPractice: (theme: string) => void
 }
 
 const DEPTHS = [
@@ -22,7 +25,7 @@ const DEPTHS = [
   { value: 16, label: 'Profundo' },
 ]
 
-export function AnalysisView({ game, settings, onSettings, onNavigate }: Props) {
+export function AnalysisView({ game, settings, onSettings, onNavigate, onPractice }: Props) {
   if (!game) {
     return (
       <div className="page">
@@ -38,10 +41,10 @@ export function AnalysisView({ game, settings, onSettings, onNavigate }: Props) 
       </div>
     )
   }
-  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} />
+  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} onPractice={onPractice} />
 }
 
-function GameAnalysisView({ game, settings, onSettings }: { game: GameSummary; settings: Settings; onSettings: (s: Settings) => void }) {
+function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props, 'game' | 'onNavigate'> & { game: GameSummary }) {
   const parsed = useMemo(() => {
     try {
       return parsePgn(game.pgn)
@@ -55,6 +58,7 @@ function GameAnalysisView({ game, settings, onSettings }: { game: GameSummary; s
   const [ply, setPly] = useState(0)
   const [orientation, setOrientation] = useState<Color>(game.userColor ?? 'white')
   const [showBest, setShowBest] = useState(true)
+  const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
   const abortRef = useRef<AbortController | null>(null)
 
   const total = parsed ? parsed.fens.length - 1 : 0
@@ -115,6 +119,7 @@ function GameAnalysisView({ game, settings, onSettings }: { game: GameSummary; s
   const move = ply > 0 ? parsed.moves[ply - 1] : undefined
   const moveAnalysis = analysis && ply > 0 ? analysis.moves[ply - 1] : undefined
   const evalNow = analysis?.positions[ply]
+  const coachComment = report?.comentarios.find((c) => c.ply === ply)?.comentario ?? report?.momentos_clave.find((m) => m.ply === ply)?.explicacion
   const bestNow = evalNow?.best
   const arrows: Arrow[] = showBest && bestNow ? [{ orig: bestNow.slice(0, 2), dest: bestNow.slice(2, 4), brush: 'paleBlue' }] : []
   const top = orientation === 'white' ? game.black : game.white
@@ -248,11 +253,27 @@ function GameAnalysisView({ game, settings, onSettings }: { game: GameSummary; s
                 {evalNow && <span className="eval-chip">{formatEval(evalNow)}</span>}
               </div>
               <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
+              {coachComment && (
+                <p className="coach-comment">
+                  <strong>Entrenador:</strong> {coachComment}
+                </p>
+              )}
             </>
           ) : (
             <p className="muted">Posición inicial. Usa las flechas del teclado para avanzar por la partida.</p>
           )}
         </section>
+
+        <CoachPanel
+          game={game}
+          parsed={parsed}
+          analysis={analysis}
+          ply={ply}
+          report={report}
+          onReport={setReport}
+          onSelectPly={go}
+          onPractice={onPractice}
+        />
 
         {keyMoments && keyMoments.length > 0 && (
           <section className="card">

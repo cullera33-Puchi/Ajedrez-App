@@ -70,9 +70,16 @@ export default function App() {
           <GamesView settings={settings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}
         {view === 'analisis' && (
-          <AnalysisView key={currentGame?.id ?? 'none'} game={currentGame} settings={settings} onSettings={setSettings} onNavigate={setView} />
+          <AnalysisView
+            key={currentGame?.id ?? 'none'}
+            game={currentGame}
+            settings={settings}
+            onSettings={setSettings}
+            onNavigate={setView}
+            onPractice={openPuzzles}
+          />
         )}
-        {view === 'problemas' && <PuzzlesView initialTheme={puzzleTheme} />}
+        {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
         {view === 'aprender' && <LearnView onPractice={openPuzzles} />}
       </main>
     </div>

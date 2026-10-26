@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { View } from '../App'
 import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
+import { type CoachStatus, fetchCoachStatus, saveCoachKey } from '../lib/coach'
 import { fetchLichessStats } from '../lib/lichess'
 import { INITIAL_PUZZLE_STATS, type PuzzleStats } from '../lib/puzzles'
 import type { Settings } from '../lib/settings'
@@ -165,6 +166,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate }
           </ul>
         </section>
 
+        <CoachKeyCard />
+
         <section className="card">
           <h2>Resumen de tus partidas</h2>
           {recent.length ? (
@@ -226,5 +229,66 @@ function Kpi({ label, value, tone }: { label: string; value: number | string; to
       <span className="kpi-value">{value}</span>
       <span className="kpi-label">{label}</span>
     </div>
+  )
+}
+
+function CoachKeyCard() {
+  const [status, setStatus] = useState<CoachStatus | null | undefined>(undefined)
+  const [key, setKey] = useState('')
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
+  const [editing, setEditing] = useState(false)
+
+  useEffect(() => {
+    fetchCoachStatus().then(setStatus)
+  }, [])
+
+  const saveKey = async () => {
+    try {
+      setStatus(await saveCoachKey(key))
+      setKey('')
+      setEditing(false)
+      setMsg({ kind: 'ok', text: 'Clave guardada en este PC (archivo .env.local).' })
+    } catch (e) {
+      setMsg({ kind: 'error', text: (e as Error).message })
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Entrenador IA (Claude)</h2>
+      {status === undefined && <p className="muted">Comprobando…</p>}
+      {status === null && (
+        <p className="muted">El entrenador necesita el servidor local. Arranca la app con npm run dev o con iniciar.bat.</p>
+      )}
+      {status && status.configured && !editing && (
+        <>
+          <p>
+            <span className="badge out-victoria">Activo</span> Claude comentará tus partidas desde la pantalla de análisis.
+          </p>
+          <button className="btn small" onClick={() => setEditing(true)}>
+            Cambiar la clave
+          </button>
+        </>
+      )}
+      {status && (!status.configured || editing) && (
+        <>
+          <p className="muted">
+            Pega tu clave de la API de Anthropic. Se consigue en{' '}
+            <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">
+              console.anthropic.com
+            </a>{' '}
+            y se guarda solo en este PC.
+          </p>
+          <label className="field">
+            <span>Clave de la API</span>
+            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="sk-ant-..." autoComplete="off" />
+          </label>
+          <button className="btn primary" onClick={saveKey} disabled={!key.trim()}>
+            Guardar clave
+          </button>
+        </>
+      )}
+      {msg && <p className={`msg ${msg.kind}`}>{msg.text}</p>}
+    </section>
   )
 }

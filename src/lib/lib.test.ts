@@ -155,3 +155,23 @@ describe('importación', () => {
     expect(() => gameFromPgn('esto no es un pgn')).toThrow()
   })
 })
+
+describe('contexto para el entrenador', () => {
+  it('resume la partida con los datos de Stockfish', async () => {
+    const { buildGameContext, describePosition } = await import('./coach')
+    const parsed = parsePgn(DEMO_GAMES[0].pgn)
+    const positions: PositionEval[] = parsed.fens.map(() => ({ cp: 30, pv: [] }))
+    positions[8] = { cp: 250, best: 'c4f7', pv: ['c4f7', 'e8d8'] }
+    positions[9] = { cp: -600, best: 'g5g2', pv: ['g5g2', 'h1f1', 'g2e4', 'c4e2', 'd4f3'] }
+    const a = buildAnalysis(parsed, positions, 12)
+    const ctx = buildGameContext(DEMO_GAMES[0], parsed, a)
+    expect(ctx).toContain('El alumno juega con: blancas')
+    expect(ctx).toContain('derrota del alumno')
+    expect(ctx).toContain('[ply 9] 5. Cxf7 (blancas)')
+    expect(ctx).toContain('Mejor jugada: Axf7+ (línea: Axf7+ Rd8)')
+    expect(ctx).toContain('el motor espera: Dxg2 Tf1 Dxe4+ Ae2 Cf3#')
+    const pos = describePosition(parsed, a, 9)
+    expect(pos).toContain('Juegan las negras')
+    expect(pos).toContain('Mejor línea según Stockfish: Dxg2')
+  })
+})
