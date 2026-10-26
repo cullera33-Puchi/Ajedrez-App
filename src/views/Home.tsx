@@ -3,7 +3,8 @@ import type { View } from '../App'
 import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
 import { type CoachProvider, type CoachStatus, fetchCoachStatus, saveCoachKey, setCoachProvider } from '../lib/coach'
 import { fetchLichessStats } from '../lib/lichess'
-import { INITIAL_PUZZLE_STATS, type PuzzleStats } from '../lib/puzzles'
+import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
+import { recommendThemes } from '../lib/recommend'
 import type { Settings } from '../lib/settings'
 import { listKeys, load, save } from '../lib/storage'
 import type { GameAnalysis } from '../lib/analysis'
@@ -15,6 +16,7 @@ interface Props {
   games: GameSummary[]
   onOpenGame: (id: string) => void
   onNavigate: (v: View) => void
+  onPractice: (theme: string) => void
 }
 
 interface StatsCache {
@@ -22,7 +24,7 @@ interface StatsCache {
   lichess?: RatingInfo[]
 }
 
-export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate }: Props) {
+export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, onPractice }: Props) {
   const [cc, setCc] = useState(settings.chesscomUser)
   const [li, setLi] = useState(settings.lichessUser)
   const [stats, setStats] = useState<StatsCache>(() => load('stats', {}))
@@ -73,6 +75,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate }
     if (o) tally[o]++
   }
   const lastLoss = mine.find((g) => outcomeFor(g) === 'derrota')
+  const topTheme = recommendThemes(games).themes[0]
 
   // Errores graves del usuario en las partidas ya analizadas.
   const analysed = listKeys('analysis:')
@@ -140,6 +143,19 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate }
                 </div>
                 <button className="btn" onClick={() => onOpenGame(lastLoss.id)}>
                   Analizar
+                </button>
+              </li>
+            )}
+            {topTheme && (
+              <li>
+                <div>
+                  <strong>Practica: {themeName(topTheme.theme)}</strong>
+                  <p className="muted">
+                    Es el tema que más se repite en tus errores ({topTheme.count} {topTheme.count === 1 ? 'vez' : 'veces'} en tus últimas partidas analizadas).
+                  </p>
+                </div>
+                <button className="btn" onClick={() => onPractice(topTheme.theme)}>
+                  Practicar
                 </button>
               </li>
             )}

@@ -1224,3 +1224,102 @@ code.detail {
     letter-spacing: -0.02em;
   }
 }
+
+/* Variantes de la tarjeta de jugada: bajo el tablero en el móvil, en el lateral en el ordenador */
+.mobile-only {
+  display: none;
+}
+.nav-controls {
+  display: flex;
+  gap: 0.4rem;
+}
+
+@media (max-width: 800px) {
+  :root {
+    --nav-h: 60px;
+  }
+  .nav-item {
+    height: 52px;
+    justify-content: center;
+  }
+  .sidebar {
+    height: calc(var(--nav-h) + var(--safe-bottom));
+    box-sizing: border-box;
+    align-items: flex-start;
+    overflow: hidden;
+  }
+  .mobile-only {
+    display: block;
+  }
+  .desktop-only {
+    display: none;
+  }
+  .analysis .move-card.mobile-only {
+    margin: 0.5rem 0 0;
+    padding: 0.7rem 0.8rem;
+  }
+  .analysis .move-card.mobile-only p {
+    margin: 0.3rem 0 0;
+    font-size: 0.92rem;
+  }
+  /* Barra fija de navegación por la partida, justo encima de la barra de pestañas */
+  .analysis .nav-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(var(--nav-h) + var(--safe-bottom));
+    z-index: 45;
+    gap: 8px;
+    padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
+    background: var(--bg-2);
+    border-top: 1px solid var(--line);
+  }
+  .analysis .nav-controls .btn {
+    flex: 1;
+    height: 50px;
+    font-size: 1.3rem;
+    touch-action: manipulation;
+  }
+  .page.analysis {
+    padding-bottom: 70px;
+  }
+  .controls {
+    padding-left: 0;
+  }
+}
+
+/* Evita el zoom por doble toque de iOS al pulsar botones seguidos */
+button,
+.btn,
+a,
+.nav-item,
+.move,
+.chip,
+cg-board {
+  touch-action: manipulation;
+}
+
+.practice .btn.primary {
+  margin: 0.3rem 0 0.5rem;
+}
+.reco {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.reco-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.reco-item.active {
+  border-color: var(--accent);
+}

@@ -8,6 +8,8 @@ import { MoveList } from '../components/MoveList'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan } from '../lib/analysis'
 import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
+import { themeName } from '../lib/puzzles'
+import { themesForGame } from '../lib/recommend'
 import type { Settings } from '../lib/settings'
 import type { Color, GameSummary } from '../lib/types'
 
@@ -59,6 +61,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
   const [orientation, setOrientation] = useState<Color>(game.userColor ?? 'white')
   const [showBest, setShowBest] = useState(true)
   const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
+  const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report])
   const abortRef = useRef<AbortController | null>(null)
 
   const total = parsed ? parsed.fens.length - 1 : 0
@@ -131,6 +134,35 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
     (m) => (m.classification === 'grave' || m.classification === 'error') && (!userSide || m.color === userSide),
   )
 
+  const moveCard = (variant: string) => (
+<section className={`card move-card ${variant} ${moveAnalysis ? 'c-' + moveAnalysis.classification : ''}`}>
+      {move ? (
+        <>
+          <div className="move-card-head">
+            <strong>
+              {Math.ceil(ply / 2)}
+              {move.color === 'w' ? '.' : '...'} {toSpanishSan(move.san)}
+            </strong>
+            {moveAnalysis && (
+              <span className={`badge cls-${moveAnalysis.classification}`}>
+                {CLASS_SYMBOL[moveAnalysis.classification]} {CLASS_LABEL[moveAnalysis.classification]}
+              </span>
+            )}
+            {evalNow && <span className="eval-chip">{formatEval(evalNow)}</span>}
+          </div>
+          <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
+          {coachComment && (
+            <p className="coach-comment">
+              <strong>Entrenador:</strong> {coachComment}
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="muted">Posición inicial. Avanza con los botones de la barra (o con las flechas del teclado).</p>
+      )}
+    </section>
+  )
+
   return (
     <div className="page analysis">
       <div className="analysis-board">
@@ -140,19 +172,22 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           <Board fen={fen} orientation={orientation} lastMove={move ? [move.from, move.to] : undefined} arrows={arrows} />
         </div>
         <PlayerLine player={bottom} />
+        {moveCard('mobile-only')}
         <div className="controls">
-          <button className="btn" onClick={() => go(0)} title="Inicio">
-            ⏮
-          </button>
-          <button className="btn" onClick={() => go(ply - 1)} title="Anterior (flecha izquierda)">
-            ◀
-          </button>
-          <button className="btn" onClick={() => go(ply + 1)} title="Siguiente (flecha derecha)">
-            ▶
-          </button>
-          <button className="btn" onClick={() => go(total)} title="Final">
-            ⏭
-          </button>
+          <div className="nav-controls">
+            <button className="btn" onClick={() => go(0)} title="Inicio" aria-label="Inicio">
+              ⏮
+            </button>
+            <button className="btn" onClick={() => go(ply - 1)} title="Anterior (flecha izquierda)" aria-label="Anterior">
+              ◀
+            </button>
+            <button className="btn" onClick={() => go(ply + 1)} title="Siguiente (flecha derecha)" aria-label="Siguiente">
+              ▶
+            </button>
+            <button className="btn" onClick={() => go(total)} title="Final" aria-label="Final">
+              ⏭
+            </button>
+          </div>
           <button className="btn" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
             Girar tablero
           </button>
@@ -237,32 +272,35 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           )}
         </section>
 
-        <section className={`card move-card ${moveAnalysis ? 'c-' + moveAnalysis.classification : ''}`}>
-          {move ? (
-            <>
-              <div className="move-card-head">
-                <strong>
-                  {Math.ceil(ply / 2)}
-                  {move.color === 'w' ? '.' : '...'} {toSpanishSan(move.san)}
-                </strong>
-                {moveAnalysis && (
-                  <span className={`badge cls-${moveAnalysis.classification}`}>
-                    {CLASS_SYMBOL[moveAnalysis.classification]} {CLASS_LABEL[moveAnalysis.classification]}
-                  </span>
-                )}
-                {evalNow && <span className="eval-chip">{formatEval(evalNow)}</span>}
-              </div>
-              <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
-              {coachComment && (
-                <p className="coach-comment">
-                  <strong>Entrenador:</strong> {coachComment}
+        {analysis && (
+          <section className="card practice">
+            <h3>Practica lo que has fallado</h3>
+            {practice.length ? (
+              <>
+                <p className="muted small">
+                  {game.userColor ? 'Tus errores en esta partida' : 'Los errores de esta partida'} tienen que ver con estos temas. Practícalos para
+                  que no se repitan:
                 </p>
-              )}
-            </>
-          ) : (
-            <p className="muted">Posición inicial. Avanza por la partida con los botones de debajo del tablero (o con las flechas del teclado).</p>
-          )}
-        </section>
+                <button className="btn primary" onClick={() => onPractice(practice[0].theme)}>
+                  Practicar: {themeName(practice[0].theme)}
+                </button>
+                {practice.length > 1 && (
+                  <div className="chips">
+                    {practice.map((t) => (
+                      <button key={t.theme} className="chip" onClick={() => onPractice(t.theme)}>
+                        {themeName(t.theme)} ({t.count})
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p className="muted small">En esta partida no hay errores claros asociados a un tema de problemas.</p>
+            )}
+          </section>
+        )}
+
+        {moveCard('desktop-only')}
 
         <CoachPanel
           game={game}

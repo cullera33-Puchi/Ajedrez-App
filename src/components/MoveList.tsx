@@ -11,8 +11,15 @@ interface Props {
 export function MoveList({ sans, analysis, ply, onSelect }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
+  // Desplaza solo la lista (no la página) para que la jugada actual quede visible.
   useEffect(() => {
-    ref.current?.querySelector('.move.active')?.scrollIntoView({ block: 'nearest' })
+    const box = ref.current
+    const el = box?.querySelector<HTMLElement>('.move.active')
+    if (!box || !el) return
+    const b = box.getBoundingClientRect()
+    const e = el.getBoundingClientRect()
+    if (e.top < b.top) box.scrollTop -= b.top - e.top
+    else if (e.bottom > b.bottom) box.scrollTop += e.bottom - b.bottom
   }, [ply])
 
   const rows = []

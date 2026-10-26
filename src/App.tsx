@@ -69,7 +69,7 @@ export default function App() {
       </aside>
       <main className="content">
         {view === 'inicio' && (
-          <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} />
+          <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} onPractice={openPuzzles} />
         )}
         {view === 'partidas' && (
           <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />

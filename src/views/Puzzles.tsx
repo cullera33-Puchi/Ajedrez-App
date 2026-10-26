@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { type Arrow, Board } from '../components/Board'
 import { type Difficulty, fetchLichessPuzzle } from '../lib/lichess'
 import {
@@ -12,6 +12,8 @@ import {
   themeName,
   updateRating,
 } from '../lib/puzzles'
+import { loadGames } from '../lib/games'
+import { recommendThemes } from '../lib/recommend'
 import { usePersistentState } from '../lib/storage'
 import type { Color } from '../lib/types'
 
@@ -42,6 +44,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [resetKey, setResetKey] = useState(0)
   const [flags, setFlags] = useState({ mistake: false, hint: false, rated: false })
   const [notice, setNotice] = useState<string | null>(null)
+  const recommendation = useMemo(() => recommendThemes(loadGames()), [])
 
   const begin = (p: Puzzle) => {
     setPuzzle(p)
@@ -71,7 +74,10 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     async (t = theme, src = source) => {
       setPhase('loading')
       setNotice(null)
-      if (src === 'lichess') {
+      // Si el set sin conexión casi no tiene problemas de ese tema, se usan los de Lichess.
+      const sparse = src === 'local' && t !== 'mix' && localPuzzlesFor(t).length < 3 && navigator.onLine
+      if (sparse) setNotice(`Hay pocos problemas de ${themeName(t).toLowerCase()} sin conexión: se usan los de Lichess.`)
+      if (src === 'lichess' || sparse) {
         try {
           begin(await fetchLichessPuzzle(t, difficulty))
           return
@@ -264,6 +270,29 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
                 </a>
               )}
             </div>
+          )}
+        </section>
+
+        <section className="card">
+          <h3>Recomendado para ti</h3>
+          {recommendation.themes.length ? (
+            <>
+              <p className="muted small">
+                Según los errores de {recommendation.games === 1 ? 'tu última partida analizada' : `tus últimas ${recommendation.games} partidas analizadas`}:
+              </p>
+              <div className="reco">
+                {recommendation.themes.slice(0, 4).map((t) => (
+                  <button key={t.theme} className={`reco-item ${theme === t.theme ? 'active' : ''}`} onClick={() => changeTheme(t.theme)}>
+                    <span>{themeName(t.theme)}</span>
+                    <span className="muted small">
+                      {t.count} {t.count === 1 ? 'error' : 'errores'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="muted small">Importa y analiza algunas partidas tuyas y te diré qué temas practicar según tus errores.</p>
           )}
         </section>
 

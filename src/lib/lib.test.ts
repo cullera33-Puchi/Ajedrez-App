@@ -233,3 +233,31 @@ describe('importación de Chess.com con fetch simulado', () => {
     expect(games[0].url).toBe('https://www.chess.com/game/live/1')
   })
 })
+
+describe('recomendación de temas por errores', () => {
+  it('detecta un doble ataque de caballo', async () => {
+    const { isFork } = await import('./recommend')
+    // Tras Ce7+ el caballo ataca al rey de g8 y a la dama de c8
+    const chess = new Chess('2q3k1/4Nppp/8/8/8/8/5PPP/6K1 b - - 1 1')
+    expect(isFork(chess, 'e7')).toBe(true)
+    expect(isFork(new Chess(), 'g1')).toBe(false)
+  })
+
+  it('asocia los errores de la partida trampa con temas', async () => {
+    const { mistakeThemes } = await import('./recommend')
+    const parsed = parsePgn(DEMO_GAMES[0].pgn)
+    const positions: PositionEval[] = parsed.fens.map(() => ({ cp: 30, pv: [] }))
+    // 5. Cxf7?? permite Dxg2 y pierde material
+    positions[8] = { cp: 250, best: 'c4f7', pv: ['c4f7', 'e8e7', 'e5d4'] }
+    positions[9] = { cp: -600, best: 'g5g2', pv: ['g5g2', 'h1f1', 'g2e4', 'c4e2', 'd4f3'] }
+    // 7. Ae2?? permite mate en 1
+    positions[12] = { cp: -700, best: 'd1e2', pv: ['d1e2', 'e4e2'] }
+    positions[13] = { mate: -1, best: 'd4f3', pv: ['d4f3'] }
+    const a = buildAnalysis(parsed, positions, 12)
+    const res = mistakeThemes(parsed, a, 'w')
+    const byPly = Object.fromEntries(res.map((r) => [r.ply, r.themes]))
+    expect(byPly[13]).toEqual(expect.arrayContaining(['mateIn1', 'defensiveMove']))
+    expect(byPly[9]).toBeDefined()
+    expect(res.every((r) => r.themes.length > 0)).toBe(true)
+  })
+})

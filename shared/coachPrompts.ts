@@ -26,7 +26,7 @@ export const REPORT_TASK = `Escribe el informe de esta partida para el alumno, s
 
 export const ASK_INSTRUCTIONS = `Responde a la pregunta del alumno sobre la posición indicada. Sé breve: máximo 150 palabras salvo que pida más detalle. Texto llano, párrafos cortos y, si ayuda, una lista con guiones. Sin títulos.`
 
-const THEMES = ['mateIn1', 'mateIn2', 'hangingPiece', 'fork', 'pin', 'skewer', 'backRankMate', 'promotion', 'endgame']
+const THEMES = ['mateIn1', 'mateIn2', 'hangingPiece', 'fork', 'pin', 'skewer', 'backRankMate', 'defensiveMove', 'promotion', 'endgame']
 
 const plyItem = (fields: Record<string, { type: string }>) => ({
   type: 'object',

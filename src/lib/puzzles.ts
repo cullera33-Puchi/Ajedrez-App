@@ -105,7 +105,7 @@ export const THEME_NAMES: Record<string, string> = {
 export const themeName = (t: string) => THEME_NAMES[t] ?? t
 
 /** Temas que se ofrecen en el selector, pensados para empezar. */
-export const BEGINNER_THEMES = ['mix', 'mateIn1', 'mateIn2', 'hangingPiece', 'fork', 'pin', 'skewer', 'backRankMate', 'promotion', 'endgame']
+export const BEGINNER_THEMES = ['mix', 'mateIn1', 'mateIn2', 'hangingPiece', 'fork', 'pin', 'skewer', 'backRankMate', 'defensiveMove', 'promotion', 'endgame']
 
 export function localPuzzlesFor(theme: string): Puzzle[] {
   return theme === 'mix' ? LOCAL_PUZZLES : LOCAL_PUZZLES.filter((p) => p.themes.includes(theme))

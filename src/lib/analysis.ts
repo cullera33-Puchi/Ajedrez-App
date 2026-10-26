@@ -115,7 +115,7 @@ export function materialBalance(fen: string): number {
 }
 
 /** Juega una línea UCI desde una posición y devuelve las FEN y SAN resultantes. */
-function playLine(fen: string, line: string[], plies: number): { fen: string; sans: string[] } {
+export function playLine(fen: string, line: string[], plies: number): { fen: string; sans: string[] } {
   const chess = new Chess(fen)
   const sans: string[] = []
   for (const uci of line.slice(0, plies)) {
