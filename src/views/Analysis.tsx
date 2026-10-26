@@ -66,6 +66,7 @@ const SOURCE_BADGE: Record<GameSummary['source'], string> = {
   bot: 'Partida contra bot',
   pgn: 'PGN importado',
   demo: 'Partida de ejemplo',
+  posicion: 'Posición escaneada',
 }
 
 const DEPTHS = [
@@ -83,9 +84,14 @@ export function AnalysisView({ game, settings, onSettings, onNavigate, onPractic
         </header>
         <section className="card empty">
           <p>Elige una partida para analizarla.</p>
-          <button className="btn primary" onClick={() => onNavigate('partidas')}>
-            Ir a mis partidas
-          </button>
+          <div className="toolbar">
+            <button className="btn primary" onClick={() => onNavigate('partidas')}>
+              Ir a mis partidas
+            </button>
+            <button className="btn" onClick={() => onNavigate('escanear')}>
+              Escanear una captura
+            </button>
+          </div>
         </section>
       </div>
     )

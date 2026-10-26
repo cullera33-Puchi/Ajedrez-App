@@ -32,6 +32,7 @@ const SOURCE_LABEL: Record<GameSummary['source'], string> = {
   lichess: 'Lichess',
   pgn: 'PGN',
   demo: 'Ejemplo',
+  posicion: 'Posición',
   bot: 'Bot',
 }
 
@@ -163,6 +164,9 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
           </button>
           <button className="btn" onClick={() => setShowPgn((v) => !v)}>
             Pegar PGN
+          </button>
+          <button className="btn" onClick={() => onNavigate('escanear')}>
+            Escanear captura
           </button>
           <label className="btn file-btn">
             Importar archivo PGN

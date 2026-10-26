@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
@@ -10,7 +10,10 @@ import { LearnView } from './views/Learn'
 import { PlayView } from './views/Play'
 import { PuzzlesView } from './views/Puzzles'
 
-export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender'
+// El escáner (con sus plantillas de piezas) solo se descarga al usarlo.
+const ScanView = lazy(() => import('./views/Scan').then((m) => ({ default: m.ScanView })))
+
+export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear'
 
 const NAV: { id: View; label: string; icon: string }[] = [
   { id: 'inicio', label: 'Inicio', icon: '⌂' },
@@ -71,7 +74,7 @@ export default function App() {
         </div>
         <nav>
           {NAV.map((n) => (
-            <button key={n.id} className={`nav-item ${view === n.id ? 'active' : ''}`} onClick={() => setView(n.id)}>
+            <button key={n.id} className={`nav-item ${view === n.id || (view === 'escanear' && n.id === 'partidas') ? 'active' : ''}`} onClick={() => setView(n.id)}>
               <span className="nav-icon">{n.icon}</span>
               {n.label}
             </button>
@@ -99,6 +102,17 @@ export default function App() {
         )}
         {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
         {view === 'aprender' && <LearnView onPractice={openPuzzles} />}
+        {view === 'escanear' && (
+          <Suspense fallback={<p className="muted page">Cargando el escáner…</p>}>
+            <ScanView
+              onAnalyze={(g) => {
+                addGames([g])
+                openGame(g.id)
+              }}
+              onBack={() => setView('partidas')}
+            />
+          </Suspense>
+        )}
       </main>
     </div>
   )
