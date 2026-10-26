@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { View } from '../App'
 import { TrendChart } from '../components/TrendChart'
 import { allSummaries } from '../lib/games'
@@ -40,7 +40,8 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
   const tc = tcs.some((t) => t.tc === storedTc) ? storedTc : (tcs[0]?.tc ?? '')
 
   const summaries = useMemo(() => new Map(allSummaries().map((s) => [s.id, s])), [])
-  const since = days ? Date.now() - days * 86_400_000 : 0
+  const [now] = useState(() => Date.now())
+  const since = days ? now - days * 86_400_000 : 0
   const inPeriod = online.filter((g) => g.date >= since)
   const ofTc = inPeriod.filter((g) => g.timeClass === tc)
 

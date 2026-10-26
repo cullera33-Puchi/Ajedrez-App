@@ -2406,3 +2406,57 @@ label {
 .bar-win.sel {
   opacity: 0.7;
 }
+
+/* Lecciones */
+.lesson-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.5rem;
+}
+.lesson-item {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.lesson-item:hover {
+  border-color: var(--accent);
+}
+.lesson-item.done {
+  border-color: var(--c-mejor);
+}
+.lesson-check {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  color: var(--muted);
+}
+.lesson-item.done .lesson-check {
+  color: var(--c-mejor);
+}
+.lesson-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.lesson-steps-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.lesson-steps-head h3 {
+  margin: 0;
+}

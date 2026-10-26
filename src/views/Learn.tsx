@@ -1,4 +1,7 @@
+import { useState } from 'react'
 import { ResourceLinks } from '../components/ResourceLinks'
+import { type Lesson, LESSONS } from '../lib/lessons'
+import { LessonList, LessonPlayer } from './Lessons'
 
 interface Props {
   onPractice: (theme: string) => void
@@ -29,14 +32,25 @@ const MODULES = [
 ]
 
 export function LearnView({ onPractice }: Props) {
+  const [lesson, setLesson] = useState<Lesson | null>(null)
+  if (lesson) {
+    const next = LESSONS[LESSONS.indexOf(lesson) + 1]
+    return <LessonPlayer key={lesson.id} lesson={lesson} onBack={() => setLesson(null)} onNext={next ? () => setLesson(next) : undefined} />
+  }
   return (
     <div className="page">
       <header className="page-head">
         <h1>Aprender</h1>
-        <p className="muted">Lo básico para subir de 500 a 1000. Las lecciones interactivas llegarán en las próximas versiones.</p>
+        <p className="muted">Lo básico para subir de 500 a 1000.</p>
       </header>
 
       <div className="grid-2">
+        <section className="card span-2">
+          <h2>Lecciones prácticas</h2>
+          <p className="muted">Finales que hay que saber ganar (y uno que hay que saber defender). Juegas contra Stockfish, que defiende lo mejor posible.</p>
+          <LessonList onOpen={setLesson} />
+        </section>
+
         <section className="card">
           <h2>Valor de las piezas</h2>
           <p className="muted">Sirve para decidir si un cambio te conviene. Antes de capturar, suma lo que ganas y lo que pierdes.</p>
