@@ -2602,3 +2602,51 @@ label {
 .var-move.active.corrected {
   color: #fff;
 }
+
+/* Juego online */
+.play-mode {
+  margin-bottom: 0.8rem;
+}
+.online-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+.online-head h2 {
+  margin: 0;
+}
+.player-line.live {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.clock {
+  min-width: 4.2em;
+  padding: 0.1rem 0.5rem;
+  border-radius: 4px;
+  background: var(--line);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-align: center;
+}
+.clock.running {
+  background: var(--accent);
+  color: #fff;
+}
+.clock.low.running {
+  background: var(--c-grave);
+}
+.field.inline {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+}
+.toolbar .grow,
+.grow {
+  flex: 1;
+  min-width: 0;
+}

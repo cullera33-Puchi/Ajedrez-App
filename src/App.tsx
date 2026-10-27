@@ -2,6 +2,10 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadBotGame } from './lib/bots'
+import { isLiveActive } from './lib/lichessPlay'
+import { finishLichessLogin } from './lib/lichessAuth'
+import { save } from './lib/storage'
+import { LiveLock } from './components/LiveLock'
 import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
@@ -84,6 +88,16 @@ export default function App() {
   useEffect(() => {
     startBackgroundAnalysis()
   }, [])
+  // Vuelta desde la autorización de Lichess: se guarda el permiso y se abre el juego online.
+  useEffect(() => {
+    void finishLichessLogin().then((msg) => {
+      if (!msg) return
+      showToast(msg)
+      save('playMode', 'online')
+      setView('jugar')
+    })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Sincronización automática entre dispositivos (si está configurada).
   useEffect(() => {
     const stop = startAutoSync()
@@ -155,7 +169,8 @@ export default function App() {
         {view === 'partidas' && (
           <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}
-        {view === 'analisis' && (
+        {(view === 'analisis' || view === 'escanear') && isLiveActive() && <LiveLock onGoToGame={() => setView('jugar')} />}
+        {view === 'analisis' && !isLiveActive() && (
           <AnalysisView
             key={currentGame?.id ?? 'none'}
             game={currentGame}
@@ -169,7 +184,7 @@ export default function App() {
         {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
         {view === 'aprender' && <LearnView onPractice={openPuzzles} onPlayFrom={playPosition} />}
         {view === 'progreso' && <ProgressView games={games} onNavigate={setView} onOpenGame={openGame} onPractice={openPuzzles} />}
-        {view === 'escanear' && (
+        {view === 'escanear' && !isLiveActive() && (
           <Suspense fallback={<p className="muted page">Cargando el escáner…</p>}>
             <ScanView
               onAnalyze={(g) => {

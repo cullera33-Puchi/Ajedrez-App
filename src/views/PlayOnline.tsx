@@ -1,0 +1,584 @@
+import { Chess } from 'chess.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Board } from '../components/Board'
+import { MoveList } from '../components/MoveList'
+import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
+import { setBusy } from '../lib/activity'
+import { fetchAccount, type LichessAccount, loadLichessToken, revokeLichess, saveLichessToken, startLichessLogin, tokenCreateUrl } from '../lib/lichessAuth'
+import {
+  abortGame,
+  answerDraw,
+  cancelChallenge,
+  challengeAi,
+  challengeFriend,
+  type ClockChoice,
+  clockLeft,
+  exportFinishedGame,
+  formatClock,
+  isFinished,
+  type LiveGame,
+  nowPlaying,
+  resignGame,
+  seek,
+  setLiveActive,
+  sendMove,
+  statusText,
+  watchEvents,
+  watchGame,
+} from '../lib/lichessPlay'
+import { useBackGuard } from '../lib/nav'
+import { usePersistentState } from '../lib/storage'
+import type { Color, GameSummary } from '../lib/types'
+
+interface Props {
+  onSaveGame: (g: GameSummary) => void
+  onAnalyze: (id: string) => void
+  /** Selector de modo de la pantalla Jugar. */
+  header?: React.ReactNode
+}
+
+/** Ritmos que Lichess permite buscar desde aplicaciones (rápidas y clásicas). */
+const CLOCKS: ClockChoice[] = [
+  { minutes: 10, increment: 0 },
+  { minutes: 10, increment: 5 },
+  { minutes: 15, increment: 10 },
+  { minutes: 30, increment: 0 },
+]
+const clockLabel = (c: ClockChoice) => `${c.minutes}+${c.increment}`
+
+type Waiting = { text: string; cancel: () => void } | null
+
+export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
+  const [token, setToken] = useState(loadLichessToken)
+  const [account, setAccount] = useState<LichessAccount | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
+  const [gameId, setGameId] = usePersistentState<string | null>('lichessLiveGame', null)
+  const [waiting, setWaiting] = useState<Waiting>(null)
+  const [playing, setPlaying] = useState<Awaited<ReturnType<typeof nowPlaying>>>([])
+  const [clock, setClock] = usePersistentState('lichessClock', 0)
+  const [rated, setRated] = usePersistentState('lichessRated', false)
+  const [aiLevel, setAiLevel] = usePersistentState('lichessAiLevel', 2)
+  const [color, setColor] = usePersistentState<Color | 'random'>('lichessColor', 'random')
+  const [friend, setFriend] = useState('')
+  const [pasted, setPasted] = useState('')
+
+  // Cuenta conectada.
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    fetchAccount(token)
+      .then((a) => !cancelled && setAccount(a))
+      .catch((e) => !cancelled && setError((e as Error).message))
+    return () => {
+      cancelled = true
+    }
+  }, [token])
+
+  // Eventos de la cuenta: partidas que empiezan y retos rechazados.
+  useEffect(() => {
+    if (!account) return
+    const ctrl = new AbortController()
+    void watchEvents(
+      (e) => {
+        if (e.type === 'gameStart' && e.game) {
+          setWaiting(null)
+          setGameId(e.game.gameId ?? e.game.id ?? null)
+        } else if (e.type === 'challengeDeclined') {
+          setWaiting(null)
+          setInfo('Tu amigo ha rechazado el reto.')
+        }
+      },
+      ctrl.signal,
+      setError,
+    )
+    nowPlaying()
+      .then(setPlaying)
+      .catch(() => undefined)
+    return () => ctrl.abort()
+  }, [account]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const savePasted = async () => {
+    setError(null)
+    try {
+      await fetchAccount(pasted.trim())
+      saveLichessToken(pasted)
+      setToken(pasted.trim())
+      setPasted('')
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const disconnect = async () => {
+    await revokeLichess()
+    setToken(null)
+    setAccount(null)
+  }
+
+  const c = CLOCKS[clock] ?? CLOCKS[0]
+
+  const doSeek = () => {
+    setError(null)
+    const ctrl = new AbortController()
+    setWaiting({ text: `Buscando rival (${clockLabel(c)}${rated ? ', con puntuación' : ', amistosa'})…`, cancel: () => ctrl.abort() })
+    seek(c, rated, ctrl.signal).catch((e) => {
+      if ((e as Error).name === 'AbortError') return
+      setWaiting(null)
+      setError((e as Error).message)
+    })
+  }
+
+  const doAi = async () => {
+    setError(null)
+    try {
+      setGameId(await challengeAi(aiLevel, c, color))
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const doFriend = async () => {
+    setError(null)
+    try {
+      const id = await challengeFriend(friend, c, rated, color)
+      setWaiting({
+        text: `Reto enviado a ${friend.trim()}. Esperando a que lo acepte…`,
+        cancel: () => {
+          if (id) void cancelChallenge(id)
+          setWaiting(null)
+        },
+      })
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const page = (children: React.ReactNode) => (
+    <div className="page play-setup">
+      <header className="page-head">
+        <h1>Jugar</h1>
+      </header>
+      {header}
+      {children}
+    </div>
+  )
+
+  if (!token) {
+    return page(
+      <section className="card">
+        <h2>Jugar online en Lichess</h2>
+        <p className="muted">
+          Partidas reales contra personas de tu nivel, contra Stockfish de Lichess o contra un amigo. Necesitas una cuenta de Lichess (gratuita) y dar
+          permiso a la app para jugar con ella.
+        </p>
+        <h3>En el ordenador</h3>
+        <button className="btn primary" onClick={() => void startLichessLogin()}>
+          Conectar con Lichess
+        </button>
+        <h3>En el iPhone (app instalada)</h3>
+        <ol className="rules small">
+          <li>
+            <a href={tokenCreateUrl()} target="_blank" rel="noreferrer">
+              Abre esta página de Lichess
+            </a>{' '}
+            (entra con tu cuenta si te lo pide). Los permisos ya están marcados.
+          </li>
+          <li>Baja hasta el final y pulsa el botón de crear. Copia el código que te muestra (empieza por lip_).</li>
+          <li>Vuelve aquí, pégalo y pulsa Guardar.</li>
+        </ol>
+        <label className="field">
+          <span>Código de Lichess</span>
+          <input value={pasted} onChange={(e) => setPasted(e.target.value)} placeholder="lip_..." autoCapitalize="none" spellCheck={false} />
+        </label>
+        <button className="btn small" onClick={() => void savePasted()} disabled={!pasted.trim()}>
+          Guardar
+        </button>
+        {error && <p className="msg error">{error}</p>}
+      </section>,
+    )
+  }
+
+  if (gameId && account) {
+    return (
+      <LiveGameView
+        key={gameId}
+        id={gameId}
+        account={account}
+        onSaveGame={onSaveGame}
+        onAnalyze={onAnalyze}
+        onExit={() => {
+          setGameId(null)
+          nowPlaying()
+            .then(setPlaying)
+            .catch(() => undefined)
+        }}
+      />
+    )
+  }
+
+  return page(
+    <>
+      <section className="card">
+        <div className="online-head">
+          <h2>Jugar online en Lichess</h2>
+          {account && (
+            <span className="small muted">
+              Conectado como <strong>{account.username}</strong>
+              {account.perfs?.rapid?.rating ? ` (${account.perfs.rapid.rating} en rápidas)` : ''}
+            </span>
+          )}
+        </div>
+        {!account && !error && <p className="muted">Conectando con Lichess…</p>}
+        {error && <p className="msg error">{error}</p>}
+        {info && <p className="msg info">{info}</p>}
+        {waiting ? (
+          <div className="msg info">
+            <p>
+              <span className="spinner" /> {waiting.text}
+            </p>
+            <button
+              className="btn small"
+              onClick={() => {
+                waiting.cancel()
+                setWaiting(null)
+              }}
+            >
+              Cancelar
+            </button>
+          </div>
+        ) : (
+          account && (
+            <>
+              <h3>Ritmo</h3>
+              <div className="chips">
+                {CLOCKS.map((x, i) => (
+                  <button key={i} className={`chip ${clock === i ? 'active' : ''}`} onClick={() => setClock(i)}>
+                    {clockLabel(x)}
+                  </button>
+                ))}
+              </div>
+              <p className="muted small">Minutos por jugador y segundos que se suman en cada jugada. Desde apps como esta, Lichess permite partidas rápidas y clásicas.</p>
+
+              <h3>Contra una persona</h3>
+              <label className="check">
+                <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Con puntuación (cambia tu rating de Lichess)
+              </label>
+              <div className="toolbar">
+                <button className="btn primary" onClick={doSeek}>
+                  Buscar rival
+                </button>
+              </div>
+
+              <h3>Contra Stockfish de Lichess</h3>
+              <div className="toolbar">
+                <label className="field inline">
+                  <span>Nivel</span>
+                  <select value={aiLevel} onChange={(e) => setAiLevel(Number(e.target.value))}>
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((l) => (
+                      <option key={l} value={l}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="segmented" role="radiogroup" aria-label="Color">
+                  {(['white', 'random', 'black'] as const).map((x) => (
+                    <button key={x} className={color === x ? 'active' : ''} onClick={() => setColor(x)}>
+                      {x === 'white' ? 'Blancas' : x === 'black' ? 'Negras' : 'Al azar'}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn" onClick={() => void doAi()}>
+                  Jugar
+                </button>
+              </div>
+              <p className="muted small">El nivel 1 es muy flojo; el 3 o el 4 suelen ser un buen reto para empezar.</p>
+
+              <h3>Retar a un amigo</h3>
+              <div className="toolbar">
+                <input className="grow" value={friend} onChange={(e) => setFriend(e.target.value)} placeholder="Usuario de Lichess" autoCapitalize="none" spellCheck={false} />
+                <button className="btn" onClick={() => void doFriend()} disabled={!friend.trim()}>
+                  Retar
+                </button>
+              </div>
+            </>
+          )
+        )}
+      </section>
+
+      {playing.length > 0 && !waiting && (
+        <section className="card">
+          <h3>Partidas en curso</h3>
+          {playing.map((p) => (
+            <div key={p.gameId} className="toolbar">
+              <span className="grow small">
+                Contra {p.opponent?.ai ? `Stockfish nivel ${p.opponent.ai}` : (p.opponent?.username ?? 'rival')} con {p.color === 'white' ? 'blancas' : 'negras'}
+              </span>
+              <button className="btn small primary" onClick={() => setGameId(p.gameId)}>
+                Continuar
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
+
+      <section className="card">
+        <p className="small muted">
+          Durante una partida online el análisis y el escáner quedan bloqueados, como exige el juego limpio de Lichess. Al terminar, la partida se
+          guarda en Mis partidas para analizarla.
+        </p>
+        <button className="btn small" onClick={() => void disconnect()}>
+          Desconectar la cuenta de Lichess
+        </button>
+      </section>
+    </>,
+  )
+}
+
+function LiveGameView({
+  id,
+  account,
+  onSaveGame,
+  onAnalyze,
+  onExit,
+}: {
+  id: string
+  account: LichessAccount
+  onSaveGame: (g: GameSummary) => void
+  onAnalyze: (id: string) => void
+  onExit: () => void
+}) {
+  const [game, setGame] = useState<LiveGame | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [pending, setPending] = useState<string | null>(null)
+  const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
+  const [resetKey, setResetKey] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
+  const [saved, setSaved] = useState<string | null>(null)
+  const [flipped, setFlipped] = useState(false)
+  const savedOnce = useRef(false)
+
+  useEffect(() => {
+    const ctrl = new AbortController()
+    void watchGame(id, account.id, setGame, ctrl.signal, setError)
+    return () => ctrl.abort()
+  }, [id, account.id])
+
+  const finished = game ? isFinished(game.status) : false
+  useBackGuard(Boolean(game && !finished), 'Partida online en curso. Para salir, termínala (o ríndete).')
+  useEffect(() => {
+    setBusy('play', Boolean(game && !finished))
+    if (game) setLiveActive(!finished)
+    return () => setBusy('play', false)
+  }, [game, finished])
+
+  // Relojes en marcha.
+  useEffect(() => {
+    if (!game || finished) return
+    const t = setInterval(() => setNow(Date.now()), 200)
+    return () => clearInterval(t)
+  }, [game, finished])
+
+  // Al terminar, se guarda en Mis partidas (y se libera el bloqueo del análisis).
+  useEffect(() => {
+    if (!game || !finished || savedOnce.current) return
+    savedOnce.current = true
+    const t = setTimeout(() => {
+      exportFinishedGame(id, account.username)
+        .then((g) => {
+          if (g) {
+            onSaveGame(g)
+            setSaved(g.id)
+          }
+        })
+        .catch(() => undefined)
+    }, 1500)
+    return () => clearTimeout(t)
+  }, [game, finished]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const chess = useMemo(() => {
+    const c = new Chess(game && game.initialFen !== 'startpos' ? game.initialFen : undefined)
+    for (const uci of [...(game?.moves ?? []), ...(pending ? [pending] : [])]) {
+      try {
+        c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
+      } catch {
+        break
+      }
+    }
+    return c
+  }, [game, pending])
+
+  // Cuando Lichess confirma la jugada, deja de ser «pendiente».
+  useEffect(() => {
+    if (pending && game?.moves.includes(pending)) setPending(null)
+  }, [game, pending])
+
+  if (!game) {
+    return (
+      <section className="card">
+        <p>
+          <span className="spinner" /> Conectando con la partida…
+        </p>
+        {error && <p className="msg error">{error}</p>}
+        <button className="btn small" onClick={onExit}>
+          Volver
+        </button>
+      </section>
+    )
+  }
+
+  const myTurn = !finished && !pending && chess.turn() === game.color[0]
+  const opponent: Color = game.color === 'white' ? 'black' : 'white'
+  const oppOffersDraw = opponent === 'white' ? game.wdraw : game.bdraw
+  const iOfferDraw = game.color === 'white' ? game.wdraw : game.bdraw
+  const myMoves = Math.floor((game.moves.length + (game.color === 'white' ? 1 : 0)) / 2)
+  const canAbort = !finished && myMoves < 1
+  const orientation: Color = flipped ? opponent : game.color
+  const last = chess.history({ verbose: true }).pop()
+
+  const play = async (from: string, to: string, promotion?: string) => {
+    let uci: string
+    try {
+      uci = new Chess(chess.fen()).move({ from, to, promotion }).lan
+    } catch {
+      setResetKey((k) => k + 1)
+      return
+    }
+    setPending(uci)
+    setError(null)
+    try {
+      await sendMove(game.id, uci)
+    } catch (e) {
+      setPending(null)
+      setResetKey((k) => k + 1)
+      setError((e as Error).message)
+    }
+  }
+
+  const onMove = (from: string, to: string) => {
+    const piece = chess.get(from as Parameters<Chess['get']>[0])
+    if (needsPromotion(chess.fen(), from, to, piece?.type)) setPromo({ from, to })
+    else void play(from, to)
+  }
+
+  const act = async (fn: () => Promise<unknown>) => {
+    setError(null)
+    try {
+      await fn()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const playerLine = (side: Color) => {
+    const p = side === 'white' ? game.white : game.black
+    const left = clockLeft(game, side, now)
+    const active = !finished && chess.turn() === side[0]
+    return (
+      <div className={`player-line live ${active ? 'active' : ''}`}>
+        <span>
+          <strong>{p.name}</strong>
+          {p.rating ? <span className="muted"> ({p.rating})</span> : null}
+        </span>
+        {left !== undefined && <span className={`clock ${active ? 'running' : ''} ${left < 30000 ? 'low' : ''}`}>{formatClock(left)}</span>}
+      </div>
+    )
+  }
+
+  const result = game.winner ? (game.winner === game.color ? '¡Has ganado!' : 'Has perdido') : game.status === 'aborted' ? 'Partida anulada' : 'Tablas'
+
+  return (
+    <div className="page play online" data-fen={chess.fen()}>
+      <div className="play-board">
+        {playerLine(orientation === 'white' ? 'black' : 'white')}
+        <Board fen={chess.fen()} orientation={orientation} movableColor={myTurn ? game.color : undefined} lastMove={last ? [last.from, last.to] : undefined} onMove={onMove} resetKey={resetKey} />
+        {playerLine(orientation)}
+      </div>
+      <div className="play-side">
+        {finished ? (
+          <section className={`card play-result ${game.winner === game.color ? 'win' : game.winner ? 'loss' : 'draw'}`}>
+            <h2>{result}</h2>
+            <p className="muted">
+              {statusText(game.status)}. {saved ? 'La partida está guardada en Mis partidas.' : game.status === 'aborted' ? '' : 'Guardando en Mis partidas…'}
+            </p>
+            <div className="toolbar">
+              {saved && (
+                <button className="btn primary" onClick={() => onAnalyze(saved)}>
+                  Analizar la partida
+                </button>
+              )}
+              <a className="btn" href={`https://lichess.org/${game.id}`} target="_blank" rel="noreferrer">
+                Ver en Lichess
+              </a>
+              <button className="btn" onClick={onExit}>
+                Nueva partida
+              </button>
+            </div>
+          </section>
+        ) : (
+          <section className="card play-status">
+            <p>
+              <strong>{myTurn ? 'Te toca mover.' : pending ? 'Enviando tu jugada…' : 'Juega tu rival…'}</strong> {game.rated ? 'Partida con puntuación.' : 'Partida amistosa.'}
+            </p>
+            {oppOffersDraw && (
+              <div className="msg info">
+                <p>Tu rival ofrece tablas.</p>
+                <div className="toolbar">
+                  <button className="btn small primary" onClick={() => void act(() => answerDraw(game.id, true))}>
+                    Aceptar
+                  </button>
+                  <button className="btn small" onClick={() => void act(() => answerDraw(game.id, false))}>
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            )}
+            {iOfferDraw && <p className="muted small">Has ofrecido tablas. Esperando respuesta.</p>}
+          </section>
+        )}
+        {error && <p className="msg error">{error}</p>}
+        <section className="card">
+          <MoveList sans={chess.history()} ply={chess.history().length} onSelect={() => undefined} startFen={game.initialFen !== 'startpos' ? game.initialFen : undefined} />
+        </section>
+        <div className="view-controls">
+          <button className="btn small" onClick={() => setFlipped((f) => !f)}>
+            Girar tablero
+          </button>
+        </div>
+      </div>
+
+      {!finished && (
+        <div className="play-actions">
+          {canAbort ? (
+            <button className="btn" onClick={() => void act(() => abortGame(game.id))}>
+              ✕ Anular
+            </button>
+          ) : (
+            <button className="btn" onClick={() => void act(() => answerDraw(game.id, true))} disabled={iOfferDraw || Boolean(game.black.aiLevel || game.white.aiLevel)}>
+              ½ Tablas
+            </button>
+          )}
+          <button className="btn" onClick={() => window.confirm('¿Seguro que quieres rendirte?') && void act(() => resignGame(game.id))}>
+            ⚑ Rendirse
+          </button>
+        </div>
+      )}
+
+      {promo && (
+        <PromotionPicker
+          color={game.color}
+          onCancel={() => {
+            setPromo(null)
+            setResetKey((k) => k + 1)
+          }}
+          onPick={(p) => {
+            const { from, to } = promo
+            setPromo(null)
+            void play(from, to, p)
+          }}
+        />
+      )}
+    </div>
+  )
+}

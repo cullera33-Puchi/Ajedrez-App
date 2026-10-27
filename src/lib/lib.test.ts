@@ -707,3 +707,55 @@ describe('sincronización', () => {
     expect(loadSyncConfig()!.url).toBe('https://abcd.supabase.co')
   })
 })
+
+describe('juego online en Lichess', () => {
+  it('interpreta el estado completo y los cambios de la partida', async () => {
+    const { applyGameEvent, clockLeft, formatClock, isFinished } = await import('./lichessPlay')
+    const full = {
+      type: 'gameFull',
+      id: 'abc',
+      rated: false,
+      speed: 'rapid',
+      clock: { initial: 600000, increment: 0 },
+      initialFen: 'startpos',
+      white: { id: 'anriqui', name: 'anriqui', rating: 1100 },
+      black: { aiLevel: 3 },
+      state: { type: 'gameState', moves: 'e2e4 e7e5', wtime: 590000, btime: 600000, status: 'started', wdraw: false, bdraw: false },
+    }
+    let g = applyGameEvent(null, full, 'Anriqui')!
+    expect(g.color).toBe('white')
+    expect(g.black.name).toBe('Stockfish de Lichess (nivel 3)')
+    expect(g.moves).toEqual(['e2e4', 'e7e5'])
+    // Le toca a blancas: su reloj corre.
+    expect(clockLeft(g, 'white', g.receivedAt + 5000)).toBe(585000)
+    expect(clockLeft(g, 'black', g.receivedAt + 5000)).toBe(600000)
+    g = applyGameEvent(g, { type: 'gameState', moves: 'e2e4 e7e5 d1h5', wtime: 588000, btime: 600000, status: 'started', bdraw: true }, 'anriqui')!
+    expect(g.bdraw).toBe(true)
+    g = applyGameEvent(g, { type: 'gameState', moves: 'e2e4 e7e5 d1h5', status: 'resign', winner: 'white' }, 'anriqui')!
+    expect(isFinished(g.status)).toBe(true)
+    expect(g.winner).toBe('white')
+    expect(formatClock(65000)).toBe('1:05')
+    expect(formatClock(9400)).toBe('0:09,4')
+  })
+
+  it('lee un flujo NDJSON partido en trozos', async () => {
+    const { readNdjson } = await import('./lichessPlay')
+    const enc = new TextEncoder()
+    const body = new ReadableStream({
+      start(c) {
+        c.enqueue(enc.encode('{"type":"gameStart","ga'))
+        c.enqueue(enc.encode('me":{"gameId":"x1"}}\n\n{"type":"gameFinish"}\n'))
+        c.close()
+      },
+    })
+    const got: unknown[] = []
+    await readNdjson(new Response(body), (o) => got.push(o))
+    expect(got).toEqual([{ type: 'gameStart', game: { gameId: 'x1' } }, { type: 'gameFinish' }])
+  })
+
+  it('prepara la página del token con los permisos', async () => {
+    const { tokenCreateUrl } = await import('./lichessAuth')
+    const u = new URL(tokenCreateUrl())
+    expect(u.searchParams.getAll('scopes[]')).toEqual(['board:play', 'challenge:read', 'challenge:write'])
+  })
+})

@@ -60,6 +60,31 @@ Ya son once lecciones. En las de sacrificio, entregar material no cuenta como fa
 - Se sincroniza sola al abrir la app y al volver a ella. Cada dispositivo descarga la copia de la nube, la fusiona sin borrar nada y sube el resultado.
 - La copia es un archivo privado que solo puede leer tu usuario. La sesión de cada dispositivo nunca viaja en la copia.
 
+## Añadido después: jugar online en Lichess
+
+En **Jugar**, nuevo selector *Bots de la app* u *Online en Lichess*.
+
+- **Conectar tu cuenta** (una vez por dispositivo):
+  - en el PC, *Conectar con Lichess*: abre Lichess, autorizas y vuelves a la app;
+  - en el iPhone (app instalada), un enlace abre Lichess con los permisos ya marcados; creas el código (empieza por `lip_`), lo copias y lo pegas en la app.
+- **Tres formas de jugar**, en partidas rápidas o clásicas (10+0, 10+5, 15+10 y 30+0, que es lo que Lichess permite desde apps como esta):
+  - *Buscar rival*: una persona de tu nivel; amistosa o con puntuación;
+  - *Contra Stockfish de Lichess*, del nivel 1 al 8;
+  - *Retar a un amigo* por su usuario.
+- **La partida**: relojes en marcha, ofertas de tablas, anular al principio y rendirse. Si bloqueas el móvil, al volver se reconecta y sigue.
+- **Juego limpio**: mientras la partida está en curso, el análisis y el escáner se bloquean, y el gesto atrás no te saca.
+- **Al terminar**, la partida se guarda sola en *Mis partidas*, apartado *Chess.com y Lichess*, lista para analizar.
+- El permiso se guarda solo en ese dispositivo: no viaja en las copias ni en la sincronización. Se puede desconectar en cualquier momento.
+
+Probado con un Lichess simulado que reproduce su API, incluidos los flujos en directo:
+- conectar con un código erróneo y con uno bueno;
+- buscar rival y jugar;
+- aceptar unas tablas y ver la partida guardada en *Mis partidas*;
+- jugar contra Stockfish de Lichess y rendirse;
+- comprobar el bloqueo del análisis y del gesto atrás durante la partida.
+
+Desde aquí no hay acceso a Lichess: **la prueba con tu cuenta real queda para ti**. Empieza por una partida contra Stockfish de Lichess, nivel 2 o 3, que no afecta a tu rating.
+
 ## Otras mejoras y correcciones
 
 - La lista de jugadas numera bien cuando la partida empieza con las negras.
@@ -97,6 +122,6 @@ Ya son once lecciones. En las de sacrificio, entregar material no cuenta como fa
 
 Detalle en `docs/HOJA_DE_RUTA.md`. Lo más valioso que queda:
 
-1. Ajustar los bots con tus valoraciones (*Copiar para Claude* en Jugar).
-2. Jugar online en Lichess, mejor contigo porque necesita tu cuenta.
+1. Probar el juego online con tu cuenta y ajustar lo que haga falta.
+2. Ajustar los bots con tus valoraciones (*Copiar para Claude* en Jugar).
 3. Estudios de Lichess por temas.

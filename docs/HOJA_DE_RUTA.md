@@ -20,6 +20,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Jugar online en Lichess (1.5) | Jugar, *Online en Lichess*: buscar rival (rápidas y clásicas), Stockfish de Lichess por niveles y retos a amigos; análisis bloqueado durante la partida. Falta probarlo con tu cuenta |
 | Tus aperturas (4.5, versión 1) | Aprender: las 5 más jugadas con cada color, línea habitual, revisión con Stockfish, lo que te juegan y práctica con repaso espaciado |
 | Problemas sin conexión (1.6, parte sin conexión) | 5.493 problemas de Lichess de 400 a 1500, generados al publicar a partir de la base oficial (CC0) |
 | Jugar desde cualquier posición (1.9) | Desde el escáner, el análisis, las lecciones y las aperturas; opción de máxima fuerza |
@@ -51,7 +52,6 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida. Necesita tu cuenta de Lichess y probarlo contigo | Alto | Media |
 | 1.6 | Problemas de Lichess sincronizados con tu cuenta (el paquete sin conexión ya está hecho) | Medio | Baja |
 | 1.8 | Calibrar la fuerza de los bots con tus valoraciones (*Copiar para Claude*), registradas en `docs/AJUSTE_BOTS.md` | Bajo | Continua |
 
@@ -60,6 +60,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
 | 2.3 | Probar la sincronización con tu cuenta real de Supabase | Bajo | Alta |
+| 2.4 | Probar el juego online con tu cuenta real de Lichess | Bajo | Alta |
 
 ### 3. Entrenador con Claude
 

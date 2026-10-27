@@ -27,6 +27,8 @@ import type { Settings } from '../lib/settings'
 import { addFeedback, type BotFeel, FEEL_LABEL, feedbackReport, loadFeedback } from '../lib/botFeedback'
 import { copyText } from '../lib/coach'
 import { useBackGuard } from '../lib/nav'
+import { liveGameId } from '../lib/lichessPlay'
+import { PlayOnline } from './PlayOnline'
 import { usePersistentState } from '../lib/storage'
 import type { Color, GameSummary, Result } from '../lib/types'
 
@@ -75,6 +77,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   const [msg, setMsg] = useState<string | null>(null)
   const [record, setRecord] = useState(loadBotRecord)
   const [flipped, setFlipped] = useState(false)
+  const [mode, setMode] = usePersistentState<'bots' | 'online'>('playMode', 'bots')
 
   const chess = useMemo(() => replay(game?.moves ?? [], game?.startFen), [game])
   const fen = chess.fen()
@@ -202,6 +205,22 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
     setMsg(null)
   }
 
+  const modeSwitch = (
+    <div className="segmented play-mode" role="tablist" aria-label="Rival">
+      <button role="tab" aria-selected={mode === 'bots'} className={mode === 'bots' ? 'active' : ''} onClick={() => setMode('bots')}>
+        Bots de la app
+      </button>
+      <button role="tab" aria-selected={mode === 'online'} className={mode === 'online' ? 'active' : ''} onClick={() => setMode('online')}>
+        Online en Lichess
+      </button>
+    </div>
+  )
+
+  // Partida online: con una en curso se muestra siempre.
+  if (!game && (mode === 'online' || liveGameId())) {
+    return <PlayOnline onSaveGame={onSaveGame} onAnalyze={onAnalyze} header={modeSwitch} />
+  }
+
   // Elección de rival
   if (!game) {
     const r = record[bot.id]
@@ -213,6 +232,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
           <h1>Jugar</h1>
           <p className="muted">Elige el nivel de tu rival, de 50 en 50 puntos. Al terminar, la partida se guarda en Mis partidas, en el apartado Contra bots.</p>
         </header>
+        {modeSwitch}
         <section className="card level-card">
           <div className="level-head">
             <span className="bot-avatar">{bot.avatar}</span>
