@@ -48,6 +48,9 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          # Código de acceso de 4 cifras (Settings, Secrets and variables, Actions). Si no existe,
+          # la app no pide código.
+          APP_PIN: ${{ secrets.APP_PIN }}
       - uses: actions/upload-pages-artifact@v5
         with:
           path: dist

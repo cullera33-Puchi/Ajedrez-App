@@ -82,4 +82,5 @@ BASE_PATH=/Ajedrez-App/ npx vite build   # build como en GitHub Pages
 - En `useEffect`, nunca devolver un valor que no sea una función de limpieza.
 - Desde el entorno en la nube no hay acceso a chess.com, lichess.org, supabase.co ni a github.io: probar con datos y servidores simulados (rutas de Playwright). El resultado del paquete de problemas se lee en las anotaciones del workflow (`gh api repos/cullera33-Puchi/Ajedrez-App/check-runs/<job>/annotations`).
 - Las copias de seguridad nunca incluyen datos propios del dispositivo: sesión de sincronización, token de Lichess, partida online en curso ni partida a medias contra bot (`DEVICE_ONLY` en `src/lib/backup.ts`).
+- Código de acceso (`src/components/PinGate.tsx`, `src/lib/pin.ts`): 4 cifras guardadas como secreto `APP_PIN` en GitHub (desde aquí no se pueden leer ni cambiar los secretos). `vite.config.ts` incluye solo su huella PBKDF2; sin `APP_PIN` no se pide código. El dispositivo lo recuerda en `pinOk`, que está en `DEVICE_ONLY`. Es una barrera sencilla, no una protección fuerte.
 - Juego limpio: mientras haya una partida online sin terminar (`isLiveActive`), el análisis y el escáner se bloquean.

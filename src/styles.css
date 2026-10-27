@@ -2722,3 +2722,33 @@ label {
   display: block;
   margin: auto;
 }
+
+/* Código de acceso al abrir la app */
+.pin-gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: calc(16px + var(--safe-top)) 16px calc(16px + var(--safe-bottom));
+  background: var(--bg);
+}
+.pin-card {
+  width: min(340px, 100%);
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  text-align: center;
+}
+.pin-card h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+.pin-input {
+  width: 9ch;
+  font-size: 2rem;
+  letter-spacing: 0.5em;
+  text-align: center;
+  padding: 0.4rem 0 0.4rem 0.5em;
+}
+.pin-card .msg {
+  margin: 0;
+}

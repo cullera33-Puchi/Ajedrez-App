@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { PinGate } from './components/PinGate'
 import { initStore } from './lib/games'
 import { initMyPuzzles } from './lib/myPuzzles'
 import { summarizeStored } from './lib/recommend'
@@ -15,7 +16,9 @@ Promise.all([initStore(summarizeStored), initMyPuzzles()])
   .finally(() => {
     createRoot(document.getElementById('root')!).render(
       <StrictMode>
-        <App />
+        <PinGate>
+          <App />
+        </PinGate>
       </StrictMode>,
     )
   })

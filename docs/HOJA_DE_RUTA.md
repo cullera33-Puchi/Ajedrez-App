@@ -20,6 +20,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Código de acceso de 4 cifras | Se pide al abrir la app la primera vez en cada dispositivo. El código es un secreto de GitHub (`APP_PIN`) y en la app solo va su huella; 5 fallos bloquean 30 segundos. Barrera sencilla: para un cierre real, Cloudflare Access (ver *Por analizar*) |
 | Búsqueda de rival en Lichess corregida | La conexión de la búsqueda queda abierta mientras se espera (antes Lichess la retiraba sin avisar); se relanza sola si se corta, recoge la partida aunque se pierda el aviso y muestra el tiempo de espera |
 | Supabase con tu proyecto | Dirección y clave publishable ya puestas en la tarjeta de sincronización; guía actualizada al formato nuevo de clave y con el paso de cerrar el alta de usuarios |
 | Iconos de navegación del análisis | Inicio, anterior, siguiente y final dibujados en SVG con el color del texto: en el iPhone ya no salen como emoji azules |
@@ -111,4 +112,5 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | # | Idea | Primeras notas |
 |---|---|---|
 | 6.1 | **Estudios y cursos de Lichess para estudiar y practicar por temas** | Lichess permite exportar estudios en PGN (públicos y, con tu cuenta, los tuyos y los que te compartan) y listar los estudios de un usuario. Cada capítulo puede ser una lección o un ejercicio con jugadas que adivinar. Enfoque posible: importar un estudio por enlace, mostrar sus capítulos como temario y practicar cada capítulo en modo «adivina la jugada», guardando el progreso. Falta decidir qué estudios usar (propios, de la comunidad o una selección para principiantes) y cómo encaja con los problemas recomendados |
+| 6.3 | **Acceso privado real a la app** | Cloudflare Pages con Cloudflare Access (gratis): código por correo antes de cargar la app y repositorio privado. Cambia la dirección de la app; probar el inicio de sesión en la app instalada del iPhone |
 | 6.2 | **Recomendación de cursos y libros, versión completa** | La versión sencilla (enlaces de búsqueda) ya está hecha. Queda decidir si queremos una lista fija de recursos revisada por nosotros o que Claude proponga 2 o 3 recursos concretos en el informe de cada partida |
