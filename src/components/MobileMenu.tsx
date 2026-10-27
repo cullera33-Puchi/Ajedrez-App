@@ -23,8 +23,8 @@ const EDGE = 24
 const BACK_TRIGGER = 70
 
 /**
- * Menú del móvil: un panel lateral que se abre desde la izquierda, con el botón de abajo a la
- * izquierda o deslizando desde el borde izquierdo (el panel sigue al dedo). Si hay algo abierto
+ * Menú del móvil: un panel lateral que se abre deslizando desde el borde izquierdo (el panel
+ * sigue al dedo). Si hay algo abierto
  * encima de la pantalla (una variante, una lección, una apertura), ese mismo gesto lo cierra.
  * Sustituye a la barra de pestañas para ganar altura. En el ordenador y la tablet no se muestra.
  */
@@ -155,7 +155,6 @@ export function MobileMenu<V extends string>({ items, extra, isActive, onSelect 
     close()
     onSelect(id)
   }
-  const anyDot = items.some((i) => i.dot)
   const entry = (i: MenuItem<V>) => (
     <button key={i.id} className={`drawer-item ${isActive(i.id) ? 'active' : ''}`} onClick={() => pick(i.id)}>
       <span className="nav-icon">{i.icon}</span>
@@ -166,10 +165,6 @@ export function MobileMenu<V extends string>({ items, extra, isActive, onSelect 
 
   return (
     <>
-      <button className="menu-fab" onClick={() => setOpen(true)} aria-label="Abrir el menú" aria-expanded={open}>
-        <span aria-hidden="true">☰</span>
-        {anyDot && <span className="menu-fab-dot" />}
-      </button>
       <div ref={indicator} className="back-indicator" aria-hidden="true">
         ‹
       </div>

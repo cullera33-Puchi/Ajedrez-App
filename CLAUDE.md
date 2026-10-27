@@ -51,6 +51,7 @@ Reglas de negocio a respetar:
 - Los problemas de *Mis errores* no cambian el nivel de problemas.
 - Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección, apertura) antes de cambiar de pantalla.
 - Gesto del borde izquierdo en el móvil (`src/components/MobileMenu.tsx`): abre el menú siguiendo el dedo; si hay un `useBackHandler` activo, en su lugar va atrás. En la app instalada en iOS no se toca el historial (el sistema mostraría una página gris al deslizar); el botón atrás del sistema en Android, Safari y PC usa una entrada de historial de reserva.
+- Iconos de botones: SVG con `currentColor` (`src/components/NavIcons.tsx`), no caracteres como ⏮ o ▶, que iOS pinta como emoji azules.
 - El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión. Precarga todas las partes recorriendo los JS de forma recursiva; si se añade una pantalla con `lazy`, no hace falta tocarlo.
 - Las pantallas se cargan con `lazy` desde `src/App.tsx` (objeto `VIEWS`) y se precargan en segundo plano. Una pantalla no debe importar otra (rompe la división); lo compartido va a `src/lib/`.
 - Motor: `evaluate(fen, depth, multipv, tag)`. Con `tag`, una búsqueda nueva sustituye a la anterior de la misma etiqueta (se usa en las líneas del motor). Tras un `await` al motor, comprobar que la pantalla sigue en el mismo estado antes de aplicar el resultado.
@@ -73,7 +74,7 @@ BASE_PATH=/Ajedrez-App/ npx vite build   # build como en GitHub Pages
 
 - Cada push a `main` publica en GitHub Pages (`.github/workflows/pages.yml`). `BASE_PATH` debe coincidir con el nombre del repositorio respetando mayúsculas (`/Ajedrez-App/`).
 - Antes de publicar: tipos, pruebas, lint y una revisión en navegador con Playwright en viewport de iPhone 17 (402x874), modo día y noche, comprobando que nada se sale de la pantalla (`document.documentElement.scrollWidth` igual al ancho).
-- En móvil (hasta 800 px) no hay barra de pestañas: el menú es un panel lateral desde la izquierda (`src/components/MobileMenu.tsx`) con un botón fijo abajo a la izquierda. `--nav-h` vale 0 y las barras inferiores (análisis y partidas) dejan sitio al botón con `--fab`. Las pantallas de análisis y juego usan diseño fijo entre la zona segura superior y la barra de controles (`--controls-h`, `--safe-*`). En PC y tablet se mantiene la barra lateral.
+- En móvil (hasta 800 px) no hay barra de pestañas: el menú es un panel lateral que se abre deslizando desde el borde izquierdo (`src/components/MobileMenu.tsx`), sin botón fijo. `--nav-h` vale 0 y las barras inferiores (análisis y partidas) ocupan todo el ancho. Las pantallas de análisis y juego usan diseño fijo entre la zona segura superior y la barra de controles (`--controls-h`, `--safe-*`). En PC y tablet se mantiene la barra lateral.
 
 ## Avisos
 

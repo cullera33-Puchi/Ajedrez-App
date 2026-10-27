@@ -6,6 +6,7 @@ import { ResourceLinks } from '../components/ResourceLinks'
 import { EvalBar } from '../components/EvalBar'
 import { EvalChart } from '../components/EvalChart'
 import { MoveList } from '../components/MoveList'
+import { IconFirst, IconLast, IconNext, IconPrev } from '../components/NavIcons'
 import { EngineLines, lineToWhite, useEngineLines } from '../components/EngineLines'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
 import { useBackHandler } from '../lib/nav'
@@ -522,16 +523,16 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
         <div className="controls">
           <div className="nav-controls">
             <button className="btn" onClick={() => nav('start')} title="Inicio" aria-label="Inicio">
-              ⏮
+              <IconFirst />
             </button>
             <button className="btn" onClick={() => nav('prev')} title="Anterior (flecha izquierda)" aria-label="Anterior">
-              ◀
+              <IconPrev />
             </button>
             <button className="btn" onClick={() => nav('next')} title="Siguiente (flecha derecha)" aria-label="Siguiente">
-              ▶
+              <IconNext />
             </button>
             <button className="btn" onClick={() => nav('end')} title="Final" aria-label="Final">
-              ⏭
+              <IconLast />
             </button>
           </div>
           <div className="desktop-only">{viewControls}</div>
