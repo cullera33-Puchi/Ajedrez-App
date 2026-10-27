@@ -2942,3 +2942,54 @@ label {
 :root[data-theme='eink'] .log-list strong {
   color: inherit;
 }
+
+/*
+ * Móvil y tinta, análisis: la página se desplaza entera (el desplazamiento de una zona interior se
+ * bloqueaba en el iPhone) y el tablero queda fijo arriba con position: sticky. La barra de botones
+ * sigue fija abajo. Sustituye al diseño fijo anterior.
+ */
+@media (max-width: 800px) {
+  html,
+  body {
+    /* clip y no hidden: hidden convierte body en contenedor de desplazamiento y anula el sticky */
+    overflow-x: clip;
+  }
+  .page.analysis {
+    position: static;
+    display: block;
+    margin: 0;
+    /* Hueco para la barra de botones fija de abajo */
+    padding: 0 0 calc(var(--controls-h) + 12px);
+  }
+  .page.analysis .analysis-board {
+    position: sticky;
+    top: var(--safe-top);
+    z-index: 30;
+    background: var(--bg);
+    margin: calc(-0.9rem) -12px 0;
+    max-width: none;
+    padding: 6px 12px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .page.analysis .analysis-side {
+    overflow: visible;
+    min-height: 0;
+    border-top: 0;
+    padding: 8px 0 0;
+  }
+  .page.analysis .side-scroll {
+    overflow: visible;
+    flex: none;
+    min-height: 0;
+    padding-bottom: 0;
+  }
+}
+.engine-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.engine-toggles .chip {
+  font-size: 0.8rem;
+}

@@ -11,7 +11,6 @@ import { IconFirst, IconLast, IconNext, IconPrev } from '../components/NavIcons'
 import { EngineLines, lineToWhite, useEngineLines } from '../components/EngineLines'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
 import { useBackHandler } from '../lib/nav'
-import { usePersistentState } from '../lib/storage'
 import { Chess } from 'chess.js'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
 import { formatClock, formatSeconds, parseClocks, quickLimit } from '../lib/clock'
@@ -119,14 +118,29 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [ply, setPly] = useState(0)
+  // En el móvil la página se desplaza entera y el tablero queda fijo arriba. Si has bajado a ver la
+  // lista, al avanzar se mantiene a la vista la jugada actual (sin tapar el tablero ni la barra).
+  useEffect(() => {
+    if (!window.matchMedia('(max-width: 800px)').matches || window.scrollY <= 0) return
+    const el = document.querySelector('.page.analysis .movelist .move.active')
+    const head = document.querySelector('.page.analysis .analysis-board')
+    if (!el || !head) return
+    const r = el.getBoundingClientRect()
+    const top = head.getBoundingClientRect().bottom + 8
+    const bottom = (document.querySelector('.analysis .nav-controls')?.getBoundingClientRect().top ?? window.innerHeight) - 8
+    if (r.bottom > bottom) window.scrollBy({ top: r.bottom - bottom })
+    else if (r.top < top) window.scrollBy({ top: r.top - top })
+  }, [ply])
+
   const [orientation, setOrientation] = useState<Color>(game.userColor ?? 'white')
-  const [showBest, setShowBest] = useState(true)
+  // La ayuda del motor empieza oculta: primero piensas tú y, si quieres, la despliegas.
+  const [showBest, setShowBest] = useState(false)
   const [report, setReport] = useState<CoachReport | null>(() => loadReport(game.id))
   const [retry, setRetry] = useState<Retry | null>(null)
   const [variation, setVariation] = useState<Variation | null>(null)
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
   const [boardKey, setBoardKey] = useState(0)
-  const [showLines, setShowLines] = usePersistentState('showEngineLines', false)
+  const [showLines, setShowLines] = useState(false)
   // Se recalcula también al llegar un informe de Claude, porque sus temas se suman (se leen del almacenamiento).
   const practice = useMemo(() => (parsed && analysis ? themesForGame(game, parsed, analysis) : []), [game, parsed, analysis, report]) // eslint-disable-line react-hooks/exhaustive-deps
   const abortRef = useRef<AbortController | null>(null)
@@ -371,6 +385,18 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
 
   const playUci = (uci: string) => playMove(uci.slice(0, 2), uci.slice(2, 4), uci[4])
 
+  /** Ayuda del motor, oculta hasta que se pide: la flecha de la mejor jugada y las 3 mejores líneas. */
+  const engineToggles = (
+    <div className="engine-toggles">
+      <button className={`chip ${showBest ? 'active' : ''}`} onClick={() => setShowBest(!showBest)} aria-pressed={showBest}>
+        {showBest ? 'Ocultar la mejor jugada' : 'Ver la mejor jugada'}
+      </button>
+      <button className={`chip ${showLines ? 'active' : ''}`} onClick={() => setShowLines(!showLines)} aria-pressed={showLines}>
+        {showLines ? 'Ocultar las líneas' : 'Ver las 3 mejores líneas'}
+      </button>
+    </div>
+  )
+
   const variationCard = (variant: string) => {
     if (!variation || !boardFen) return null
     const startFen = parsed.fens[variation.base]
@@ -399,14 +425,10 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
           ))}
         </div>
         {showLines && <EngineLines fen={boardFen} lines={live} onPlay={playUci} />}
-        <div className="toolbar">
-          <button className="btn small" onClick={() => go(variation.base)}>
-            Volver a la partida
-          </button>
-          <button className="link small" onClick={() => setShowLines(!showLines)}>
-            {showLines ? 'Ocultar las líneas del motor' : 'Ver las 3 mejores líneas'}
-          </button>
-        </div>
+        <button className="btn small" onClick={() => go(variation.base)}>
+          Volver a la partida
+        </button>
+        {engineToggles}
       </section>
     )
   }
@@ -416,12 +438,6 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
       <button className="btn small" onClick={() => setOrientation((o) => (o === 'white' ? 'black' : 'white'))}>
         Girar tablero
       </button>
-      <label className="check">
-        <input type="checkbox" checked={showBest} onChange={(e) => setShowBest(e.target.checked)} /> Mostrar mejor jugada
-      </label>
-      <label className="check">
-        <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} /> Líneas del motor
-      </label>
       {boardFen && !new Chess(boardFen).isGameOver() && (
         <button className="btn small" onClick={() => onPlayFrom(boardFen)}>
           Jugar desde aquí
@@ -495,6 +511,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
                   Inténtalo tú
                 </button>
               )}
+              {engineToggles}
             </>
           )}
           {coachComment && (
@@ -509,6 +526,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
           <p className="muted">
             {total ? 'Posición inicial. Avanza con los botones de la barra o mueve una pieza para explorar una variante.' : 'Mueve una pieza para explorar una variante.'}
           </p>
+          {engineToggles}
           {showLines && !retry && <EngineLines fen={fen} lines={live} onPlay={playUci} />}
         </>
       )}

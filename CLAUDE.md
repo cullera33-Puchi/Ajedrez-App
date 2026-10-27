@@ -82,7 +82,7 @@ BASE_PATH=/Ajedrez-App/ npx vite build   # build como en GitHub Pages
 
 - Cada push a `main` publica en GitHub Pages (`.github/workflows/pages.yml`). `BASE_PATH` debe coincidir con el nombre del repositorio respetando mayúsculas (`/Ajedrez-App/`).
 - Antes de publicar: tipos, pruebas, lint y una revisión en navegador con Playwright en viewport de iPhone 17 (402x874), modo día y noche, comprobando que nada se sale de la pantalla (`document.documentElement.scrollWidth` igual al ancho).
-- En móvil (hasta 800 px) no hay barra de pestañas: el menú es un panel lateral que se abre deslizando desde el borde izquierdo (`src/components/MobileMenu.tsx`), sin botón fijo. `--nav-h` vale 0 y las barras inferiores (análisis y partidas) ocupan todo el ancho. Las pantallas de análisis y juego usan diseño fijo entre la zona segura superior y la barra de controles (`--controls-h`, `--safe-*`). En PC y tablet se mantiene la barra lateral.
+- En móvil (hasta 800 px) no hay barra de pestañas: el menú es un panel lateral que se abre deslizando desde el borde izquierdo (`src/components/MobileMenu.tsx`), sin botón fijo. `--nav-h` vale 0 y las barras inferiores (análisis y partidas) ocupan todo el ancho. El análisis se desplaza con la página entera y el tablero queda fijo arriba con `position: sticky` (un desplazamiento interior se bloqueaba en el iPhone); por eso `html` y `body` usan `overflow-x: clip` y no `hidden`, que anula el sticky. La pantalla de juego usa diseño fijo entre la zona segura superior y la barra de controles (`--controls-h`, `--safe-*`). En el análisis, la flecha de la mejor jugada y las 3 líneas del motor empiezan ocultas y se despliegan con los botones de la tarjeta de la jugada. En PC y tablet se mantiene la barra lateral.
 
 ## Avisos
 
