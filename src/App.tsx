@@ -4,6 +4,7 @@ import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadBotGame } from './lib/bots'
 import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
+import { onSyncMerged, startAutoSync } from './lib/sync'
 import type { GameSummary } from './lib/types'
 import { AnalysisView } from './views/Analysis'
 import { GamesView } from './views/Games'
@@ -82,6 +83,18 @@ export default function App() {
   // Análisis en segundo plano de las partidas pendientes. Cada partida que termina refresca la vista.
   useEffect(() => {
     startBackgroundAnalysis()
+  }, [])
+  // Sincronización automática entre dispositivos (si está configurada).
+  useEffect(() => {
+    const stop = startAutoSync()
+    const off = onSyncMerged(() => {
+      setGames(getGames())
+      setSettingsState(loadSettings())
+    })
+    return () => {
+      stop()
+      off()
+    }
   }, [])
   const bg = useBackgroundState()
   useEffect(() => {

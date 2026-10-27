@@ -8,6 +8,7 @@ import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzle
 import { recommendThemes } from '../lib/recommend'
 import { duePuzzles } from '../lib/myPuzzles'
 import { MY_ERRORS } from './Puzzles'
+import { SyncCard } from '../components/SyncCard'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import { backupFileName, exportBackup, importBackup, parseBackup } from '../lib/backup'
 import { allSummaries } from '../lib/games'
@@ -226,6 +227,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
 
         <ThemeCard />
 
+        <SyncCard />
         <BackupCard gamesCount={games.length} />
 
         <CoachKeyCard />

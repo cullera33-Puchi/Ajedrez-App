@@ -32,13 +32,16 @@ export interface ImportResult {
   puzzles: number
 }
 
+/** Datos propios de cada dispositivo que no viajan en la copia (la sesión de sincronización, entre otros). */
+const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'botGame'])
+
 export async function exportBackup(includeAnalyses = true): Promise<Backup> {
   const store = await db()
   return {
     app: 'ajedrez-app',
     version: 1,
     exportedAt: Date.now(),
-    local: dumpAll(),
+    local: Object.fromEntries(Object.entries(dumpAll()).filter(([k]) => !DEVICE_ONLY.has(k))),
     games: await store.getAll<GameSummary>('games'),
     analyses: includeAnalyses ? await store.entries<GameAnalysis>('analyses') : [],
     summaries: includeAnalyses ? await store.getAll<AnalysisSummary>('summaries') : [],
@@ -67,7 +70,7 @@ const played = (s?: PuzzleStats | null) => (s ? s.solved + s.failed : 0)
 /** Fusiona los ajustes y datos pequeños: se queda con lo más completo de cada lado. */
 function mergeLocal(incoming: Record<string, unknown>) {
   for (const [key, value] of Object.entries(incoming)) {
-    if (value === null || value === undefined || key === 'botGame') continue
+    if (value === null || value === undefined || DEVICE_ONLY.has(key)) continue
     const current = load<unknown>(key, null)
     if (key === 'puzzleStats') {
       if (played(value as PuzzleStats) > played(current as PuzzleStats | null)) save(key, value)

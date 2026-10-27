@@ -686,3 +686,24 @@ describe('aperturas', () => {
     expect(o.isDue(o.loadOpeningSrs(), 'x', 11 * 60 * 1000)).toBe(true)
   })
 })
+
+describe('sincronización', () => {
+  it('la copia no incluye la sesión ni la configuración de la sincronización', async () => {
+    const { save } = await import('./storage')
+    const { exportBackup } = await import('./backup')
+    save('syncSession', { access_token: 'secreto' })
+    save('syncConfig', { url: 'https://x.supabase.co', anonKey: 'k' })
+    save('botElo', 550)
+    const b = await exportBackup(false)
+    expect(Object.keys(b.local)).toContain('botElo')
+    expect(Object.keys(b.local)).not.toContain('syncSession')
+    expect(Object.keys(b.local)).not.toContain('syncConfig')
+  })
+
+  it('valida la dirección del proyecto', async () => {
+    const { saveSyncConfig, loadSyncConfig } = await import('./sync')
+    expect(() => saveSyncConfig('http://inseguro.com', 'x'.repeat(30))).toThrow()
+    saveSyncConfig('https://abcd.supabase.co/', 'x'.repeat(30))
+    expect(loadSyncConfig()!.url).toBe('https://abcd.supabase.co')
+  })
+})
