@@ -231,12 +231,19 @@ export interface ClockChoice {
 }
 
 /**
- * Busca rival en el emparejamiento de Lichess. La petición sigue abierta mientras se busca; la
- * partida empieza con un evento gameStart. Cancelar `signal` retira la búsqueda.
+ * Busca rival en el emparejamiento de Lichess. La búsqueda dura mientras la conexión siga abierta,
+ * así que se lee la respuesta hasta el final: Lichess la cierra cuando encuentra rival (la partida
+ * llega con un evento gameStart) o cuando retira la búsqueda. Cancelar `signal` la retira.
  * Desde aplicaciones como esta, Lichess solo permite buscar partidas rápidas o clásicas.
  */
 export async function seek(c: ClockChoice, rated: boolean, signal: AbortSignal) {
-  await post('/api/board/seek', { time: c.minutes, increment: c.increment, rated, variant: 'standard', color: 'random' }, signal)
+  const res = await post('/api/board/seek', { time: c.minutes, increment: c.increment, rated, variant: 'standard', color: 'random' }, signal)
+  const reader = res.body?.getReader()
+  if (!reader) {
+    await res.text()
+    return
+  }
+  for (;;) if ((await reader.read()).done) return
 }
 
 /** Partida contra Stockfish de Lichess (niveles 1 a 8). Devuelve el id de la partida. */

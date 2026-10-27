@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { clearSync, onSyncState, saveSyncConfig, signIn, signOut, signUp, syncNow, syncState, type SyncState } from '../lib/sync'
+import { clearSync, DEFAULT_SYNC, onSyncState, saveSyncConfig, signIn, signOut, signUp, syncNow, syncState, type SyncState } from '../lib/sync'
 
 const GUIDE = 'https://github.com/cullera33-Puchi/Ajedrez-App/blob/main/docs/SINCRONIZACION.md'
 
@@ -16,8 +16,8 @@ const ago = (t?: number) => {
 /** Tarjeta de Inicio para configurar y usar la sincronización entre dispositivos. */
 export function SyncCard() {
   const [state, setState] = useState<SyncState>(syncState)
-  const [url, setUrl] = useState('')
-  const [key, setKey] = useState('')
+  const [url, setUrl] = useState(DEFAULT_SYNC.url)
+  const [key, setKey] = useState(DEFAULT_SYNC.anonKey)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error' | 'info'; text: string } | null>(null)
@@ -50,7 +50,7 @@ export function SyncCard() {
       {!state.configured ? (
         <>
           <p className="muted small">
-            Mantén iguales el móvil, el PC y la tablet de forma automática. Usa una cuenta gratuita de Supabase (sin tarjeta) que creas tú una sola vez.{' '}
+            Mantén iguales el móvil, el PC y la tablet de forma automática. Los datos de tu proyecto de Supabase ya están puestos: pulsa Guardar y entra con tu correo.{' '}
             <a href={GUIDE} target="_blank" rel="noreferrer">
               Guía paso a paso
             </a>
@@ -61,8 +61,8 @@ export function SyncCard() {
             <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://abcd.supabase.co" autoCapitalize="none" spellCheck={false} />
           </label>
           <label className="field">
-            <span>Clave pública (anon public)</span>
-            <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="eyJ..." autoCapitalize="none" spellCheck={false} />
+            <span>Clave pública (publishable)</span>
+            <input value={key} onChange={(e) => setKey(e.target.value)} placeholder="sb_publishable_..." autoCapitalize="none" spellCheck={false} />
           </label>
           <button className="btn primary small" disabled={!url || !key} onClick={() => run(async () => saveSyncConfig(url, key))}>
             Guardar

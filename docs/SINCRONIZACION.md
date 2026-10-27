@@ -53,16 +53,27 @@ Debe responder *Success. No rows returned*.
 1. En el menú izquierdo: *Project Settings* (rueda dentada), *API* (o *Data API* y *API Keys*).
 2. Copia:
    - *Project URL*, por ejemplo `https://abcdefgh.supabase.co`.
-   - La clave *anon* *public* (un texto largo que empieza por `eyJ`). Es pública por diseño: la protección la dan las reglas del paso 3. No copies la clave *service_role*.
+   - La clave *publishable* (empieza por `sb_publishable_`; en proyectos antiguos, la clave *anon public*, que empieza por `eyJ`). Es pública por diseño: la protección la dan las reglas del paso 3. No copies nunca la clave *secret* ni la *service_role*, ni la contraseña de la base de datos.
 
 Truco para pasarlos al móvil: envíatelos por correo o por una nota compartida.
+
+El proyecto del propietario (`xkkyzmnzchdvahhvlxrq`) ya viene puesto en la app: la tarjeta sale rellena.
 
 ## 5. Configurar la app en cada dispositivo
 
 1. Abre la app, *Inicio*, tarjeta *Sincronización*.
-2. Pega la dirección del proyecto y la clave pública y pulsa *Guardar*.
+2. Comprueba la dirección del proyecto y la clave pública (vienen rellenas) y pulsa *Guardar*.
 3. En el primer dispositivo, escribe un correo y una contraseña (mínimo 6 caracteres) y pulsa *Crear cuenta*. En los demás, usa el mismo correo y contraseña y pulsa *Entrar*.
 4. La primera sincronización sube tus datos. En los demás dispositivos se descargan y se fusionan con lo que tuvieran.
+
+## 6. Cerrar el alta de usuarios nuevos
+
+La clave pública está en el código de la app, que es público. Para que nadie más pueda crear usuarios en tu proyecto, cuando ya tengas tu cuenta:
+
+1. En el menú izquierdo: *Authentication*, *Sign In / Providers*.
+2. Desactiva *Allow new users to sign up* y guarda.
+
+Tu cuenta sigue funcionando en todos los dispositivos con *Entrar*.
 
 ## Preguntas frecuentes
 

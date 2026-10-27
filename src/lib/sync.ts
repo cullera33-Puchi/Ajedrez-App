@@ -29,6 +29,16 @@ export interface SyncState {
   error?: string
 }
 
+/**
+ * Proyecto de Supabase del propietario, para que la tarjeta salga ya rellena en cada dispositivo.
+ * La clave publishable es pública por diseño: la protección la dan las reglas de acceso del bucket
+ * (cada usuario solo lee y escribe su carpeta) y tener desactivado el alta de usuarios nuevos.
+ */
+export const DEFAULT_SYNC: SyncConfig = {
+  url: 'https://xkkyzmnzchdvahhvlxrq.supabase.co',
+  anonKey: 'sb_publishable_TE0wJ0WlMkh55WSnyLULOQ_YxHUW5D8',
+}
+
 const CONFIG_KEY = 'syncConfig'
 const SESSION_KEY = 'syncSession'
 const LAST_KEY = 'syncLast'
@@ -71,7 +81,7 @@ export function onSyncMerged(fn: () => void): () => void {
 export function saveSyncConfig(url: string, anonKey: string) {
   const clean = url.trim().replace(/\/+$/, '')
   if (!/^https:\/\/[\w.-]+$/.test(clean)) throw new SyncError('La dirección del proyecto no es válida. Tiene que ser como https://abcd.supabase.co')
-  if (anonKey.trim().length < 20) throw new SyncError('La clave pública (anon) no parece completa.')
+  if (anonKey.trim().length < 20) throw new SyncError('La clave pública no parece completa.')
   save(CONFIG_KEY, { url: clean, anonKey: anonKey.trim() })
   emit()
 }

@@ -20,6 +20,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Búsqueda de rival en Lichess corregida | La conexión de la búsqueda queda abierta mientras se espera (antes Lichess la retiraba sin avisar); se relanza sola si se corta, recoge la partida aunque se pierda el aviso y muestra el tiempo de espera |
+| Supabase con tu proyecto | Dirección y clave publishable ya puestas en la tarjeta de sincronización; guía actualizada al formato nuevo de clave y con el paso de cerrar el alta de usuarios |
 | Iconos de navegación del análisis | Inicio, anterior, siguiente y final dibujados en SVG con el color del texto: en el iPhone ya no salen como emoji azules |
 | Menú lateral en el móvil | La barra de pestañas pasa a un menú que se abre deslizando desde el borde izquierdo (el panel sigue al dedo); sin botón fijo, que era redundante. Sin pantalla gris al deslizar en el iPhone. En análisis gana unos 50 px de zona de jugadas. En PC y tablet, sin cambios |
 | Revisión y optimización del código (27/10/2026) | 32 fallos corregidos (juego online, sincronización, motor, lecciones, duplicados de partidas, seguridad del entrenador); la app carga un 43 % menos al abrir |
@@ -74,8 +76,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 2.3 | Probar la sincronización con tu cuenta real de Supabase | Bajo | Alta |
-| 2.4 | Probar el juego online con tu cuenta real de Lichess | Bajo | Alta |
+| 2.3 | Probar la sincronización con tu cuenta real de Supabase (proyecto ya creado y puesto en la app; falta el SQL del bucket si no se hizo, crear la cuenta y cerrar el alta) | Bajo | Alta |
+| 2.4 | Probar el juego online con tu cuenta real de Lichess (conexión hecha; volver a probar la búsqueda tras la corrección) | Bajo | Alta |
 
 ### 3. Entrenador con Claude
 

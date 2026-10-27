@@ -51,7 +51,18 @@ const CLOCKS: ClockChoice[] = [
 const clockLabel = (c: ClockChoice) => `${c.minutes}+${c.increment}`
 
 /** Lo que se está esperando: búsqueda de rival o reto a un amigo, y qué partida lo cumple. */
-type Waiting = { text: string; cancel: () => void; accepts: (gameId: string) => boolean } | null
+type Waiting = { text: string; since: number; cancel: () => void; accepts: (gameId: string) => boolean } | null
+
+/** Tiempo que lleva la búsqueda, para ver que sigue viva. */
+function Elapsed({ since }: { since: number }) {
+  const [now, setNow] = useState(Date.now)
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(t)
+  }, [])
+  const s = Math.max(0, Math.floor((now - since) / 1000))
+  return <>{`${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`}</>
+}
 
 /** Partidas que terminan sin jugarse: no se guardan. */
 const NO_GAME = new Set(['aborted', 'noStart'])
@@ -148,16 +159,35 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
     const ctrl = new AbortController()
     // Las partidas que ya estaban en curso no son la que se busca (Lichess las repite al reconectar).
     const before = new Set((await nowPlaying().catch(() => playing)).map((p) => p.gameId))
-    setWaiting({
-      text: `Buscando rival (${clockLabel(c)}${rated ? ', con puntuación' : ', amistosa'})…`,
+    const w: Waiting = {
+      text: `Buscando rival (${clockLabel(c)}${rated ? ', con puntuación' : ', amistosa'})`,
+      since: Date.now(),
       cancel: () => ctrl.abort(),
       accepts: (gameId) => !before.has(gameId),
-    })
-    seek(c, rated, ctrl.signal).catch((e) => {
-      if ((e as Error).name === 'AbortError') return
+    }
+    setWaiting(w)
+    const stillWaiting = () => !ctrl.signal.aborted && waitingRef.current === w
+    try {
+      // Lichess cierra la conexión al encontrar rival o al retirar la búsqueda (también se corta si
+      // el móvil se bloquea). Si al cerrarse no ha llegado la partida, se mira si ya existe y, si
+      // no, se vuelve a buscar.
+      while (stillWaiting()) {
+        await seek(c, rated, ctrl.signal)
+        if (!stillWaiting()) return
+        const fresh = (await nowPlaying().catch(() => [])).find((p) => !before.has(p.gameId))
+        if (fresh && stillWaiting()) {
+          setWaiting(null)
+          setGameId(fresh.gameId)
+          setLiveGameId(fresh.gameId)
+          return
+        }
+        await new Promise((r) => setTimeout(r, 2000))
+      }
+    } catch (e) {
+      if ((e as Error).name === 'AbortError' || !stillWaiting()) return
       setWaiting(null)
       setError((e as Error).message)
-    })
+    }
   }
 
   const doAi = async () => {
@@ -176,7 +206,8 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
     try {
       const id = await challengeFriend(friend, c, rated, color)
       setWaiting({
-        text: `Reto enviado a ${friend.trim()}. Esperando a que lo acepte…`,
+        text: `Reto enviado a ${friend.trim()}. Esperando a que lo acepte`,
+        since: Date.now(),
         cancel: () => {
           if (id) void cancelChallenge(id)
         },
@@ -269,7 +300,7 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
         {waiting ? (
           <div className="msg info">
             <p>
-              <span className="spinner" /> {waiting.text}
+              <span className="spinner" /> {waiting.text}… <Elapsed since={waiting.since} />
             </p>
             <button
               className="btn small"
@@ -298,6 +329,7 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
               <label className="check">
                 <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Con puntuación (cambia tu rating de Lichess)
               </label>
+              <p className="muted small">Con puntuación hay muchos más jugadores buscando y el rival llega antes. Las amistosas pueden tardar varios minutos.</p>
               <div className="toolbar">
                 <button className="btn primary" onClick={() => void doSeek()}>
                   Buscar rival
