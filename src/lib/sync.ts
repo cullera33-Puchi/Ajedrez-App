@@ -112,6 +112,7 @@ async function call<T>(path: string, init: RequestInit & { token?: string } = {}
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error_description?: string; msg?: string; message?: string; error?: string }
     const detail = body.error_description ?? body.msg ?? body.message ?? body.error ?? ''
+    if (/bucket not found/i.test(detail)) throw new SyncError('Falta crear el espacio de las copias en Supabase: ejecuta el SQL del paso 3 de la guía y vuelve a intentarlo.')
     if (res.status === 404 || /not found/i.test(detail)) throw new SyncError('404')
     if (/invalid login|invalid_grant|invalid credentials/i.test(detail)) throw new SyncError('Correo o contraseña incorrectos.')
     if (/email not confirmed/i.test(detail)) throw new SyncError('Falta confirmar el correo: abre el enlace que te ha enviado Supabase y vuelve a entrar.')
