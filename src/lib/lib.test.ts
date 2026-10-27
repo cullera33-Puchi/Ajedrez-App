@@ -12,6 +12,11 @@ import { isOnlineGame, openingStats, ratingSeries, results, score, themeTotals, 
 import type { AnalysisSummary } from './recommend'
 import { boardToFen, fenToBoard, piecesToBoard } from './scan/scan'
 import { cleanShape, fillHoles } from './scan/features'
+import { LESSONS } from './lessons'
+import { buildPlan, chooseReviewGame, judgeAnswer, mergeLists, planComplete, planSteps, PUZZLES_PER_DAY, refreshPlan, reviewMoments, streak, winAfterReply } from './training'
+import type { GameAnalysis, MoveAnalysis } from './analysis'
+import type { MyPuzzle } from './myPuzzles'
+import type { OpeningGroup } from './openings'
 
 describe('problemas locales', () => {
   it.each(LOCAL_PUZZLES.map((p) => [p.id, p] as const))('%s tiene una solución legal', (_id, p) => {
@@ -799,5 +804,85 @@ describe('correcciones de la revisión', () => {
     })
     expect(load('lessonProgress', {})).toEqual({ 'two-rooks': { done: true, best: 7 }, queen: { done: true, best: 12 } })
     expect(load<Record<string, { reps: number }>>('openingSrs', {}).a.reps).toBe(2)
+  })
+})
+
+describe('entrenamiento de hoy', () => {
+  const DAY = 86_400_000
+  const now = new Date('2026-10-27T18:00:00').getTime()
+  const game = (id: string, daysAgo: number, source: GameSummary['source'] = 'chesscom'): GameSummary => ({
+    id, source, white: { name: 'anriqui' }, black: { name: `rival-${id}` }, result: '0-1', userColor: 'white', date: now - daysAgo * DAY, pgn: '',
+  })
+  const counts = (error: number, grave: number) => ({ mejor: 0, buena: 0, imprecision: 0, error, grave })
+  const summary = (id: string, errors: number): AnalysisSummary => ({
+    id, depth: 12, accuracy: { white: 70, black: 70 }, counts: { white: counts(errors, 0), black: counts(0, 0) }, themes: [], analyzedAt: now,
+  })
+
+  it('elige para el repaso la partida real más reciente, analizada, con errores y sin repasar', () => {
+    const games = [game('a', 1), game('b', 2), game('bot', 0, 'bot'), game('c', 3), game('vieja', 40)]
+    const sums = new Map([['a', summary('a', 0)], ['b', summary('b', 2)], ['c', summary('c', 1)], ['bot', summary('bot', 3)], ['vieja', summary('vieja', 3)]])
+    expect(chooseReviewGame(games, (id) => sums.get(id), [], now)?.id).toBe('b')
+    expect(chooseReviewGame(games, (id) => sums.get(id), ['b'], now)?.id).toBe('c')
+    expect(chooseReviewGame(games, (id) => sums.get(id), ['b', 'c'], now)).toBeUndefined()
+  })
+
+  it('momentos del repaso: los errores más caros, en el orden de la partida', () => {
+    const m = (ply: number, color: 'w' | 'b', classification: MoveAnalysis['classification'], drop: number) => ({ ply, color, classification, drop }) as MoveAnalysis
+    const analysis = { moves: [m(1, 'w', 'grave', 30), m(2, 'b', 'grave', 50), m(3, 'w', 'error', 12), m(5, 'w', 'grave', 40), m(7, 'w', 'error', 11), m(9, 'w', 'imprecision', 6)] } as GameAnalysis
+    expect(reviewMoments(game('x', 0), analysis).map((x) => x.ply)).toEqual([1, 3, 5])
+    const clean = { moves: [m(1, 'w', 'buena', 1), m(3, 'w', 'imprecision', 7)] } as GameAnalysis
+    expect(reviewMoments(game('x', 0), clean).map((x) => x.ply)).toEqual([3])
+  })
+
+  it('valora la respuesta del repaso', () => {
+    expect(judgeAnswer('e2e4', 'e2e4', 'd2d4', 60, undefined)).toBe('best')
+    expect(judgeAnswer('d2d4', 'e2e4', 'd2d4', 60, 30)).toBe('played')
+    expect(judgeAnswer('c2c4', 'e2e4', 'd2d4', 60, 57)).toBe('good')
+    expect(judgeAnswer('g2g4', 'e2e4', 'd2d4', 60, 40)).toBe('bad')
+    expect(winAfterReply({ cp: 0 })).toBeCloseTo(50)
+    expect(winAfterReply({ mate: -2 })).toBe(100)
+  })
+
+  it('plan del día: quita del paso de errores los de la partida repasada y elige tema, apertura y lección', () => {
+    const mp = (id: string, gameId: string) => ({ id, gameId }) as MyPuzzle
+    const opening = (id: string) => ({ id, family: id, color: 'white' }) as OpeningGroup
+    const plan = buildPlan({
+      day: '2026-10-27',
+      reviewGame: game('b', 2),
+      dueMistakes: [mp('b:5', 'b'), mp('x:3', 'x'), mp('y:9', 'y'), mp('z:1', 'z'), mp('w:2', 'w')],
+      themes: ['raro', 'fork'],
+      themeAvailable: (t) => t === 'fork',
+      openings: [opening('ya'), opening('toca')],
+      openingSrs: { ya: { due: now + DAY, interval: 1, reps: 1, lapses: 0 }, toca: { due: now - 1, interval: 1, reps: 2, lapses: 1 } },
+      lessons: LESSONS,
+      lessonProgress: { [LESSONS[0].id]: { done: true } },
+      now,
+    })
+    expect(plan.review).toEqual({ gameId: 'b', opponent: 'rival-b' })
+    expect(plan.mistakes).toEqual(['x:3', 'y:9', 'z:1'])
+    expect(plan.theme).toBe('fork')
+    expect(plan.opening).toEqual({ id: 'toca', family: 'toca', mark: 3 })
+    expect(plan.lesson?.id).toBe(LESSONS[1].id)
+    expect(planSteps(plan).map((s) => s.id)).toEqual(['review', 'mistakes', 'puzzles', 'opening', 'lesson'])
+    expect(planComplete(plan)).toBe(false)
+
+    // Lo que se hace fuera de la sesión cuenta al volver.
+    const after = refreshPlan(plan, { toca: { due: now + DAY, interval: 2, reps: 3, lapses: 1 } }, { [LESSONS[1].id]: { done: true } }, ['b'])
+    expect(after.done).toMatchObject({ review: true, opening: true, lesson: true })
+    expect(planComplete({ ...after, done: { ...after.done, mistakes: 3, puzzles: PUZZLES_PER_DAY } })).toBe(true)
+  })
+
+  it('sin datos, el plan es de problemas variados y la primera lección', () => {
+    const plan = buildPlan({ day: 'd', dueMistakes: [], themes: [], themeAvailable: () => true, openings: [], openingSrs: {}, lessons: LESSONS, lessonProgress: {} })
+    expect(planSteps(plan).map((s) => s.id)).toEqual(['puzzles', 'lesson'])
+    expect(plan.theme).toBe('mix')
+  })
+
+  it('racha de días seguidos, contando hasta ayer si hoy aún no está hecho', () => {
+    expect(streak(['2026-10-25', '2026-10-26', '2026-10-27'], now)).toBe(3)
+    expect(streak(['2026-10-25', '2026-10-26'], now)).toBe(2)
+    expect(streak(['2026-10-24', '2026-10-26'], now)).toBe(1)
+    expect(streak(['2026-10-20'], now)).toBe(0)
+    expect(mergeLists(['2026-10-26', 'a'], ['a', '2026-10-27'])).toEqual(['2026-10-26', '2026-10-27', 'a'])
   })
 })

@@ -4,11 +4,15 @@ import { type Lesson, LESSONS } from '../lib/lessons'
 import { LessonList, LessonPlayer } from './Lessons'
 import { OpeningDetail, OpeningsCard } from './Openings'
 import { getGames } from '../lib/games'
-import type { OpeningGroup } from '../lib/openings'
+import { type OpeningGroup, topOpenings } from '../lib/openings'
 
 interface Props {
   onPractice: (theme: string) => void
   onPlayFrom: (fen: string) => void
+  /** Lección o apertura que se abre directamente (desde el entrenamiento de hoy). */
+  target?: { kind: 'lesson' | 'opening'; id: string } | null
+  /** Vuelta al entrenamiento cuando se ha abierto desde allí. */
+  onReturn?: () => void
 }
 
 const PIECES = [
@@ -35,13 +39,38 @@ const MODULES = [
   { title: 'Clavadas', text: 'Una pieza que no puede moverse sin dejar expuesta otra más valiosa.', theme: 'pin' },
 ]
 
-export function LearnView({ onPractice, onPlayFrom }: Props) {
-  const [lesson, setLesson] = useState<Lesson | null>(null)
-  const [opening, setOpening] = useState<OpeningGroup | null>(null)
-  if (opening) return <OpeningDetail key={opening.id} group={opening} onBack={() => setOpening(null)} onPlayFrom={onPlayFrom} />
+export function LearnView({ onPractice, onPlayFrom, target, onReturn }: Props) {
+  const [lesson, setLesson] = useState<Lesson | null>(() => (target?.kind === 'lesson' ? (LESSONS.find((l) => l.id === target.id) ?? null) : null))
+  const [opening, setOpening] = useState<OpeningGroup | null>(() => {
+    if (target?.kind !== 'opening') return null
+    const top = topOpenings(getGames())
+    return [...top.white, ...top.black].find((o) => o.id === target.id) ?? null
+  })
+  // Abierto desde el entrenamiento: al salir se vuelve allí.
+  const fromTraining = Boolean(target && onReturn)
+  const close = (clear: () => void) => (fromTraining ? onReturn!() : clear())
+  if (opening)
+    return (
+      <OpeningDetail
+        key={opening.id}
+        group={opening}
+        onBack={() => close(() => setOpening(null))}
+        backLabel={fromTraining ? 'Volver al entrenamiento' : undefined}
+        onPlayFrom={onPlayFrom}
+      />
+    )
   if (lesson) {
     const next = LESSONS[LESSONS.indexOf(lesson) + 1]
-    return <LessonPlayer key={lesson.id} lesson={lesson} onBack={() => setLesson(null)} onNext={next ? () => setLesson(next) : undefined} onPlayFrom={onPlayFrom} />
+    return (
+      <LessonPlayer
+        key={lesson.id}
+        lesson={lesson}
+        onBack={() => close(() => setLesson(null))}
+        backLabel={fromTraining ? 'Volver al entrenamiento' : undefined}
+        onNext={next && !fromTraining ? () => setLesson(next) : undefined}
+        onPlayFrom={onPlayFrom}
+      />
+    )
   }
   return (
     <div className="page">

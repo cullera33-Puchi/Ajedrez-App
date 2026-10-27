@@ -20,6 +20,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Tu entrenamiento de hoy (4.8) | Nueva pestaña *Entrenar* y tarjeta en Inicio: sesión diaria con el repaso de tu última partida, 3 errores pendientes, 5 problemas del tema que más fallas, una apertura y una lección. Racha de días seguidos, sincronizada entre dispositivos |
+| Repaso guiado de tu última partida (4.9) | Antes de ver el análisis, la app te para en tus 3 errores más caros y te pregunta qué jugarías; Stockfish valora tu respuesta (la mejor, también buena, la de la partida o mala) y al final ves el resumen. También desde *Tus momentos clave* en el análisis |
 | Código de acceso de 4 cifras | Se pide al abrir la app la primera vez en cada dispositivo. El código es un secreto de GitHub (`APP_PIN`) y en la app solo va su huella; 5 fallos bloquean 30 segundos. Barrera sencilla: para un cierre real, Cloudflare Access (ver *Por analizar*) |
 | Búsqueda de rival en Lichess corregida | La conexión de la búsqueda queda abierta mientras se espera (antes Lichess la retiraba sin avisar); se relanza sola si se corta, recoge la partida aunque se pierda el aviso y muestra el tiempo de espera |
 | Supabase con tu proyecto | Dirección y clave publishable ya puestas en la tarjeta de sincronización; guía actualizada al formato nuevo de clave y con el paso de cerrar el alta de usuarios |
@@ -57,13 +59,12 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Orden | Mejora | Por qué | Esfuerzo | ¿Te necesito? |
 |---|---|---|---|---|
 | 1 | Terminar las pruebas reales: búsqueda de rival en Lichess tras la corrección (2.4), escáner con capturas de Chess.com (5.9), importación de Lichess (5.1), modo Tinta en la BOOX (5.8) y comprobar que la app pide el código de acceso | Es lo único que no se puede probar desde aquí | Bajo | Sí |
-| 2 | **Tu entrenamiento de hoy** (4.8): una sesión diaria de 10 a 15 minutos que junta tus errores pendientes, el repaso de aperturas que toque, 5 problemas del tema que más fallas y una lección; con racha de días | Para mejorar, la constancia pesa más que el volumen; hoy cada cosa está en una pantalla distinta | Medio | No |
-| 3 | **Repaso guiado de tu última partida** (4.9): antes de ver el análisis, la app te para en tus 3 momentos clave y te pregunta qué jugarías | Aprender de tus propios errores es lo que más rinde a tu nivel; encaja como primer paso de la sesión diaria | Medio | No |
-| 4 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
-| 5 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
-| 6 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
-| 7 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |
-| 8 | Acceso privado real con Cloudflare (6.3), si el código de 4 cifras se queda corto | Cierra la URL de verdad y permite el repositorio privado | Medio | Sí, crear la cuenta |
+| 2 | Usar unos días el entrenamiento diario y contarme qué sobra o falta (duración, número de problemas, orden de los pasos) | Ajustarlo a cómo entrenas de verdad | Bajo | Sí |
+| 3 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
+| 4 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
+| 5 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
+| 6 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |
+| 7 | Acceso privado real con Cloudflare (6.3), si el código de 4 cifras se queda corto | Cierra la URL de verdad y permite el repositorio privado | Medio | Sí, crear la cuenta |
 
 ## Pendiente
 
@@ -91,8 +92,6 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 4.8 | Tu entrenamiento de hoy: sesión diaria guiada con racha | Medio | Alta |
-| 4.9 | Repaso guiado de tu última partida en sus momentos clave | Medio | Media |
 | 4.7 | Más lecciones: mate con alfil y caballo, finales de dama contra peón, triangulación | Medio | Baja |
 | 4.5 | Aperturas, versión 2: repertorio propio editable y variantes del rival que aún no te han jugado | Alto | Baja |
 

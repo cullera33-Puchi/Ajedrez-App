@@ -29,7 +29,7 @@ Piezas principales:
 
 | Zona | Archivos |
 |---|---|
-| Vistas | `src/views/` (Home, Play, Games, Analysis, Puzzles, Learn, Lessons, Openings, Scan, Progress) |
+| Vistas | `src/views/` (Home, Training, Play, Games, Analysis, Puzzles, Learn, Lessons, Openings, Scan, Progress) |
 | Bots | `src/lib/bots.ts` (nivel de 250 a 2000 de 50 en 50, `makeBot`) |
 | Análisis | `src/lib/analysis.ts`, `src/lib/engine.ts`, `src/lib/background.ts` |
 | Problemas | `src/lib/puzzles.ts` (nivel tipo Elo), `src/lib/myPuzzles.ts` (tus errores con repaso espaciado), `src/lib/puzzleLog.ts` (histórico por día) |
@@ -43,12 +43,14 @@ Piezas principales:
 | Aperturas | `src/lib/openings.ts` (árbol, revisión, repertorio, repasos), `src/views/Openings.tsx` |
 | Problemas sin conexión | `scripts/build-puzzle-pack.mjs` (se ejecuta en el workflow de Pages con la base de Lichess), `src/lib/puzzlePack.ts`. `public/puzzles/` no se versiona |
 | Juego online | `src/lib/lichessAuth.ts` (OAuth PKCE y token personal), `src/lib/lichessPlay.ts` (Board API, flujos NDJSON con reconexión), `src/views/PlayOnline.tsx`, `src/components/LiveLock.tsx` (bloqueo del análisis durante la partida) |
+| Entrenamiento de hoy | `src/lib/training.ts` (plan del día, racha, momentos del repaso guiado), `src/views/Training.tsx` (sesión y repaso guiado), `src/lib/usePuzzlePlay.ts` (resolver un problema en el tablero). Desde el análisis, *Repaso guiado* abre `entreno` con `review` en el estado de navegación; la apertura y la lección se abren en Aprender con `learnTarget` y vuelven al entrenamiento |
 | Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
 
 Reglas de negocio a respetar:
 
 - Las partidas contra bots se guardan y analizan, pero van separadas (apartado *Contra bots* en Partidas) y no cuentan en recomendaciones ni en el resumen de Inicio.
 - Los problemas de *Mis errores* no cambian el nivel de problemas.
+- Entrenamiento de hoy: el plan (`trainingPlan`) es propio de cada dispositivo (`DEVICE_ONLY`); la racha (`trainingDays`) y las partidas repasadas (`reviewedGames`) se fusionan por unión en `MERGERS`. Los problemas del tema cambian el nivel como en Problemas; los de tus errores, no.
 - Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección, apertura) antes de cambiar de pantalla.
 - Gesto del borde izquierdo en el móvil (`src/components/MobileMenu.tsx`): abre el menú siguiendo el dedo; si hay un `useBackHandler` activo, en su lugar va atrás. En la app instalada en iOS no se toca el historial (el sistema mostraría una página gris al deslizar); el botón atrás del sistema en Android, Safari y PC usa una entrada de historial de reserva.
 - Iconos de botones: SVG con `currentColor` (`src/components/NavIcons.tsx`), no caracteres como ⏮ o ▶, que iOS pinta como emoji azules.

@@ -8,6 +8,7 @@ import { mergeLogs, type PuzzleAttempt } from './puzzleLog'
 import type { PuzzleStats } from './puzzles'
 import type { LessonProgress } from './lessons'
 import type { OpeningSrs } from './openings'
+import { mergeLists } from './training'
 import type { AnalysisSummary } from './recommend'
 import { dumpAll, load, save } from './storage'
 import type { GameSummary } from './types'
@@ -35,7 +36,7 @@ export interface ImportResult {
 }
 
 /** Datos propios de cada dispositivo que no viajan en la copia (la sesión de sincronización, entre otros). */
-const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk'])
+const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk', 'trainingPlan'])
 
 export async function exportBackup(includeAnalyses = true): Promise<Backup> {
   const store = await db()
@@ -138,6 +139,9 @@ const MERGERS: Rec<(current: unknown, incoming: unknown) => unknown> = {
     for (const [u, t] of Object.entries(obj<number>(b))) out[u] = Math.max(out[u] ?? 0, t)
     return out
   },
+  // Entrenamiento diario: días cumplidos y partidas ya repasadas, unión de los dos lados.
+  trainingDays: mergeLists,
+  reviewedGames: mergeLists,
   // Correcciones del escáner: unión sin repetir, con el mismo límite que en el escáner.
   scanSamples: (a, b) => {
     const seen = new Set<string>()

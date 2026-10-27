@@ -37,7 +37,7 @@ export function LessonList({ onOpen }: { onOpen: (l: Lesson) => void }) {
 
 const ENGINE_DEPTH = 14
 
-export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: Lesson; onBack: () => void; onNext?: () => void; onPlayFrom?: (fen: string) => void }) {
+export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom, backLabel = 'Volver a las lecciones' }: { lesson: Lesson; onBack: () => void; onNext?: () => void; onPlayFrom?: (fen: string) => void; backLabel?: string }) {
   const userColor = lessonColor(lesson)
   const userTurnChar = userColor === 'white' ? 'w' : 'b'
   const [chess] = useState(() => new Chess(lesson.fen))
@@ -53,7 +53,7 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
   const [showSteps, setShowSteps] = useState(true)
   const startPieces = useRef(countPieces(new Chess(lesson.fen)))
   // Con la lección empezada, ir atrás no la abandona; si no, vuelve a la lista.
-  useBackGuard(status.state === 'playing' && userMoves > 0, 'Lección en curso. Para salir, pulsa Volver a las lecciones.')
+  useBackGuard(status.state === 'playing' && userMoves > 0, `Lección en curso. Para salir, pulsa ${backLabel}.`)
   useBackHandler(true, onBack)
   const alive = useRef(true)
   /** Se incrementa al empezar de nuevo, para descartar cálculos del motor de la ronda anterior. */
@@ -162,7 +162,7 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
       <div className="puzzle-side">
         <section className="card">
           <button className="link small" onClick={onBack}>
-            Volver a las lecciones
+            {backLabel}
           </button>
           <h2>{lesson.title}</h2>
           {status.state === 'playing' ? (

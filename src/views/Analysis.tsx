@@ -30,6 +30,8 @@ interface Props {
   onNavigate: (v: View) => void
   onPractice: (theme: string) => void
   onPlayFrom: (fen: string) => void
+  /** Repaso guiado de esta partida: piensa tus momentos clave antes de ver el análisis. */
+  onGuidedReview?: (gameId: string) => void
 }
 
 interface Retry {
@@ -78,7 +80,7 @@ const DEPTHS = [
   { value: 16, label: 'Profundo' },
 ]
 
-export function AnalysisView({ game, settings, onSettings, onNavigate, onPractice, onPlayFrom }: Props) {
+export function AnalysisView({ game, settings, onSettings, onNavigate, onPractice, onPlayFrom, onGuidedReview }: Props) {
   if (!game) {
     return (
       <div className="page">
@@ -99,10 +101,10 @@ export function AnalysisView({ game, settings, onSettings, onNavigate, onPractic
       </div>
     )
   }
-  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} onPractice={onPractice} onPlayFrom={onPlayFrom} />
+  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} onPractice={onPractice} onPlayFrom={onPlayFrom} onGuidedReview={onGuidedReview} />
 }
 
-function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }: Omit<Props, 'game' | 'onNavigate'> & { game: GameSummary }) {
+function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, onGuidedReview }: Omit<Props, 'game' | 'onNavigate'> & { game: GameSummary }) {
   const parsed = useMemo(() => {
     try {
       return parsePgn(game.pgn)
@@ -670,6 +672,14 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
                   </button>
                 ))}
               </div>
+              {userSide && onGuidedReview && (
+                <>
+                  <p className="muted small">Antes de mirar las respuestas, prueba a encontrar tú la buena jugada en cada uno.</p>
+                  <button className="btn small" onClick={() => onGuidedReview(game.id)}>
+                    Repaso guiado
+                  </button>
+                </>
+              )}
             </section>
           )}
 

@@ -16,6 +16,7 @@ import { allMyPuzzles } from '../lib/myPuzzles'
 import type { Settings } from '../lib/settings'
 import { load, save } from '../lib/storage'
 import { getSummary } from '../lib/games'
+import { loadDays, planComplete, planSteps, stepComplete, storedPlan, streak } from '../lib/training'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -93,6 +94,17 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   const userBlunders = mine
     .filter((g) => getSummary(g.id))
     .map((g) => getSummary(g.id)!.counts[g.userColor!].grave)
+  // Entrenamiento de hoy: estado del plan (si ya se ha empezado) y racha.
+  const plan = storedPlan()
+  const days = streak(loadDays())
+  const steps = plan ? planSteps(plan) : []
+  const stepsDone = steps.filter(stepComplete).length
+  const streakText = days ? ` Llevas ${days} ${days === 1 ? 'día seguido' : 'días seguidos'}.` : ''
+  const training = !plan
+    ? { text: `Unos 10 a 15 minutos: tu última partida, tus errores, problemas, una apertura y una lección.${streakText}`, label: 'Empezar' }
+    : planComplete(plan)
+      ? { text: `Hecho por hoy.${streakText} Vuelve mañana para no perder la racha.`, label: 'Ver' }
+      : { text: `Llevas ${stepsDone} de ${steps.length} pasos.${streakText}`, label: 'Continuar' }
   const avgBlunders = userBlunders.length ? userBlunders.reduce((s, n) => s + n, 0) / userBlunders.length : undefined
 
   return (
@@ -103,6 +115,16 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
       </header>
 
       <div className="grid-2">
+        <section className="card span-2 training-card">
+          <div>
+            <h2>Tu entrenamiento de hoy</h2>
+            <p className="muted">{training.text}</p>
+          </div>
+          <button className={`btn ${training.label === 'Ver' ? '' : 'primary'}`} onClick={() => onNavigate('entreno')}>
+            {training.label}
+          </button>
+        </section>
+
         <section className="card">
           <h2>Tus cuentas</h2>
           <label className="field">

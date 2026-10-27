@@ -22,6 +22,7 @@ const VIEWS = {
   puzzles: () => import('./views/Puzzles'),
   learn: () => import('./views/Learn'),
   progress: () => import('./views/Progress'),
+  training: () => import('./views/Training'),
 }
 const PlayView = lazy(() => VIEWS.play().then((m) => ({ default: m.PlayView })))
 const GamesView = lazy(() => VIEWS.games().then((m) => ({ default: m.GamesView })))
@@ -29,12 +30,14 @@ const AnalysisView = lazy(() => VIEWS.analysis().then((m) => ({ default: m.Analy
 const PuzzlesView = lazy(() => VIEWS.puzzles().then((m) => ({ default: m.PuzzlesView })))
 const LearnView = lazy(() => VIEWS.learn().then((m) => ({ default: m.LearnView })))
 const ProgressView = lazy(() => VIEWS.progress().then((m) => ({ default: m.ProgressView })))
+const TrainingView = lazy(() => VIEWS.training().then((m) => ({ default: m.TrainingView })))
 const ScanView = lazy(() => import('./views/Scan').then((m) => ({ default: m.ScanView })))
 
-export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear' | 'progreso'
+export type View = 'inicio' | 'entreno' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear' | 'progreso'
 
 const NAV: { id: View; label: string; icon: string }[] = [
   { id: 'inicio', label: 'Inicio', icon: '⌂' },
+  { id: 'entreno', label: 'Entrenar', icon: '★' },
   { id: 'jugar', label: 'Jugar', icon: '♟' },
   { id: 'partidas', label: 'Partidas', icon: '☰' },
   { id: 'analisis', label: 'Análisis', icon: '♘' },
@@ -47,11 +50,15 @@ interface NavState {
   view: View
   gameId: string | null
   puzzleTheme: string
+  /** En Entrenar: repaso guiado de la partida `gameId` en lugar de la sesión del día. */
+  review: boolean
+  /** En Aprender: lección o apertura que se abre directamente (desde el entrenamiento). */
+  learnTarget: { kind: 'lesson' | 'opening'; id: string } | null
 }
 
 export default function App() {
-  const [nav, setNav] = useState<NavState>({ view: 'inicio', gameId: null, puzzleTheme: 'mix' })
-  const { view, gameId, puzzleTheme } = nav
+  const [nav, setNav] = useState<NavState>({ view: 'inicio', gameId: null, puzzleTheme: 'mix', review: false, learnTarget: null })
+  const { view, gameId, puzzleTheme, review, learnTarget } = nav
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [games, setGames] = useState<GameSummary[]>(getGames)
   const [toast, setToast] = useState<string | null>(null)
@@ -64,12 +71,12 @@ export default function App() {
   const go = (next: Partial<NavState>) => {
     const cur = navRef.current
     const merged = { ...cur, ...next }
-    if (merged.view === cur.view && merged.gameId === cur.gameId && merged.puzzleTheme === cur.puzzleTheme) return
+    if (JSON.stringify(merged) === JSON.stringify(cur)) return
     history.current = [...history.current, cur].slice(-30)
     navRef.current = merged
     setNav(merged)
   }
-  const setView = (v: View) => go({ view: v })
+  const setView = (v: View) => go({ view: v, review: false, learnTarget: null })
 
   // Gesto y botón atrás: vuelven a la pantalla anterior (las pantallas pueden interceptarlo).
   useEffect(() => {
@@ -147,6 +154,8 @@ export default function App() {
   const addGames = (incoming: GameSummary[]) => setGames(mergeGames(incoming))
   const openGame = (id: string) => go({ view: 'analisis', gameId: id })
   const openPuzzles = (theme: string) => go({ view: 'problemas', puzzleTheme: theme })
+  const openReview = (id: string) => go({ view: 'entreno', gameId: id, review: true, learnTarget: null })
+  const openLearn = (kind: 'lesson' | 'opening', id: string) => go({ view: 'aprender', review: false, learnTarget: { kind, id } })
   const pendingBotGame = view !== 'jugar' && Boolean(loadBotGame())
   /** Prepara una partida contra un bot desde una posición. */
   const playPosition = (fen: string) => {
@@ -206,10 +215,30 @@ export default function App() {
             onNavigate={setView}
             onPractice={openPuzzles}
             onPlayFrom={playPosition}
+            onGuidedReview={openReview}
+          />
+        )}
+        {view === 'entreno' && (
+          <TrainingView
+            key={review ? `repaso-${gameId}` : 'sesion'}
+            games={games}
+            reviewGameId={review ? gameId : null}
+            onOpenGame={openGame}
+            onOpenLesson={(id) => openLearn('lesson', id)}
+            onOpenOpening={(id) => openLearn('opening', id)}
+            onStartSession={() => setView('entreno')}
           />
         )}
         {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
-        {view === 'aprender' && <LearnView onPractice={openPuzzles} onPlayFrom={playPosition} />}
+        {view === 'aprender' && (
+          <LearnView
+            key={learnTarget ? `${learnTarget.kind}-${learnTarget.id}` : 'aprender'}
+            onPractice={openPuzzles}
+            onPlayFrom={playPosition}
+            target={learnTarget}
+            onReturn={() => setView('entreno')}
+          />
+        )}
         {view === 'progreso' && <ProgressView games={games} onNavigate={setView} onOpenGame={openGame} onPractice={openPuzzles} />}
         {view === 'escanear' && !isLiveActive() && (
           <Suspense fallback={<p className="muted page">Cargando el escáner…</p>}>

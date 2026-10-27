@@ -121,7 +121,7 @@ function useReviews(tree: Map<string, OpeningNode>) {
   return { reviews, progress }
 }
 
-export function OpeningDetail({ group, onBack, onPlayFrom }: { group: OpeningGroup; onBack: () => void; onPlayFrom?: (fen: string) => void }) {
+export function OpeningDetail({ group, onBack, onPlayFrom, backLabel = 'Volver a Aprender' }: { group: OpeningGroup; onBack: () => void; onPlayFrom?: (fen: string) => void; backLabel?: string }) {
   const tree = useMemo(() => buildTree(group), [group])
   const { reviews, progress } = useReviews(tree)
   const line = mainLine(tree, reviews)
@@ -176,7 +176,7 @@ export function OpeningDetail({ group, onBack, onPlayFrom }: { group: OpeningGro
       <div className="puzzle-side">
         <section className="card">
           <button className="link small" onClick={onBack}>
-            Volver a Aprender
+            {backLabel}
           </button>
           <h2>
             {group.family} <span className="muted small">con {colorName(group.color)}</span>
