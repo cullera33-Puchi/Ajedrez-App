@@ -4,7 +4,7 @@ import { buildAnalysis, classify, formatEval, materialBalance, moveAccuracy, par
 import { normalizeChesscomGame, openingFromPgn } from './chesscom'
 import { DEMO_GAMES } from './games'
 import { normalizeLichessGame, puzzleFromLichess } from './lichess'
-import { gameFromPgn } from './pgnImport'
+import { gameFromPgn, gamesFromPgnFile } from './pgnImport'
 import { INITIAL_PUZZLE_STATS, LOCAL_PUZZLES, updateRating } from './puzzles'
 import { dailyStats, mergeLogs, type PuzzleAttempt, ratingChange } from './puzzleLog'
 import { type GameSummary, outcomeFor } from './types'
@@ -757,5 +757,47 @@ describe('juego online en Lichess', () => {
     const { tokenCreateUrl } = await import('./lichessAuth')
     const u = new URL(tokenCreateUrl())
     expect(u.searchParams.getAll('scopes[]')).toEqual(['board:play', 'challenge:read', 'challenge:write'])
+  })
+})
+
+describe('correcciones de la revisión', () => {
+  it('no duplica una partida importada por la API y desde un PGN', async () => {
+    const { mergeGames, getGames } = await import('./games')
+    const base = { white: { name: 'a' }, black: { name: 'b' }, result: '1-0' as const, date: 5, pgn: '1. e4' }
+    mergeGames([{ ...base, id: 'pgn-x1', source: 'chesscom', url: 'https://www.chess.com/game/live/999' }])
+    mergeGames([{ ...base, id: 'cc-uuid', source: 'chesscom', url: 'https://www.chess.com/game/live/999' }])
+    mergeGames([{ ...base, id: 'pgn-x2', source: 'chesscom', url: 'https://www.chess.com/game/live/999' }])
+    expect(getGames().filter((g) => g.url === 'https://www.chess.com/game/live/999').map((g) => g.id)).toEqual(['cc-uuid'])
+  })
+
+  it('da a los PGN de Lichess el mismo id que la API y marca las partidas contra su Stockfish', () => {
+    const pgn = (white: string) => `[Event "Rated"]\n[Site "https://lichess.org/AbCd1234"]\n[White "${white}"]\n[Black "anriqui"]\n[Result "0-1"]\n\n1. e4 e5 0-1`
+    const { games } = gamesFromPgnFile(`${pgn('rival')}\n\n${pgn('lichess AI level 3')}`, 'anriqui')
+    expect(games[0]).toMatchObject({ id: 'li-AbCd1234', source: 'lichess' })
+    expect(games[1].source).toBe('bot')
+    const g = normalizeLichessGame(
+      { id: 'zz', variant: 'standard', status: 'mate', createdAt: 0, winner: 'white', players: { white: { user: { name: 'anriqui' } }, black: { aiLevel: 2 } }, pgn: '1. e4 e5' },
+      'anriqui',
+    )
+    expect(g?.source).toBe('bot')
+  })
+
+  it('fusiona el progreso de lecciones y aperturas de dos dispositivos', async () => {
+    const { save, load } = await import('./storage')
+    const { importBackup } = await import('./backup')
+    save('lessonProgress', { 'two-rooks': { done: true, best: 9 } })
+    save('openingSrs', { a: { due: 1, interval: 1, reps: 1, lapses: 0 } })
+    await importBackup({
+      app: 'ajedrez-app',
+      version: 1,
+      exportedAt: 0,
+      games: [],
+      analyses: [],
+      summaries: [],
+      puzzles: [],
+      local: { lessonProgress: { 'two-rooks': { done: true, best: 7 }, queen: { done: true, best: 12 } }, openingSrs: { a: { due: 9, interval: 3, reps: 2, lapses: 1 } } },
+    })
+    expect(load('lessonProgress', {})).toEqual({ 'two-rooks': { done: true, best: 7 }, queen: { done: true, best: 12 } })
+    expect(load<Record<string, { reps: number }>>('openingSrs', {}).a.reps).toBe(2)
   })
 })

@@ -237,6 +237,8 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
   }
 
   const fen = parsed.fens[ply]
+  // Número de la jugada `p` según la FEN anterior (vale también para partidas que no empiezan en la posición inicial).
+  const moveNo = (p: number) => Number(parsed.fens[p - 1]?.split(' ')[5]) || Math.ceil(p / 2)
   const move = ply > 0 ? parsed.moves[ply - 1] : undefined
   const moveAnalysis = analysis && ply > 0 ? analysis.moves[ply - 1] : undefined
   const evalNow = analysis?.positions[ply]
@@ -295,21 +297,18 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
     // ¿Es igual de buena? Se comprueba con el motor la posición resultante.
     setRetry({ ...retry, checking: true })
     const res = await getEngine('main').evaluate(chess.fen(), 10)
+    // La evaluación es del rival: se pasa al punto de vista de las blancas.
     const sign = played.color === 'w' ? 1 : -1
-    const afterWhite = { cp: res.cp !== undefined ? -res.cp * (played.color === 'w' ? 1 : -1) : undefined, mate: res.mate !== undefined ? -res.mate * (played.color === 'w' ? 1 : -1) : undefined, pv: [] }
+    const afterWhite = { cp: res.cp !== undefined ? -res.cp * sign : undefined, mate: res.mate !== undefined ? -res.mate * sign : undefined, pv: [] }
     const toMover = (w: number) => (sign === 1 ? w : 100 - w)
     const drop = toMover(winPercent(analysis.positions[retry.ply - 1])) - toMover(winPercent(afterWhite))
-    if (drop < 5) {
-      setRetry({ ...retry, status: 'solved', played: toSpanishSan(played.san), equal: true, checking: false, solvedFen: chess.fen(), solvedMove: [from, to] })
-    } else {
-      setRetry({
-        ...retry,
-        tries: retry.tries + 1,
-        resetKey: retry.resetKey + 1,
-        checking: false,
-        lastWrong: `${toSpanishSan(played.san)} deja la evaluación en ${formatEval(afterWhite)}.`,
-      })
-    }
+    // Si mientras se calculaba se ha salido del «Inténtalo tú» o se ha cambiado de jugada, no se toca nada.
+    setRetry((cur) => {
+      if (!cur || cur.ply !== retry.ply || !cur.checking) return cur
+      return drop < 5
+        ? { ...cur, status: 'solved', played: toSpanishSan(played.san), equal: true, checking: false, solvedFen: chess.fen(), solvedMove: [from, to] }
+        : { ...cur, tries: cur.tries + 1, resetKey: cur.resetKey + 1, checking: false, lastWrong: `${toSpanishSan(played.san)} deja la evaluación en ${formatEval(afterWhite)}.` }
+    })
   }
 
   // Explorar variantes: cualquier jugada en el tablero. Si coincide con la partida, se sigue la partida.
@@ -365,7 +364,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
         <div className="move-card-head">
           <strong>Variante</strong>
           <span className="muted small">
-            {baseMove ? `desde ${Math.ceil(variation.base / 2)}${baseMove.color === 'w' ? '.' : '...'} ${toSpanishSan(baseMove.san)}` : 'desde el inicio'}
+            {baseMove ? `desde ${moveNo(variation.base)}${baseMove.color === 'w' ? '.' : '...'} ${toSpanishSan(baseMove.san)}` : 'desde el inicio'}
           </span>
           {live?.lines[0] && <span className="eval-chip">{formatEval(lineToWhite(boardFen, live.lines[0]))}</span>}
         </div>
@@ -409,7 +408,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
         <>
           <div className="move-card-head">
             <strong>
-              {Math.ceil(ply / 2)}
+              {moveNo(ply)}
               {move.color === 'w' ? '.' : '...'} {toSpanishSan(move.san)}
             </strong>
             {moveAnalysis && (
@@ -665,7 +664,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }
               <div className="chips">
                 {keyMoments.map((m) => (
                   <button key={m.ply} className={`chip cls-${m.classification}`} onClick={() => go(m.ply)}>
-                    {Math.ceil(m.ply / 2)}
+                    {moveNo(m.ply)}
                     {m.color === 'w' ? '.' : '...'} {toSpanishSan(m.san)} {CLASS_SYMBOL[m.classification]}
                   </button>
                 ))}

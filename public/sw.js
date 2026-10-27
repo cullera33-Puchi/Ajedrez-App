@@ -1,6 +1,6 @@
 // Service worker: permite instalar la app en el móvil y abrirla sin conexión.
-// Páginas: primero la red (para recibir actualizaciones); el resto de archivos: primero la caché.
-const CACHE = 'ajedrez-app-v3'
+// Páginas: primero la red; archivos con huella (assets/): primero la caché; el resto: caché y actualización por detrás.
+const CACHE = 'ajedrez-app-v4'
 // ignoreVary: el servidor puede responder con «Vary: Origin» y los scripts de módulo llevan Origin;
 // sin esta opción, la copia guardada no se encontraría sin conexión.
 // Motor de análisis y paquete de problemas sin conexión.
@@ -21,11 +21,21 @@ async function precache() {
     .map((m) => new URL(m[1], scope))
     .filter((u) => u.origin === self.location.origin)
     .map((u) => u.href)
-  // Las partes que se cargan al usarlas (como el escáner) se nombran dentro de los JS principales.
+  // Las partes que se cargan al usarlas (pantallas, escáner) se nombran dentro de otros JS: se
+  // recorren todos, también los que se descubren por el camino.
+  const pending = linked.filter((x) => x.endsWith('.js'))
+  const seen = new Set(pending)
   const lazy = []
-  for (const u of linked.filter((x) => x.endsWith('.js'))) {
+  while (pending.length) {
+    const u = pending.pop()
     const js = await fetch(u).then((r) => (r.ok ? r.text() : '')).catch(() => '')
-    for (const m of js.matchAll(/["'`](?:\.\/|assets\/)([\w.-]+\.(?:js|css))["'`]/g)) lazy.push(new URL(`assets/${m[1]}`, scope).href)
+    for (const m of js.matchAll(/["'`](?:\.\/|assets\/)([\w.-]+\.(?:js|css))["'`]/g)) {
+      const href = new URL(`assets/${m[1]}`, scope).href
+      if (seen.has(href)) continue
+      seen.add(href)
+      lazy.push(href)
+      if (href.endsWith('.js')) pending.push(href)
+    }
   }
   const urls = [...new Set([...linked, ...lazy, ...ENGINE.map((f) => new URL(f, scope).href)])]
   await Promise.all(urls.map((u) => cache.add(u).catch(() => undefined)))
@@ -66,5 +76,22 @@ self.addEventListener('fetch', (event) => {
     )
     return
   }
-  event.respondWith(caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((res) => store(req, res))))
+  // Archivos con huella en el nombre (assets/): nunca cambian, primero la caché.
+  if (url.pathname.includes('/assets/')) {
+    event.respondWith(caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((res) => store(req, res))))
+    return
+  }
+  // El resto (motor, paquete de problemas, iconos): se sirve la copia guardada y se actualiza por detrás.
+  event.respondWith(
+    caches.match(req, { ignoreVary: true }).then((hit) => {
+      const fresh = fetch(req)
+        .then((res) => store(req, res))
+        .catch(() => hit ?? Response.error())
+      if (hit) {
+        event.waitUntil(fresh)
+        return hit
+      }
+      return fresh
+    }),
+  )
 })

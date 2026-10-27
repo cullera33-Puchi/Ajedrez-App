@@ -4,10 +4,10 @@ import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
 import { type CoachStatus, fetchCoachStatus } from '../lib/coach'
 import { loadBotGame, makeBot } from '../lib/bots'
 import { fetchLichessStats } from '../lib/lichess'
-import { INITIAL_PUZZLE_STATS, type PuzzleStats, themeName } from '../lib/puzzles'
+import { INITIAL_PUZZLE_STATS, MY_ERRORS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
+import { isOnlineGame } from '../lib/progress'
 import { duePuzzles } from '../lib/myPuzzles'
-import { MY_ERRORS } from './Puzzles'
 import { SyncCard } from '../components/SyncCard'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import { backupFileName, exportBackup, importBackup, parseBackup } from '../lib/backup'
@@ -76,7 +76,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   }
 
   // Resumen de partidas reales (las jugadas contra bots tienen su récord en Jugar).
-  const mine = games.filter((g) => g.userColor && g.source !== 'bot')
+  const mine = games.filter(isOnlineGame)
   const recent = mine.slice(0, 20)
   const tally = { victoria: 0, derrota: 0, tablas: 0 }
   for (const g of recent) {

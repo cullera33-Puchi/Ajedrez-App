@@ -261,8 +261,9 @@ export const answerDraw = (id: string, yes: boolean) => post(`/api/board/game/${
 
 /** Partidas en curso de la cuenta (para retomarlas). */
 export async function nowPlaying(): Promise<{ gameId: string; color: Color; opponent?: { username?: string; rating?: number; ai?: number } }[]> {
-  const res = await fetch(`${LICHESS}/api/account/playing`, { headers: auth() })
-  if (!res.ok) return []
+  const res = await fetch(`${LICHESS}/api/account/playing?nb=50`, { headers: auth() })
+  // Un error de Lichess no significa «sin partidas»: quien llama decide qué hacer.
+  if (!res.ok) throw new Error(`Lichess ha respondido con un error (${res.status}).`)
   const data = (await res.json()) as { nowPlaying?: { gameId: string; color: Color; opponent?: { username?: string; rating?: number; ai?: number } }[] }
   return data.nowPlaying ?? []
 }
@@ -275,12 +276,19 @@ export async function exportFinishedGame(id: string, username: string): Promise<
 }
 
 /** Tiempo que queda en el reloj de un bando, descontando lo transcurrido si le toca mover. */
+/** Bando al que le toca según el último estado confirmado por Lichess. */
+export function turnOf(g: LiveGame): Color {
+  const whiteFirst = g.initialFen === 'startpos' || g.initialFen.split(' ')[1] === 'w'
+  return (g.moves.length % 2 === 0) === whiteFirst ? 'white' : 'black'
+}
+
+/** ¿Corre el reloj de este bando? (en Lichess, desde la segunda jugada). */
+export const clockRunning = (g: LiveGame, side: Color) => !isFinished(g.status) && g.moves.length >= 2 && turnOf(g) === side
+
 export function clockLeft(g: LiveGame, side: Color, now = Date.now()): number | undefined {
   const base = side === 'white' ? g.wtime : g.btime
   if (base === undefined) return undefined
-  const turn: Color = g.moves.length % 2 === (g.initialFen === 'startpos' || g.initialFen.split(' ')[1] === 'w' ? 0 : 1) ? 'white' : 'black'
-  const running = !isFinished(g.status) && g.moves.length >= 2 && turn === side
-  return Math.max(0, running ? base - (now - g.receivedAt) : base)
+  return Math.max(0, clockRunning(g, side) ? base - (now - g.receivedAt) : base)
 }
 
 export function formatClock(ms?: number): string {
@@ -313,8 +321,9 @@ export async function verifyLiveGame(): Promise<boolean> {
   try {
     const playing = await nowPlaying()
     if (playing.some((p) => p.gameId === id)) return true
-    setLiveGameId(null)
-    return false
+    // Solo se quita si sigue siendo la misma partida (puede haber empezado otra mientras tanto).
+    if (liveGameId() === id) setLiveGameId(null)
+    return liveGameId() !== null
   } catch {
     return true
   }

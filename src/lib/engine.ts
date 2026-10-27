@@ -25,6 +25,9 @@ export class Engine {
   private listener: ((line: string) => void) | null = null
   private queue: Promise<unknown>
   private failed: Error | null = null
+  /** Última búsqueda pedida por etiqueta y búsqueda en curso, para descartar las que ya no interesan. */
+  private latest = new Map<string, number>()
+  private running: string | undefined
 
   constructor() {
     this.worker = new Worker(ENGINE_URL)
@@ -56,8 +59,21 @@ export class Engine {
     await this.waitFor(['setoption name Hash value 32', 'isready'], (l) => l === 'readyok')
   }
 
-  evaluate(fen: string, depth: number, multipv = 1): Promise<EngineResult> {
+  /**
+   * Evalúa una posición. Con `tag`, una nueva búsqueda con la misma etiqueta sustituye a la anterior:
+   * si aún no había empezado se descarta, y si estaba en marcha se corta (las anteriores se rechazan
+   * con AbortError o terminan antes con el resultado parcial).
+   */
+  evaluate(fen: string, depth: number, multipv = 1, tag?: string): Promise<EngineResult> {
+    let gen = 0
+    if (tag) {
+      gen = (this.latest.get(tag) ?? 0) + 1
+      this.latest.set(tag, gen)
+      if (this.running === tag) this.worker.postMessage('stop')
+    }
     const run = async (): Promise<EngineResult> => {
+      if (tag && this.latest.get(tag) !== gen) throw new DOMException('Búsqueda sustituida', 'AbortError')
+      this.running = tag
       const result: EngineResult = { pv: [], depth: 0, lines: [] }
       await this.waitFor(
         [`setoption name MultiPV value ${multipv}`, `position fen ${fen}`, `go depth ${depth}`],
@@ -83,6 +99,7 @@ export class Engine {
         },
       )
       result.lines = result.lines.filter(Boolean)
+      this.running = undefined
       return result
     }
     const job = this.queue.then(run)

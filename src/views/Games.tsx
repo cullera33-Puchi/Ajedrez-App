@@ -6,7 +6,7 @@ import { gameFromPgn, gamesFromPgnFile } from '../lib/pgnImport'
 import type { Settings } from '../lib/settings'
 import { getSummary } from '../lib/games'
 import { setBackgroundEnabled, useBackgroundState } from '../lib/background'
-import { usePersistentState } from '../lib/storage'
+import { load, save, usePersistentState } from '../lib/storage'
 import { outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
@@ -98,9 +98,15 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
 
   const importLichess = () => {
     const user = settings.lichessUser.trim().toLowerCase()
-    const mine = games.filter((g) => g.source === 'lichess' && (g.white.name.toLowerCase() === user || g.black.name.toLowerCase() === user))
-    const since = mine.length ? Math.max(...mine.map((g) => g.date)) : undefined
-    void run('Lichess', () => fetchLichessGames(settings.lichessUser, 300, since))
+    // Se guarda hasta dónde se importó (no la fecha de la última partida guardada: las jugadas
+    // desde la app también son de Lichess y harían saltarse el historial anterior).
+    const until = load<Record<string, number>>('lichessImportedUntil', {})
+    void run('Lichess', async () => {
+      const g = await fetchLichessGames(settings.lichessUser, 300, until[user])
+      const newest = Math.max(until[user] ?? 0, ...g.map((x) => x.date))
+      if (newest) save('lichessImportedUntil', { ...until, [user]: newest })
+      return g
+    })
   }
 
   const importFile = async (file: File | undefined) => {

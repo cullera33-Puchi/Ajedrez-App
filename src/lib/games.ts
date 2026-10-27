@@ -45,14 +45,43 @@ export async function initStore(summarize: Summarizer): Promise<void> {
 
 export const getGames = () => games
 
-/** Añade o actualiza partidas sin duplicar. Devuelve la nueva lista (ordenada por fecha). */
+/**
+ * Añade o actualiza partidas sin duplicar. Una misma partida importada por la API y desde un archivo
+ * PGN tiene ids distintos pero el mismo enlace: se queda la de la API. Devuelve la lista ordenada.
+ */
 export function mergeGames(incoming: GameSummary[]): GameSummary[] {
   if (!incoming.length) return games
   const byId = new Map(games.map((g) => [g.id, g]))
-  for (const g of incoming) byId.set(g.id, g)
+  const byUrl = new Map(games.filter((g) => g.url).map((g) => [g.url!, g.id]))
+  const added: GameSummary[] = []
+  const dropped: string[] = []
+  for (const g of incoming) {
+    const twin = g.url ? byUrl.get(g.url) : undefined
+    if (twin && twin !== g.id) {
+      if (g.id.startsWith('pgn-')) continue
+      if (twin.startsWith('pgn-')) {
+        byId.delete(twin)
+        dropped.push(twin)
+      }
+    }
+    byId.set(g.id, g)
+    if (g.url) byUrl.set(g.url, g.id)
+    added.push(g)
+  }
   games = [...byId.values()].sort(byDate)
-  void db().then((s) => s.putMany('games', incoming.map((g) => [g.id, g])))
+  void db().then(async (s) => {
+    if (added.length) await s.putMany('games', added.map((g) => [g.id, g]))
+    for (const id of dropped) await s.delete('games', id)
+  })
   return games
+}
+
+/** Vuelve a leer partidas y resúmenes de la base de datos (tras recibir datos de otro dispositivo). */
+export async function reloadStore(): Promise<void> {
+  const store = await db()
+  games = (await store.getAll<GameSummary>('games')).sort(byDate)
+  summaries.clear()
+  for (const s of await store.getAll<AnalysisSummary>('summaries')) summaries.set(s.id, s)
 }
 
 export const getSummary = (id: string) => summaries.get(id)

@@ -2,10 +2,12 @@ import type { GameAnalysis } from './analysis'
 import type { BotRecord } from './bots'
 import { type BotFeedback, mergeFeedback } from './botFeedback'
 import { db } from './db'
-import { mergeGames } from './games'
-import type { MyPuzzle } from './myPuzzles'
+import { mergeGames, reloadStore } from './games'
+import { initMyPuzzles, type MyPuzzle } from './myPuzzles'
 import { mergeLogs, type PuzzleAttempt } from './puzzleLog'
 import type { PuzzleStats } from './puzzles'
+import type { LessonProgress } from './lessons'
+import type { OpeningSrs } from './openings'
 import type { AnalysisSummary } from './recommend'
 import { dumpAll, load, save } from './storage'
 import type { GameSummary } from './types'
@@ -98,10 +100,50 @@ function mergeLocal(incoming: Record<string, unknown>) {
       const merged = { ...a }
       for (const [user, months] of Object.entries(b)) merged[user] = [...new Set([...(a[user] ?? []), ...months])]
       save(key, merged)
+    } else if (key in MERGERS) {
+      save(key, MERGERS[key](current, value))
     } else if (current === null) {
       save(key, value)
     }
   }
+}
+
+type Rec<T> = Record<string, T>
+const obj = <T,>(v: unknown) => (v ?? {}) as Rec<T>
+
+/** Fusión de los progresos que cambian en cualquier dispositivo (lecciones, aperturas, escáner…). */
+const MERGERS: Rec<(current: unknown, incoming: unknown) => unknown> = {
+  // Lecciones: hecha si lo está en alguno; mejor marca, la menor.
+  lessonProgress: (a, b) => {
+    const out = { ...obj<LessonProgress>(a) }
+    for (const [id, p] of Object.entries(obj<LessonProgress>(b))) {
+      const c = out[id]
+      const best = [c?.best, p.best].filter((x): x is number => x !== undefined)
+      out[id] = { done: Boolean(c?.done || p.done), ...(best.length ? { best: Math.min(...best) } : {}) }
+    }
+    return out
+  },
+  // Repaso de aperturas: se queda el que lleva más repasos.
+  openingSrs: (a, b) => {
+    const out = { ...obj<OpeningSrs>(a) }
+    for (const [id, s] of Object.entries(obj<OpeningSrs>(b))) {
+      const c = out[id]
+      if (!c || s.reps + s.lapses > c.reps + c.lapses) out[id] = s
+    }
+    return out
+  },
+  openingReview: (a, b) => ({ ...obj(b), ...obj(a) }),
+  lichessImportedUntil: (a, b) => {
+    const out = { ...obj<number>(a) }
+    for (const [u, t] of Object.entries(obj<number>(b))) out[u] = Math.max(out[u] ?? 0, t)
+    return out
+  },
+  // Correcciones del escáner: unión sin repetir, con el mismo límite que en el escáner.
+  scanSamples: (a, b) => {
+    const seen = new Set<string>()
+    const all = [...((a ?? []) as { p: string; f: string }[]), ...((b ?? []) as { p: string; f: string }[])]
+    return all.filter((x) => !seen.has(x.p + x.f) && seen.add(x.p + x.f)).slice(-800)
+  },
 }
 
 export async function importBackup(b: Backup): Promise<ImportResult> {
@@ -134,5 +176,8 @@ export async function importBackup(b: Backup): Promise<ImportResult> {
   }
   if (puzzles.length) await store.putMany('puzzles', puzzles)
 
+  // La memoria (resúmenes de análisis y problemas propios) se pone al día con lo recibido: si no, el
+  // análisis en segundo plano repetiría análisis y se regenerarían problemas perdiendo sus repasos.
+  await Promise.all([reloadStore(), initMyPuzzles()])
   return { games: b.games.length, analyses: analyses.length, puzzles: puzzles.length }
 }

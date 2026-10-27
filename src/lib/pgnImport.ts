@@ -53,10 +53,16 @@ export function gamesFromPgnFile(text: string, username?: string): { games: Game
   for (const pgn of splitPgnFile(text)) {
     try {
       const g = gameFromPgn(pgn, username)
-      if (/chess\.com/i.test(pgn)) g.source = 'chesscom'
-      else if (/lichess\.org/i.test(pgn)) g.source = 'lichess'
       const site = header(pgn, 'Link') ?? header(pgn, 'Site')
       if (site?.startsWith('http')) g.url = site
+      if (/lichess AI level/i.test(`${g.white.name} ${g.black.name}`)) g.source = 'bot'
+      else if (/chess\.com/i.test(pgn)) g.source = 'chesscom'
+      else if (/lichess\.org/i.test(pgn)) {
+        g.source = 'lichess'
+        // Mismo id que en la importación por la API, para no duplicarla.
+        const liId = site?.match(/lichess\.org\/(\w{8})/)?.[1]
+        if (liId) g.id = `li-${liId}`
+      }
       games.push(g)
     } catch {
       failed++

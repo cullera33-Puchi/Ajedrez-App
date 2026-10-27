@@ -10,15 +10,24 @@ import { installBackNavigation, onToast, setViewBack, showToast } from './lib/na
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
 import type { GameSummary } from './lib/types'
-import { AnalysisView } from './views/Analysis'
-import { GamesView } from './views/Games'
 import { HomeView } from './views/Home'
-import { LearnView } from './views/Learn'
-import { PlayView } from './views/Play'
-import { ProgressView } from './views/Progress'
-import { PuzzlesView } from './views/Puzzles'
 
-// El escáner (con sus plantillas de piezas) solo se descarga al usarlo.
+// Cada pantalla se descarga aparte: la app abre antes. Después de abrir se precargan en segundo
+// plano para que cambiar de pestaña sea inmediato. El escáner, con sus plantillas, solo al usarlo.
+const VIEWS = {
+  play: () => import('./views/Play'),
+  games: () => import('./views/Games'),
+  analysis: () => import('./views/Analysis'),
+  puzzles: () => import('./views/Puzzles'),
+  learn: () => import('./views/Learn'),
+  progress: () => import('./views/Progress'),
+}
+const PlayView = lazy(() => VIEWS.play().then((m) => ({ default: m.PlayView })))
+const GamesView = lazy(() => VIEWS.games().then((m) => ({ default: m.GamesView })))
+const AnalysisView = lazy(() => VIEWS.analysis().then((m) => ({ default: m.AnalysisView })))
+const PuzzlesView = lazy(() => VIEWS.puzzles().then((m) => ({ default: m.PuzzlesView })))
+const LearnView = lazy(() => VIEWS.learn().then((m) => ({ default: m.LearnView })))
+const ProgressView = lazy(() => VIEWS.progress().then((m) => ({ default: m.ProgressView })))
 const ScanView = lazy(() => import('./views/Scan').then((m) => ({ default: m.ScanView })))
 
 export type View = 'inicio' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear' | 'progreso'
@@ -89,6 +98,12 @@ export default function App() {
   useEffect(() => {
     startBackgroundAnalysis()
   }, [])
+  // Precarga de las demás pantallas cuando el navegador esté libre.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 1500))
+    idle(() => Object.values(VIEWS).forEach((load) => void load().catch(() => undefined)))
+  }, [])
+
   // Vuelta desde la autorización de Lichess: se guarda el permiso y se abre el juego online.
   useEffect(() => {
     void finishLichessLogin().then((msg) => {
@@ -102,6 +117,7 @@ export default function App() {
   // Sincronización automática entre dispositivos (si está configurada).
   useEffect(() => {
     const stop = startAutoSync()
+    // Tras recibir datos de otro dispositivo (importBackup ya ha recargado la memoria) se refresca la vista.
     const off = onSyncMerged(() => {
       setGames(getGames())
       setSettingsState(loadSettings())
@@ -161,6 +177,7 @@ export default function App() {
         <p className="sidebar-foot">Versión de prueba. Los datos se guardan solo en este navegador.</p>
       </aside>
       <main className="content">
+        <Suspense fallback={<p className="muted page">Cargando…</p>}>
         {view === 'inicio' && (
           <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} onPractice={openPuzzles} />
         )}
@@ -197,6 +214,7 @@ export default function App() {
             />
           </Suspense>
         )}
+        </Suspense>
       </main>
       <div ref={indicator} className="back-indicator" aria-hidden="true">
         ‹

@@ -3,6 +3,7 @@ import { type Classification, type GameAnalysis, materialBalance, type ParsedGam
 import { loadReport } from './coach'
 import { getSummary } from './games'
 import type { GameSummary } from './types'
+import { isOnlineGame } from './progress'
 
 /**
  * Deduce qué temas de problemas habrían evitado cada error del usuario, a partir de los datos
@@ -168,8 +169,8 @@ export function recommendThemes(games: GameSummary[], maxGames = 15): Recommenda
   let used = 0
   for (const g of [...games].sort((a, b) => b.date - a.date)) {
     if (used >= maxGames) break
-    // Solo partidas reales: las jugadas contra bots no se mezclan con las de Chess.com y Lichess.
-    if (!g.userColor || g.source === 'bot') continue
+    // Solo partidas reales de Chess.com y Lichess (ni bots, ni PGN sueltos, ni posiciones escaneadas).
+    if (!isOnlineGame(g)) continue
     const summary = getSummary(g.id)
     if (!summary) continue
     for (const t of summary.themes) counts.set(t.theme, (counts.get(t.theme) ?? 0) + t.count)

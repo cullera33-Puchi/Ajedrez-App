@@ -80,6 +80,8 @@ export function ScanView({ onAnalyze, onBack, onPlay }: Props) {
 
   const fen = boardToFen(board, toMove)
   const problem = positionProblem(board, fen)
+  // Se puede analizar una posición de mate o tablas, pero no jugar desde ella.
+  const over = !problem && new Chess(fen).isGameOver()
 
   useEffect(() => {
     setFenInput(fen)
@@ -295,7 +297,8 @@ export function ScanView({ onAnalyze, onBack, onPlay }: Props) {
           </button>
           <button
             className="btn"
-            disabled={Boolean(problem)}
+            disabled={Boolean(problem) || over}
+            title={over ? 'La partida ya está terminada en esta posición' : undefined}
             onClick={() => {
               if (scan) learnFromCorrection(scan.squares, scanFlipped ? [...board].reverse() : board)
               onPlay(fen)

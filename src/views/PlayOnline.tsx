@@ -13,6 +13,8 @@ import {
   challengeFriend,
   type ClockChoice,
   clockLeft,
+  clockRunning,
+  turnOf,
   exportFinishedGame,
   formatClock,
   isFinished,
@@ -48,7 +50,8 @@ const CLOCKS: ClockChoice[] = [
 ]
 const clockLabel = (c: ClockChoice) => `${c.minutes}+${c.increment}`
 
-type Waiting = { text: string; cancel: () => void } | null
+/** Lo que se está esperando: búsqueda de rival o reto a un amigo, y qué partida lo cumple. */
+type Waiting = { text: string; cancel: () => void; accepts: (gameId: string) => boolean } | null
 
 /** Partidas que terminan sin jugarse: no se guardan. */
 const NO_GAME = new Set(['aborted', 'noStart'])
@@ -94,8 +97,8 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
       (e) => {
         // Lichess repite gameStart de todas las partidas en curso al reconectar (también las de
         // correspondencia o las jugadas en su web): solo cuenta la que se está esperando.
-        if (e.type === 'gameStart' && e.game && waitingRef.current) {
-          const id = e.game.gameId ?? e.game.id ?? null
+        const id = e.game?.gameId ?? e.game?.id ?? null
+        if (e.type === 'gameStart' && id && waitingRef.current?.accepts(id)) {
           setWaiting(null)
           setGameId(id)
           setLiveGameId(id)
@@ -140,10 +143,16 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
 
   const c = CLOCKS[clock] ?? CLOCKS[0]
 
-  const doSeek = () => {
+  const doSeek = async () => {
     setError(null)
     const ctrl = new AbortController()
-    setWaiting({ text: `Buscando rival (${clockLabel(c)}${rated ? ', con puntuación' : ', amistosa'})…`, cancel: () => ctrl.abort() })
+    // Las partidas que ya estaban en curso no son la que se busca (Lichess las repite al reconectar).
+    const before = new Set((await nowPlaying().catch(() => playing)).map((p) => p.gameId))
+    setWaiting({
+      text: `Buscando rival (${clockLabel(c)}${rated ? ', con puntuación' : ', amistosa'})…`,
+      cancel: () => ctrl.abort(),
+      accepts: (gameId) => !before.has(gameId),
+    })
     seek(c, rated, ctrl.signal).catch((e) => {
       if ((e as Error).name === 'AbortError') return
       setWaiting(null)
@@ -171,6 +180,8 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
         cancel: () => {
           if (id) void cancelChallenge(id)
         },
+        // Al aceptar un reto, la partida tiene el mismo id que el reto.
+        accepts: (gameId) => gameId === id,
       })
     } catch (e) {
       setError((e as Error).message)
@@ -288,7 +299,7 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
                 <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Con puntuación (cambia tu rating de Lichess)
               </label>
               <div className="toolbar">
-                <button className="btn primary" onClick={doSeek}>
+                <button className="btn primary" onClick={() => void doSeek()}>
                   Buscar rival
                 </button>
               </div>
@@ -384,7 +395,6 @@ function LiveGameView({
   const [pending, setPending] = useState<{ uci: string; at: number } | null>(null)
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
   const [resetKey, setResetKey] = useState(0)
-  const [now, setNow] = useState(() => Date.now())
   const [saved, setSaved] = useState<string | null>(null)
   const [flipped, setFlipped] = useState(false)
   const savedOnce = useRef(false)
@@ -410,13 +420,6 @@ function LiveGameView({
     if (game) setLiveGameId(finished ? null : id)
     return () => setBusy('play', false)
   }, [game, finished, id])
-
-  // Relojes en marcha.
-  useEffect(() => {
-    if (!game || finished) return
-    const t = setInterval(() => setNow(Date.now()), 200)
-    return () => clearInterval(t)
-  }, [game, finished])
 
   // Al terminar, se guarda en Mis partidas. No depende de que la pantalla siga abierta, y se
   // reintenta unas veces porque Lichess puede tardar un momento en tener la partida lista.
@@ -448,6 +451,7 @@ function LiveGameView({
     }
     return c
   }, [game, pending])
+  const sans = useMemo(() => chess.history(), [chess])
 
   // Cuando Lichess confirma la jugada, deja de ser «pendiente».
   useEffect(() => {
@@ -513,15 +517,15 @@ function LiveGameView({
 
   const playerLine = (side: Color) => {
     const p = side === 'white' ? game.white : game.black
-    const left = clockLeft(game, side, now)
-    const active = !finished && chess.turn() === side[0]
+    // El turno sale del estado confirmado por Lichess, igual que el reloj que corre.
+    const active = !finished && turnOf(game) === side
     return (
       <div className={`player-line live ${active ? 'active' : ''}`}>
         <span>
           <strong>{p.name}</strong>
           {p.rating ? <span className="muted"> ({p.rating})</span> : null}
         </span>
-        {left !== undefined && <span className={`clock ${active ? 'running' : ''} ${left < 30000 ? 'low' : ''}`}>{formatClock(left)}</span>}
+        <LiveClock game={game} side={side} />
       </div>
     )
   }
@@ -580,7 +584,7 @@ function LiveGameView({
         )}
         {error && <p className="msg error">{error}</p>}
         <section className="card">
-          <MoveList sans={chess.history()} ply={chess.history().length} onSelect={() => undefined} startFen={game.initialFen !== 'startpos' ? game.initialFen : undefined} />
+          <MoveList sans={sans} ply={sans.length} onSelect={() => undefined} startFen={game.initialFen !== 'startpos' ? game.initialFen : undefined} />
         </section>
         <div className="view-controls">
           <button className="btn small" onClick={() => setFlipped((f) => !f)}>
@@ -622,4 +626,22 @@ function LiveGameView({
       )}
     </div>
   )
+}
+
+/**
+ * Reloj de un jugador. Va en su propio componente para que solo él se redibuje cada 200 ms, y solo
+ * mientras corre (no toda la pantalla de la partida).
+ */
+function LiveClock({ game, side }: { game: LiveGame; side: Color }) {
+  const running = clockRunning(game, side)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (!running) return
+    const t = setInterval(() => setNow(Date.now()), 200)
+    return () => clearInterval(t)
+  }, [running])
+  // Hasta el primer tic, `now` puede ser anterior al último estado recibido.
+  const left = clockLeft(game, side, Math.max(now, game.receivedAt))
+  if (left === undefined) return null
+  return <span className={`clock ${running ? 'running' : ''} ${left < 30000 ? 'low' : ''}`}>{formatClock(left)}</span>
 }

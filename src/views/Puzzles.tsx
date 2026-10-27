@@ -5,6 +5,7 @@ import { ResourceLinks } from '../components/ResourceLinks'
 import { type Difficulty, fetchLichessPuzzle } from '../lib/lichess'
 import {
   BEGINNER_THEMES,
+  MY_ERRORS,
   INITIAL_PUZZLE_STATS,
   LOCAL_PUZZLES,
   type Puzzle,
@@ -24,8 +25,6 @@ import type { Color } from '../lib/types'
 type Phase = 'loading' | 'playing' | 'solution' | 'done' | 'error' | 'empty'
 type PuzzleSource = 'local' | 'lichess' | 'mine'
 
-/** Valor especial de tema para abrir Problemas directamente en «Mis errores». */
-export const MY_ERRORS = '__mine__'
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easiest', label: 'Muy fácil' },

@@ -26,7 +26,7 @@ export function useEngineLines(fen: string | null, depth = 12, multipv = 3) {
     let cancelled = false
     const timer = setTimeout(() => {
       getEngine('main')
-        .evaluate(fen, depth, multipv)
+        .evaluate(fen, depth, multipv, 'lines')
         .then((r) => {
           if (!cancelled) setState({ fen, lines: r.lines, depth: r.depth })
         })

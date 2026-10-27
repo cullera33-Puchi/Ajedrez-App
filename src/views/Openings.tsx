@@ -111,7 +111,7 @@ function useReviews(tree: Map<string, OpeningNode>) {
         }
       }
       if (!cancelled) setProgress(null)
-      setBusy('openings', false)
+      if (!cancelled) setBusy('openings', false)
     })()
     return () => {
       cancelled = true

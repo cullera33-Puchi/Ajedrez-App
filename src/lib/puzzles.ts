@@ -102,6 +102,9 @@ export const THEME_NAMES: Record<string, string> = {
   superGM: 'Partida de súper GM',
 }
 
+/** Valor especial de tema para abrir Problemas directamente en «Mis errores». */
+export const MY_ERRORS = '__mine__'
+
 export const themeName = (t: string) => THEME_NAMES[t] ?? t
 
 /** Temas que se ofrecen en el selector, pensados para empezar. */

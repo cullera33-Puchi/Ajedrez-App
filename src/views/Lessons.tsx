@@ -56,6 +56,8 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
   useBackGuard(status.state === 'playing' && userMoves > 0, 'Lección en curso. Para salir, pulsa Volver a las lecciones.')
   useBackHandler(true, onBack)
   const alive = useRef(true)
+  /** Se incrementa al empezar de nuevo, para descartar cálculos del motor de la ronda anterior. */
+  const round = useRef(0)
 
   useEffect(() => {
     alive.current = true
@@ -69,8 +71,13 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
   /** Distancia al mate según Stockfish, para que el alumno vea si progresa. */
   const measure = async () => {
     if (lesson.goal !== 'mate') return
-    const r = await getEngine('main').evaluate(chess.fen(), 12)
-    if (alive.current) setMateIn(r.mate !== undefined && r.mate > 0 ? r.mate : null)
+    const fen = chess.fen()
+    try {
+      const r = await getEngine('main').evaluate(fen, 12, 1, 'lesson-mate')
+      if (alive.current && chess.fen() === fen) setMateIn(r.mate !== undefined && r.mate > 0 ? r.mate : null)
+    } catch {
+      // Sustituida por una medición más reciente.
+    }
   }
 
   const play = (from: string, to: string, promotion?: string) => {
@@ -94,10 +101,12 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
 
   /** Jugada del motor; `n` son las jugadas del alumno hasta ahora. */
   const engineMoveWith = async (n: number) => {
+    const myRound = round.current
     setThinking(true)
     try {
       const r = await getEngine('main').evaluate(chess.fen(), ENGINE_DEPTH)
-      if (!alive.current || !r.best) return
+      // Si entretanto se ha empezado de nuevo, la jugada calculada ya no vale.
+      if (!alive.current || !r.best || myRound !== round.current) return
       const m = chess.move({ from: r.best.slice(0, 2), to: r.best.slice(2, 4), promotion: r.best[4] })
       setFen(chess.fen())
       setLastMove([m.from, m.to])
@@ -128,6 +137,7 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
   }
 
   const restart = () => {
+    round.current++
     chess.load(lesson.fen)
     setFen(lesson.fen)
     setLastMove(undefined)
@@ -178,7 +188,7 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: L
                 Pista
               </button>
             )}
-            <button className="btn" onClick={restart}>
+            <button className="btn" onClick={restart} disabled={thinking}>
               {status.state === 'playing' ? 'Empezar de nuevo' : 'Repetir'}
             </button>
             {status.state !== 'playing' && onPlayFrom && (

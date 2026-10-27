@@ -55,6 +55,7 @@ export function coachPlugin(): Plugin {
     const route = routes[`${req.method} ${url}`]
     try {
       if (!route) throw new HttpError(404, 'Ruta no encontrada.')
+      if (req.method === 'POST') checkSameOrigin(req)
       const body = req.method === 'POST' ? await readJson(req) : {}
       send(res, 200, await route(body))
     } catch (e) {
@@ -73,6 +74,18 @@ export function coachPlugin(): Plugin {
       server.middlewares.use(handler)
     },
   }
+}
+
+/**
+ * Solo la propia app puede pedir informes: otra web abierta en el navegador no puede usar el plan de
+ * Claude a escondidas. Se exige JSON (obliga al navegador a pedir permiso, que no se concede) y que el
+ * origen de la petición sea el mismo servidor.
+ */
+function checkSameOrigin(req: IncomingMessage) {
+  const origin = req.headers.origin
+  const host = req.headers.host
+  if (!String(req.headers['content-type'] ?? '').includes('application/json')) throw new HttpError(415, 'Formato no admitido.')
+  if (origin && host && origin !== `http://${host}` && origin !== `https://${host}`) throw new HttpError(403, 'Petición no permitida.')
 }
 
 function requireString(v: unknown, name: string): string {

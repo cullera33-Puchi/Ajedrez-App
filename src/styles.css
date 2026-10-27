@@ -175,7 +175,6 @@ a {
 }
 .brand-icon {
   font-size: 2rem;
-  background: var(--accent-2);
   border-radius: 10px;
   width: 44px;
   height: 44px;
@@ -206,7 +205,6 @@ nav {
   color: var(--text);
 }
 .nav-item.active {
-  background: var(--card-2);
   color: var(--text);
   font-weight: 600;
 }
@@ -256,10 +254,7 @@ nav {
 
 /* Controles */
 .btn {
-  background: var(--card-2);
   color: var(--text);
-  border: 1px solid var(--line);
-  border-radius: 8px;
   padding: 0.5rem 0.9rem;
   font: inherit;
   cursor: pointer;
@@ -272,11 +267,7 @@ nav {
   cursor: not-allowed;
 }
 .btn.primary {
-  background: var(--accent-2);
   border-color: var(--accent);
-}
-.btn.primary:hover:not(:disabled) {
-  background: var(--accent);
 }
 .btn.small {
   padding: 0.3rem 0.6rem;
@@ -603,7 +594,6 @@ cg-board {
   stroke-width: 1;
 }
 .evalchart-cursor {
-  stroke: var(--c-mejor);
   stroke-width: 2;
 }
 .dot-grave {
@@ -632,7 +622,6 @@ cg-board {
 }
 .progress-bar div {
   height: 100%;
-  background: var(--accent);
   transition: width 0.2s;
 }
 table.summary {
@@ -682,9 +671,6 @@ td.c-grave,
 .move-card.c-mejor {
   border-left-color: var(--c-mejor);
 }
-.move-card.c-buena {
-  border-left-color: var(--good);
-}
 .move-card.c-imprecision {
   border-left-color: var(--c-imprecision);
 }
@@ -711,9 +697,6 @@ td.c-grave,
 }
 .cls-mejor {
   color: var(--c-mejor);
-}
-.cls-buena {
-  color: var(--good);
 }
 .cls-imprecision {
   color: var(--c-imprecision);
@@ -770,9 +753,6 @@ td.c-grave,
 .move:hover {
   background: var(--card-2);
 }
-.move.active {
-  background: var(--accent-2);
-}
 .move-sym {
   margin-left: 0.2rem;
   font-weight: 700;
@@ -798,9 +778,6 @@ td.c-grave,
   width: 12px;
   height: 12px;
   border-radius: 50%;
-}
-.dot.win {
-  background: var(--good);
 }
 .dot.loss {
   background: var(--bad);
@@ -1041,7 +1018,6 @@ code {
     bottom: 0;
     left: 0;
     right: 0;
-    height: auto;
     z-index: 50;
     padding: 0.25rem calc(0.25rem + var(--safe-right)) calc(0.25rem + var(--safe-bottom)) calc(0.25rem + var(--safe-left));
     border-right: 0;
@@ -1060,14 +1036,10 @@ code {
   }
   .nav-item {
     flex-direction: column;
-    gap: 0.1rem;
-    padding: 0.35rem 0.4rem;
-    font-size: 0.68rem;
     flex: 1;
     text-align: center;
   }
   .nav-icon {
-    font-size: 1.25rem;
     width: auto;
   }
   .content {
@@ -1084,12 +1056,6 @@ code {
   .puzzles {
     gap: 0.8rem;
   }
-  .puzzles .board {
-    width: calc(100vw - 24px);
-    height: calc(100vw - 24px);
-    max-width: 560px;
-    max-height: 560px;
-  }
   .player-line,
   .controls {
     padding-left: 30px;
@@ -1098,7 +1064,6 @@ code {
     padding: 0.45rem 0.7rem;
   }
   .evalchart {
-    width: calc(var(--board) + 30px);
     height: 80px;
   }
   .steps li {
@@ -1180,12 +1145,7 @@ select {
     left: 0;
     right: 0;
     height: var(--safe-top);
-    background: var(--bg);
     z-index: 60;
-  }
-  .puzzles .board {
-    width: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
-    height: calc(100vw - 24px - var(--safe-left) - var(--safe-right));
   }
 }
 
@@ -1319,11 +1279,7 @@ code.detail {
 }
 
 @media (max-width: 800px) {
-  :root {
-    --nav-h: 60px;
-  }
   .nav-item {
-    height: 52px;
     justify-content: center;
   }
   .sidebar {
@@ -1353,15 +1309,11 @@ code.detail {
     right: 0;
     bottom: calc(var(--nav-h) + var(--safe-bottom));
     z-index: 45;
-    gap: 8px;
-    padding: 8px calc(12px + var(--safe-right)) 8px calc(12px + var(--safe-left));
     background: var(--bg-2);
     border-top: 1px solid var(--line);
   }
   .analysis .nav-controls .btn {
     flex: 1;
-    height: 50px;
-    font-size: 1.3rem;
     touch-action: manipulation;
   }
   .page.analysis {
@@ -1430,9 +1382,6 @@ cg-board {
  * El tablero no se mueve nunca; solo se desplaza la zona de abajo (jugada, lista, resumen...).
  */
 @media (max-width: 800px) {
-  :root {
-    --controls-h: 67px;
-  }
   .page.analysis {
     position: fixed;
     top: var(--safe-top);
@@ -1461,7 +1410,6 @@ cg-board {
   }
   .page.analysis .player-line {
     font-size: 0.85rem;
-    line-height: 1.7;
     padding-left: 26px;
     max-width: calc(46dvh + 26px);
     margin: 0 auto;
@@ -1474,26 +1422,16 @@ cg-board {
     overscroll-behavior: contain;
     display: flex;
     flex-direction: column;
-    padding: 8px 0 12px;
     border-top: 1px solid var(--line);
   }
   .page.analysis .analysis-side .card {
     margin-bottom: 0.6rem;
   }
-  .page.analysis .move-card.mobile {
-    min-height: 96px;
-    margin-bottom: 0.5rem;
-    padding: 0.7rem 0.8rem;
-  }
   .page.analysis .move-card.mobile p {
     margin: 0.3rem 0 0;
-    font-size: 0.92rem;
   }
   .page.analysis .view-controls {
     margin-bottom: 0.6rem;
-  }
-  .page.analysis .movelist {
-    max-height: 200px;
   }
   .page.analysis .evalchart {
     margin: 0 0 0.6rem;

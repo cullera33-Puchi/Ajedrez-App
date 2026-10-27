@@ -141,7 +141,9 @@ async function validToken(): Promise<Session> {
   try {
     const data = await call<Parameters<typeof storeSession>[0]>('/auth/v1/token?grant_type=refresh_token', json({ refresh_token: s.refresh_token }))
     storeSession(data)
-  } catch {
+  } catch (e) {
+    // Sin conexión no se cierra la sesión: el permiso sigue valiendo para la próxima vez.
+    if (e instanceof SyncError && /conectar/.test(e.message)) throw e
     signOut()
     throw new SyncError('La sesión ha caducado. Vuelve a entrar.')
   }

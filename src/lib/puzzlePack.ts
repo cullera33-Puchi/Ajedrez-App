@@ -21,12 +21,15 @@ const toPuzzle = ([id, fen, moves, rating, themes, last]: Row): Puzzle => ({
   lastMove: [last.slice(0, 2), last.slice(2, 4)],
 })
 
-/** Carga el paquete (una sola vez). Si no está disponible, devuelve una lista vacía. */
+/** Carga el paquete (una sola vez). Si no está disponible, devuelve una lista vacía y se reintenta la próxima vez. */
 export function loadPack(): Promise<Puzzle[]> {
   if (pack) return Promise.resolve(pack)
   loading ??= fetch(`${import.meta.env.BASE_URL}puzzles/pack.json`)
-    .then((r) => (r.ok ? r.json() : { puzzles: [] }))
-    .then((d: { puzzles: Row[] }) => (pack = d.puzzles.map(toPuzzle)))
+    .then((r) => {
+      if (!r.ok) throw new Error(String(r.status))
+      return r.json() as Promise<{ puzzles: Row[] }>
+    })
+    .then((d) => (pack = d.puzzles.map(toPuzzle)))
     .catch(() => {
       loading = null
       return []

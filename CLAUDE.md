@@ -50,7 +50,12 @@ Reglas de negocio a respetar:
 - Las partidas contra bots se guardan y analizan, pero van separadas (apartado *Contra bots* en Partidas) y no cuentan en recomendaciones ni en el resumen de Inicio.
 - Los problemas de *Mis errores* no cambian el nivel de problemas.
 - Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección) antes de cambiar de pantalla.
-- El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión.
+- El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión. Precarga todas las partes recorriendo los JS de forma recursiva; si se añade una pantalla con `lazy`, no hace falta tocarlo.
+- Las pantallas se cargan con `lazy` desde `src/App.tsx` (objeto `VIEWS`) y se precargan en segundo plano. Una pantalla no debe importar otra (rompe la división); lo compartido va a `src/lib/`.
+- Motor: `evaluate(fen, depth, multipv, tag)`. Con `tag`, una búsqueda nueva sustituye a la anterior de la misma etiqueta (se usa en las líneas del motor). Tras un `await` al motor, comprobar que la pantalla sigue en el mismo estado antes de aplicar el resultado.
+- Partidas: `mergeGames` evita duplicados por enlace (la API gana al PGN). Las partidas contra Stockfish de Lichess llevan `source: 'bot'`. Para «solo partidas reales» usar `isOnlineGame` (`src/lib/progress.ts`).
+- Fusión de copias (`mergeLocal` en `src/lib/backup.ts`): todo dato de progreso nuevo en localStorage necesita su regla en `MERGERS`; si no, solo se copia cuando el otro dispositivo no lo tiene.
+- Entrenador local: solo acepta peticiones JSON del mismo origen (`checkSameOrigin` en `server/coach.ts`).
 
 ## Comandos
 

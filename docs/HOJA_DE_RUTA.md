@@ -20,6 +20,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Revisión y optimización del código (27/10/2026) | 32 fallos corregidos (juego online, sincronización, motor, lecciones, duplicados de partidas, seguridad del entrenador); la app carga un 43 % menos al abrir |
 | Jugar online en Lichess (1.5) | Jugar, *Online en Lichess*: buscar rival (rápidas y clásicas), Stockfish de Lichess por niveles y retos a amigos; análisis bloqueado durante la partida. Falta probarlo con tu cuenta |
 | Tus aperturas (4.5, versión 1) | Aprender: las 5 más jugadas con cada color, línea habitual, revisión con Stockfish, lo que te juegan y práctica con repaso espaciado |
 | Problemas sin conexión (1.6, parte sin conexión) | 5.493 problemas de Lichess de 400 a 1500, generados al publicar a partir de la base oficial (CC0) |

@@ -120,7 +120,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
 
   // Turno del bot
   useEffect(() => {
-    if (!game || finished || turn === game.userColor || chess.isGameOver()) return
+    if (!game || finished || turn === game.userColor || chess.isGameOver() || liveGameId()) return
     let cancelled = false
     setThinking(true)
     const started = Date.now()
@@ -179,10 +179,16 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   const offerDraw = async () => {
     if (!game || thinking || finished) return
     setMsg(`${bot.name} se lo está pensando…`)
+    // Mientras decide, no se puede mover (si no, las tablas se cerrarían sin la última jugada).
+    setThinking(true)
     const botColor: Color = game.userColor === 'white' ? 'black' : 'white'
-    const ok = await botAcceptsDraw(fen, bot, botColor, getEngine('play'))
-    if (ok) finish(game, '1/2-1/2', 'Tablas acordadas')
-    else setMsg(`${bot.name} rechaza las tablas.`)
+    try {
+      const ok = await botAcceptsDraw(fen, bot, botColor, getEngine('play'))
+      if (ok) finish(game, '1/2-1/2', 'Tablas acordadas')
+      else setMsg(`${bot.name} rechaza las tablas.`)
+    } finally {
+      setThinking(false)
+    }
   }
 
   const resign = () => {
@@ -216,8 +222,8 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
     </div>
   )
 
-  // Partida online: con una en curso se muestra siempre.
-  if (!game && (mode === 'online' || liveGameId())) {
+  // Partida online: con una en curso se muestra siempre, aunque haya otra a medias contra un bot.
+  if (liveGameId() || (!game && mode === 'online')) {
     return <PlayOnline onSaveGame={onSaveGame} onAnalyze={onAnalyze} header={modeSwitch} />
   }
 
