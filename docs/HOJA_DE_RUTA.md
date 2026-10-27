@@ -31,7 +31,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Problemas sin conexión (1.6, parte sin conexión) | 5.493 problemas de Lichess de 400 a 1500, generados al publicar a partir de la base oficial (CC0) |
 | Jugar desde cualquier posición (1.9) | Desde el escáner, el análisis, las lecciones y las aperturas; opción de máxima fuerza |
 | Más lecciones (4.6) | Mate del pasillo, mate de la coz, oposición, Lucena y Philidor (once en total) |
-| Sincronización automática (2.2) | Con Supabase gratuito; guía en `docs/SINCRONIZACION.md`. Falta que crees la cuenta |
+| Sincronización automática (2.2 y 2.3) | Con Supabase gratuito; guía en `docs/SINCRONIZACION.md`. Probada el 27/10/2026 con móvil, tablet y PC; alta de usuarios nuevos cerrada |
 | Volver atrás deslizando (5.10) | Gesto desde el borde izquierdo en la app del iPhone y botón atrás del sistema. No saca de una partida en marcha; en el análisis cierra antes la variante |
 | Partida contra bot a medias | Se guarda sola; aviso en Inicio con *Continuar* y punto en la pestaña Jugar |
 | Uso sin conexión completo | Corregida la caché para que la app abra sin red; el escáner y el motor también funcionan sin conexión |
@@ -56,13 +56,14 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | Orden | Mejora | Por qué | Esfuerzo | ¿Te necesito? |
 |---|---|---|---|---|
-| 1 | Probar con tus cuentas reales: juego online (2.4), sincronización (2.3), escáner con capturas de Chess.com (5.9) e importación de Lichess (5.1) | Es lo único que no se ha podido probar contra los servicios reales | Bajo | Sí |
+| 1 | Terminar las pruebas reales: búsqueda de rival en Lichess tras la corrección (2.4), escáner con capturas de Chess.com (5.9), importación de Lichess (5.1), modo Tinta en la BOOX (5.8) y comprobar que la app pide el código de acceso | Es lo único que no se puede probar desde aquí | Bajo | Sí |
 | 2 | **Tu entrenamiento de hoy** (4.8): una sesión diaria de 10 a 15 minutos que junta tus errores pendientes, el repaso de aperturas que toque, 5 problemas del tema que más fallas y una lección; con racha de días | Para mejorar, la constancia pesa más que el volumen; hoy cada cosa está en una pantalla distinta | Medio | No |
-| 3 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | No |
-| 4 | **Repaso guiado de tu última partida** (4.9): antes de ver el análisis, la app te para en tus 3 momentos clave y te pregunta qué jugarías | Aprender de tus propios errores es lo que más rinde a tu nivel | Medio | No |
+| 3 | **Repaso guiado de tu última partida** (4.9): antes de ver el análisis, la app te para en tus 3 momentos clave y te pregunta qué jugarías | Aprender de tus propios errores es lo que más rinde a tu nivel; encaja como primer paso de la sesión diaria | Medio | No |
+| 4 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
 | 5 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
 | 6 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
 | 7 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |
+| 8 | Acceso privado real con Cloudflare (6.3), si el código de 4 cifras se queda corto | Cierra la URL de verdad y permite el repositorio privado | Medio | Sí, crear la cuenta |
 
 ## Pendiente
 
@@ -77,7 +78,6 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 2.3 | Probar la sincronización con tu cuenta real de Supabase (proyecto ya creado y puesto en la app; falta el SQL del bucket si no se hizo, crear la cuenta y cerrar el alta) | Bajo | Alta |
 | 2.4 | Probar el juego online con tu cuenta real de Lichess (conexión hecha; volver a probar la búsqueda tras la corrección) | Bajo | Alta |
 
 ### 3. Entrenador con Claude
