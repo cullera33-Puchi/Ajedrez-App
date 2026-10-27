@@ -6,6 +6,7 @@ import { isLiveActive } from './lib/lichessPlay'
 import { finishLichessLogin } from './lib/lichessAuth'
 import { save } from './lib/storage'
 import { LiveLock } from './components/LiveLock'
+import { MobileMenu } from './components/MobileMenu'
 import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
@@ -176,6 +177,15 @@ export default function App() {
         </nav>
         <p className="sidebar-foot">Versión de prueba. Los datos se guardan solo en este navegador.</p>
       </aside>
+      <MobileMenu
+        items={NAV.map((n) => ({ ...n, dot: n.id === 'jugar' && pendingBotGame }))}
+        extra={[
+          { id: 'progreso', label: 'Tu progreso', icon: '📈' },
+          { id: 'escanear', label: 'Escanear posición', icon: '📷' },
+        ]}
+        isActive={(id) => view === id}
+        onSelect={setView}
+      />
       <main className="content">
         <Suspense fallback={<p className="muted page">Cargando…</p>}>
         {view === 'inicio' && (

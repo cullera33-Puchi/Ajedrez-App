@@ -92,8 +92,8 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
     return () => setBusy('play', false)
   }, [game, finished])
   useEffect(() => () => releaseEngine('play'), [])
-  // Ir atrás no saca de una partida en marcha (se puede salir con las pestañas y continuar después).
-  useBackGuard(Boolean(game && !finished), 'Partida en curso. Se guarda sola: sal con las pestañas de abajo y continúala cuando quieras.')
+  // Ir atrás no saca de una partida en marcha (se puede salir desde el menú y continuar después).
+  useBackGuard(Boolean(game && !finished), 'Partida en curso. Se guarda sola: sal desde el menú y continúala cuando quieras.')
 
   const finish = (g: BotGame, result: Result, reason: string) => {
     const summary = botGameToSummary(g, result, userName, reason)

@@ -72,7 +72,7 @@ BASE_PATH=/Ajedrez-App/ npx vite build   # build como en GitHub Pages
 
 - Cada push a `main` publica en GitHub Pages (`.github/workflows/pages.yml`). `BASE_PATH` debe coincidir con el nombre del repositorio respetando mayúsculas (`/Ajedrez-App/`).
 - Antes de publicar: tipos, pruebas, lint y una revisión en navegador con Playwright en viewport de iPhone 17 (402x874), modo día y noche, comprobando que nada se sale de la pantalla (`document.documentElement.scrollWidth` igual al ancho).
-- En móvil, las pantallas de análisis y juego usan diseño fijo entre la zona segura superior y las barras inferiores (`--nav-h`, `--controls-h`, `--safe-*`).
+- En móvil (hasta 800 px) no hay barra de pestañas: el menú es un panel lateral desde la izquierda (`src/components/MobileMenu.tsx`) con un botón fijo abajo a la izquierda. `--nav-h` vale 0 y las barras inferiores (análisis y partidas) dejan sitio al botón con `--fab`. Las pantallas de análisis y juego usan diseño fijo entre la zona segura superior y la barra de controles (`--controls-h`, `--safe-*`). En PC y tablet se mantiene la barra lateral.
 
 ## Avisos
 

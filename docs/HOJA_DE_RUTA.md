@@ -20,6 +20,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Menú lateral en el móvil | La barra de pestañas pasa a un menú que se abre desde la izquierda (botón abajo a la izquierda). En análisis gana unos 50 px de zona de jugadas. En PC y tablet, sin cambios |
 | Revisión y optimización del código (27/10/2026) | 32 fallos corregidos (juego online, sincronización, motor, lecciones, duplicados de partidas, seguridad del entrenador); la app carga un 43 % menos al abrir |
 | Jugar online en Lichess (1.5) | Jugar, *Online en Lichess*: buscar rival (rápidas y clásicas), Stockfish de Lichess por niveles y retos a amigos; análisis bloqueado durante la partida. Falta probarlo con tu cuenta |
 | Tus aperturas (4.5, versión 1) | Aprender: las 5 más jugadas con cada color, línea habitual, revisión con Stockfish, lo que te juegan y práctica con repaso espaciado |
@@ -46,6 +47,18 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Modo tinta electrónica (1.7) | Apariencia *Tinta* para la BOOX: alto contraste, tablero blanco y gris, sin animaciones |
 | Problemas recomendados según tus errores | Temas deducidos de tus errores y de los informes de Claude |
 | Mantenimiento (5.5) | Acciones de GitHub actualizadas y avisos del código resueltos |
+
+## Próximas mejoras propuestas (por orden)
+
+| Orden | Mejora | Por qué | Esfuerzo | ¿Te necesito? |
+|---|---|---|---|---|
+| 1 | Probar con tus cuentas reales: juego online (2.4), sincronización (2.3), escáner con capturas de Chess.com (5.9) e importación de Lichess (5.1) | Es lo único que no se ha podido probar contra los servicios reales | Bajo | Sí |
+| 2 | **Tu entrenamiento de hoy** (4.8): una sesión diaria de 10 a 15 minutos que junta tus errores pendientes, el repaso de aperturas que toque, 5 problemas del tema que más fallas y una lección; con racha de días | Para mejorar, la constancia pesa más que el volumen; hoy cada cosa está en una pantalla distinta | Medio | No |
+| 3 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | No |
+| 4 | **Repaso guiado de tu última partida** (4.9): antes de ver el análisis, la app te para en tus 3 momentos clave y te pregunta qué jugarías | Aprender de tus propios errores es lo que más rinde a tu nivel | Medio | No |
+| 5 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
+| 6 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
+| 7 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |
 
 ## Pendiente
 
@@ -74,6 +87,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
+| 4.8 | Tu entrenamiento de hoy: sesión diaria guiada con racha | Medio | Alta |
+| 4.9 | Repaso guiado de tu última partida en sus momentos clave | Medio | Media |
 | 4.7 | Más lecciones: mate con alfil y caballo, finales de dama contra peón, triangulación | Medio | Baja |
 | 4.5 | Aperturas, versión 2: repertorio propio editable y variantes del rival que aún no te han jugado | Alto | Baja |
 
@@ -83,7 +98,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 |---|---|---|
 | 5.1 | Importación de Lichess con datos reales | Programada según la documentación; sin probar con datos reales |
 | 5.2 | Problemas online de Lichess con datos reales | Sin verificar |
-| 5.3 | Calibrar profundidad y umbrales del análisis; usar la evaluación en la nube de Lichess para acelerar en el móvil | Pendiente |
+| 5.3 | Análisis rápido en el móvil con la evaluación en la nube de Lichess; calibrar profundidad y umbrales | Pendiente, propuesto como siguiente paso |
 | 5.6 | Borrar la rama temporal `diagnostico-chesscom` en GitHub | Hay que hacerlo desde la web de GitHub (*Branches*) |
 | 5.7 | Importación completa de Chess.com con un historial grande | Probada con datos simulados; falta verificarla con tu historial real |
 | 5.8 | Modo Tinta en la BOOX real | Revisado en simulación; falta probar el refresco de la pantalla real |

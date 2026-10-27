@@ -2588,3 +2588,153 @@ label {
   flex: 1;
   min-width: 0;
 }
+
+/* Menú del móvil: botón abajo a la izquierda y panel lateral desde la izquierda (sustituye a la
+   barra de pestañas). En el ordenador y la tablet no se muestra. */
+.menu-fab,
+.drawer,
+.drawer-backdrop {
+  display: none;
+}
+@media (max-width: 800px) {
+  :root {
+    --nav-h: 0px;
+    --fab: 46px;
+  }
+  .sidebar {
+    display: none;
+  }
+  .menu-fab {
+    position: fixed;
+    left: calc(10px + var(--safe-left));
+    bottom: calc(4px + var(--safe-bottom));
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--fab);
+    height: var(--fab);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card-2, var(--bg-2));
+    color: var(--text);
+    font-size: 1.35rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+  }
+  .menu-fab-dot,
+  .drawer-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--c-grave);
+  }
+  .menu-fab-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+  .drawer-dot {
+    margin-left: auto;
+  }
+  .drawer-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 90;
+    display: block;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .drawer-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .drawer {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 95;
+    display: flex;
+    flex-direction: column;
+    width: min(80vw, 300px);
+    padding: calc(16px + var(--safe-top)) 12px calc(16px + var(--safe-bottom)) calc(12px + var(--safe-left));
+    overflow-y: auto;
+    background: var(--bg-2);
+    border-right: 1px solid var(--line);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+    transform: translateX(-105%);
+    transition: transform 0.22s ease;
+  }
+  .drawer.open {
+    transform: translateX(0);
+  }
+  .drawer-head {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    padding: 0 0.4rem 1rem;
+  }
+  .drawer-head small {
+    display: block;
+    color: var(--muted);
+  }
+  .drawer-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .drawer-extra {
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--line);
+  }
+  .drawer-item {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    width: 100%;
+    padding: 0.75rem 0.7rem;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 1rem;
+    text-align: left;
+    cursor: pointer;
+  }
+  .drawer-item .nav-icon {
+    width: 1.6rem;
+    font-size: 1.2rem;
+    text-align: center;
+  }
+  .drawer-item.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-weight: 700;
+  }
+  /* Las barras de abajo (análisis y partidas) bajan hasta el borde y dejan sitio al botón de menú */
+  .analysis .nav-controls,
+  .page.play .play-actions {
+    padding-left: calc(var(--fab) + 18px + var(--safe-left));
+    padding-bottom: calc(6px + var(--safe-bottom));
+  }
+  .play-setup .start-card {
+    bottom: calc(var(--safe-bottom) + var(--fab) + 10px);
+  }
+  /* Cuatro botones junto al de menú: más estrechos y con el texto más pequeño */
+  .page.play .play-actions .btn {
+    min-width: 0;
+    padding: 0 0.25rem;
+    font-size: 0.8rem;
+    line-height: 1.15;
+    white-space: normal;
+  }
+}
+:root[data-theme='eink'] .drawer,
+:root[data-theme='eink'] .drawer-backdrop {
+  transition: none;
+}
