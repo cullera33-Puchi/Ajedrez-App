@@ -1116,11 +1116,14 @@ a.btn {
   display: inline-block;
 }
 
-/* Las letras de columna de chessground van desplazadas 24px y se salen del tablero: se alinean dentro */
-.cg-wrap coords.files {
+/*
+ * Las letras de columna de chessground van desplazadas 24px y se salen del tablero: se alinean dentro.
+ * Con más especificidad que la hoja de chessground, que se carga después junto a las pantallas.
+ */
+.board.cg-wrap coords.files {
   left: 0;
 }
-.cg-wrap coords.files coord {
+.board.cg-wrap coords.files coord {
   text-align: right;
   padding-right: 3px;
 }
@@ -2891,4 +2894,23 @@ label {
 :root[data-theme='eink'] .move-time.rushed {
   color: inherit;
   text-decoration: underline;
+}
+
+/*
+ * Móvil y tinta: en los problemas (y en Entrenar, Visión y aperturas, que usan la misma página) el
+ * tablero no pasa de la mitad del alto, para que quepan el aviso y los botones debajo; la tarjeta del
+ * problema va primero.
+ */
+@media (max-width: 800px) {
+  .puzzles .puzzle-board .board {
+    max-width: 52dvh;
+    margin: 0 auto;
+  }
+  .puzzles .puzzle-side {
+    display: flex;
+    flex-direction: column;
+  }
+  .puzzles .puzzle-side .puzzle-main {
+    order: -1;
+  }
 }

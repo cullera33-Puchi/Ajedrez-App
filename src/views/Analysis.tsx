@@ -209,7 +209,8 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
 
   const boardFen = parsed ? (variation ? (variation.idx ? variation.moves[variation.idx - 1].fen : parsed.fens[variation.base]) : parsed.fens[ply]) : null
   const exploring = Boolean(variation) || showLines
-  const live = useEngineLines(exploring && !retry ? boardFen : null)
+  // Sin las líneas a la vista basta con la mejor (para la evaluación y la flecha): menos trabajo para el motor.
+  const live = useEngineLines(exploring && !retry ? boardFen : null, 12, showLines ? 3 : 1)
 
   // Mientras se exploran variantes, el análisis en segundo plano se para.
   useEffect(() => {
@@ -393,10 +394,15 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
             </button>
           ))}
         </div>
-        <EngineLines fen={boardFen} lines={live} onPlay={playUci} />
-        <button className="btn small" onClick={() => go(variation.base)}>
-          Volver a la partida
-        </button>
+        {showLines && <EngineLines fen={boardFen} lines={live} onPlay={playUci} />}
+        <div className="toolbar">
+          <button className="btn small" onClick={() => go(variation.base)}>
+            Volver a la partida
+          </button>
+          <button className="link small" onClick={() => setShowLines(!showLines)}>
+            {showLines ? 'Ocultar las líneas del motor' : 'Ver las 3 mejores líneas'}
+          </button>
+        </div>
       </section>
     )
   }

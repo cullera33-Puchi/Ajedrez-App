@@ -51,7 +51,7 @@ export function PuzzleSolver({ puzzle, intro, solvedText, events, className = ''
       </div>
       <div className="puzzle-side">
         {before}
-        <section className="card">
+        <section className="card puzzle-main">
           {header}
           <p className={`msg ${feedback.kind}`}>{feedback.text}</p>
           <div className="toolbar">
