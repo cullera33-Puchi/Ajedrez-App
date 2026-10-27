@@ -886,3 +886,15 @@ describe('entrenamiento de hoy', () => {
     expect(mergeLists(['2026-10-26', 'a'], ['a', '2026-10-27'])).toEqual(['2026-10-26', '2026-10-27', 'a'])
   })
 })
+
+describe('huella de la sincronización', () => {
+  const base = { app: 'ajedrez-app' as const, version: 1 as const, games: [], analyses: [], summaries: [], puzzles: [] }
+  it('no depende de la fecha de exportación ni del orden de los ajustes', async () => {
+    const { fingerprint } = await import('./sync')
+    const a = await fingerprint({ ...base, exportedAt: 1, local: { b: { y: 1, x: 2 }, a: [1, 2] } })
+    const b = await fingerprint({ ...base, exportedAt: 2, local: { a: [1, 2], b: { x: 2, y: 1 } } })
+    const c = await fingerprint({ ...base, exportedAt: 2, local: { a: [2, 1], b: { x: 2, y: 1 } } })
+    expect(a).toBe(b)
+    expect(a).not.toBe(c)
+  })
+})

@@ -42,6 +42,8 @@ export const DEFAULT_SYNC: SyncConfig = {
 const CONFIG_KEY = 'syncConfig'
 const SESSION_KEY = 'syncSession'
 const LAST_KEY = 'syncLast'
+/** Huella de la última copia sincronizada, para no fusionar ni subir si nada ha cambiado. */
+const HASH_KEY = 'syncHash'
 const BUCKET = 'ajedrez'
 const MIN_INTERVAL = 2 * 60 * 1000
 
@@ -89,12 +91,14 @@ export function saveSyncConfig(url: string, anonKey: string) {
 export function clearSync() {
   save(CONFIG_KEY, null)
   save(SESSION_KEY, null)
+  save(HASH_KEY, null)
   lastError = undefined
   emit()
 }
 
 export function signOut() {
   save(SESSION_KEY, null)
+  save(HASH_KEY, null)
   emit()
 }
 
@@ -178,6 +182,20 @@ async function decode(blob: Blob): Promise<Backup> {
   return parseBackup(text)
 }
 
+/** Orden fijo de claves para que la misma información dé siempre el mismo texto. */
+const sortKeys = (v: unknown): unknown =>
+  Array.isArray(v) ? v.map(sortKeys) : v && typeof v === 'object' ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, sortKeys((v as Record<string, unknown>)[k])])) : v
+
+/**
+ * Huella de una copia sin la fecha de exportación. Las partidas, análisis y problemas salen de la
+ * base de datos ordenados por clave; los ajustes se ordenan aquí.
+ */
+export async function fingerprint(b: Backup): Promise<string> {
+  const text = JSON.stringify({ ...b, exportedAt: 0, local: sortKeys(b.local) })
+  const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text))
+  return [...new Uint8Array(hash)].map((x) => x.toString(16).padStart(2, '0')).join('')
+}
+
 /** Descarga, fusiona y sube. `force` ignora el intervalo mínimo entre sincronizaciones automáticas. */
 export async function syncNow(force = true): Promise<{ downloaded: boolean }> {
   if (syncing) return { downloaded: false }
@@ -190,16 +208,36 @@ export async function syncNow(force = true): Promise<{ downloaded: boolean }> {
     const s = await validToken()
     const path = `${BUCKET}/${s.user.id}/copia`
     let downloaded = false
+    let remote: Backup | null = null
     try {
-      const blob = await call<Blob>(`/storage/v1/object/authenticated/${path}`, { token: s.access_token })
-      await importBackup(await decode(blob))
-      downloaded = true
+      remote = await decode(await call<Blob>(`/storage/v1/object/authenticated/${path}`, { token: s.access_token }))
     } catch (e) {
-      // Si aún no hay copia en la nube (primer dispositivo), se sube la local.
-      if (!(e instanceof SyncError && (e.message === '404' || /\(400\)/.test(e.message)))) throw e
+      // Si aún no hay copia en la nube (primer dispositivo), se sube la local. Cualquier otro error
+      // para aquí: subir sin haber fusionado borraría de la nube lo de los demás dispositivos.
+      if (!(e instanceof SyncError && e.message === '404')) throw e
     }
-    const { body, type } = await encode(await exportBackup(true))
-    await call(`/storage/v1/object/${path}`, { method: 'POST', token: s.access_token, headers: { 'Content-Type': type, 'x-upsert': 'true' }, body })
+    const remoteHash = remote ? await fingerprint(remote) : null
+    // Si la copia de la nube es la misma que se sincronizó la última vez, ya está fusionada.
+    if (remote && remoteHash !== load<string | null>(HASH_KEY, null)) {
+      await importBackup(remote)
+      downloaded = true
+    }
+    let local = await exportBackup(true)
+    let localHash = await fingerprint(local)
+    if (remote && !downloaded && localHash !== remoteHash) {
+      // Por seguridad: si difieren y no se ha fusionado (por ejemplo, tras borrar datos), se fusiona antes de subir.
+      await importBackup(remote)
+      local = await exportBackup(true)
+      const mergedHash = await fingerprint(local)
+      // Solo cuenta como «traído» si la fusión ha añadido algo.
+      downloaded = mergedHash !== localHash
+      localHash = mergedHash
+    }
+    if (localHash !== remoteHash) {
+      const { body, type } = await encode(local)
+      await call(`/storage/v1/object/${path}`, { method: 'POST', token: s.access_token, headers: { 'Content-Type': type, 'x-upsert': 'true' }, body })
+    }
+    save(HASH_KEY, localHash)
     save(LAST_KEY, Date.now())
     if (downloaded) for (const fn of merged) fn()
     return { downloaded }

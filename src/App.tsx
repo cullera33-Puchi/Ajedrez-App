@@ -10,6 +10,7 @@ import { MobileMenu } from './components/MobileMenu'
 import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
+import { refreshTodayPlan } from './lib/training'
 import type { GameSummary } from './lib/types'
 import { HomeView } from './views/Home'
 
@@ -77,6 +78,14 @@ export default function App() {
     setNav(merged)
   }
   const setView = (v: View) => go({ view: v, review: false, learnTarget: null })
+  /** Vuelve a la pantalla anterior si es `v` (sin añadir otra entrada al historial); si no, va a ella. */
+  const returnTo = (v: View) => {
+    const prev = history.current[history.current.length - 1]
+    if (prev?.view !== v) return setView(v)
+    history.current.pop()
+    navRef.current = prev
+    setNav(prev)
+  }
 
   // Gesto y botón atrás: vuelven a la pantalla anterior (las pantallas pueden interceptarlo).
   useEffect(() => {
@@ -140,8 +149,10 @@ export default function App() {
   }, [bg.analyzed, bg.current]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cada pantalla empieza arriba (en el móvil, si no, el tablero puede quedar fuera de la vista).
+  // Al cambiar de pantalla, el entrenamiento de hoy recoge lo hecho fuera de él (apertura, lección).
   useEffect(() => {
     window.scrollTo(0, 0)
+    refreshTodayPlan()
   }, [view])
 
   const allGames = [...games, ...DEMO_GAMES.filter((d) => !games.some((g) => g.id === d.id))]
@@ -236,7 +247,7 @@ export default function App() {
             onPractice={openPuzzles}
             onPlayFrom={playPosition}
             target={learnTarget}
-            onReturn={() => setView('entreno')}
+            onReturn={() => returnTo('entreno')}
           />
         )}
         {view === 'progreso' && <ProgressView games={games} onNavigate={setView} onOpenGame={openGame} onPractice={openPuzzles} />}

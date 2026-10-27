@@ -5,7 +5,7 @@ import { allSummaries } from '../lib/games'
 import { isOnlineGame, openingStats, ratingSeries, results, score, themeTotals, timeClasses, weeklyAccuracy } from '../lib/progress'
 import { themeName } from '../lib/puzzles'
 import { usePersistentState } from '../lib/storage'
-import { outcomeFor, type GameSummary } from '../lib/types'
+import { opponentOf, outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
   games: GameSummary[]
@@ -134,7 +134,7 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
           points={series.map((p) => ({
             x: p.date,
             y: p.rating,
-            label: `${fmtDate(p.date)}: ${p.rating}, ${OUTCOME_TEXT[outcomeFor(p.game) ?? 'tablas']} contra ${p.game.userColor === 'white' ? p.game.black.name : p.game.white.name}.`,
+            label: `${fmtDate(p.date)}: ${p.rating}, ${OUTCOME_TEXT[outcomeFor(p.game) ?? 'tablas']} contra ${opponentOf(p.game)}.`,
           }))}
         />
       </section>

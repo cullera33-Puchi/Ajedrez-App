@@ -7,7 +7,7 @@ import { isOnlineGame } from './progress'
 import { dayKey } from './puzzleLog'
 import type { AnalysisSummary } from './recommend'
 import { load, save } from './storage'
-import type { GameSummary } from './types'
+import { type GameSummary, opponentOf } from './types'
 
 /**
  * Tu entrenamiento de hoy: una sesión corta que junta el repaso guiado de la última partida, tus
@@ -109,7 +109,7 @@ export const winAfterReply = (r: { cp?: number; mate?: number }) => 100 - winPer
 export const loadReviewed = () => load<string[]>(REVIEWED_KEY, [])
 export function markReviewed(gameId: string) {
   const all = loadReviewed()
-  if (!all.includes(gameId)) save(REVIEWED_KEY, [...all, gameId].slice(-500))
+  if (!all.includes(gameId)) save(REVIEWED_KEY, [...all, gameId])
 }
 
 // ---------------------------------------------------------------------------
@@ -131,7 +131,6 @@ export interface PlanInput {
   now?: number
 }
 
-const opponentOf = (g: GameSummary) => (g.userColor === 'white' ? g.black.name : g.white.name)
 const srsMark = (s?: OpeningSrs) => (s ? s.reps + s.lapses : 0)
 
 export function buildPlan(i: PlanInput): TrainingPlan {
@@ -178,6 +177,22 @@ export const planComplete = (plan: TrainingPlan) => planSteps(plan).every(stepCo
 export function storedPlan(now = Date.now()): TrainingPlan | null {
   const p = load<TrainingPlan | null>(PLAN_KEY, null)
   return p && p.day === today(now) ? p : null
+}
+
+/**
+ * Pone al día el plan de hoy con lo hecho fuera de la sesión (la apertura, la lección o un repaso
+ * desde el análisis) y lo guarda: así la racha cuenta aunque no se vuelva a abrir Entrenar.
+ */
+export function refreshTodayPlan(now = Date.now()): TrainingPlan | null {
+  const plan = storedPlan(now)
+  if (!plan) return null
+  // Se leen las mismas claves que openings.ts y lessons.ts sin importarlos: así Inicio no carga
+  // las lecciones y las aperturas al abrir la app.
+  const srs = load<Record<string, OpeningSrs>>('openingSrs', {})
+  const lessons = load<Record<string, LessonProgress>>('lessonProgress', {})
+  const fresh = refreshPlan(plan, srs, lessons, loadReviewed())
+  if (JSON.stringify(fresh.done) !== JSON.stringify(plan.done)) savePlan(fresh)
+  return fresh
 }
 
 export function savePlan(plan: TrainingPlan) {

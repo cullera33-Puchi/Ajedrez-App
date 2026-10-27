@@ -1,6 +1,10 @@
 // Service worker: permite instalar la app en el móvil y abrirla sin conexión.
 // Páginas: primero la red; archivos con huella (assets/): primero la caché; el resto: caché y actualización por detrás.
-const CACHE = 'ajedrez-app-v4'
+// La versión la pone vite.config.ts al compilar: cada publicación instala un service worker nuevo,
+// que guarda las partes nuevas y borra las de la versión anterior.
+const CACHE = 'ajedrez-app-__BUILD__'
+// El motor y el paquete de problemas van aparte: pesan y no cambian en cada publicación.
+const STATIC = 'ajedrez-static-v1'
 // ignoreVary: el servidor puede responder con «Vary: Origin» y los scripts de módulo llevan Origin;
 // sin esta opción, la copia guardada no se encontraría sin conexión.
 // Motor de análisis y paquete de problemas sin conexión.
@@ -37,8 +41,13 @@ async function precache() {
       if (href.endsWith('.js')) pending.push(href)
     }
   }
-  const urls = [...new Set([...linked, ...lazy, ...ENGINE.map((f) => new URL(f, scope).href)])]
-  await Promise.all(urls.map((u) => cache.add(u).catch(() => undefined)))
+  const urls = [...new Set([...linked, ...lazy])]
+  const statics = await caches.open(STATIC)
+  await Promise.all([
+    ...urls.map((u) => cache.add(u).catch(() => undefined)),
+    // Solo se descargan si no están ya (después se actualizan por detrás al usarlos).
+    ...ENGINE.map((f) => new URL(f, scope).href).map(async (u) => (await statics.match(u, { ignoreVary: true })) || statics.add(u).catch(() => undefined)),
+  ])
 }
 
 self.addEventListener('install', (event) => {
@@ -49,15 +58,15 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE && k !== STATIC).map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   )
 })
 
-const store = (req, res) => {
+const store = (req, res, name = CACHE) => {
   if (res.ok) {
     const copy = res.clone()
-    caches.open(CACHE).then((c) => c.put(req, copy))
+    caches.open(name).then((c) => c.put(req, copy))
   }
   return res
 }
@@ -85,7 +94,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(req, { ignoreVary: true }).then((hit) => {
       const fresh = fetch(req)
-        .then((res) => store(req, res))
+        .then((res) => store(req, res, STATIC))
         .catch(() => hit ?? Response.error())
       if (hit) {
         event.waitUntil(fresh)

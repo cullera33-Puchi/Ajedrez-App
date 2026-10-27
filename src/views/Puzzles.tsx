@@ -1,6 +1,5 @@
-import { Chess } from 'chess.js'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-import { type Arrow, Board } from '../components/Board'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { PuzzleSolver } from '../components/PuzzleSolver'
 import { ResourceLinks } from '../components/ResourceLinks'
 import { type Difficulty, fetchLichessPuzzle } from '../lib/lichess'
 import {
@@ -20,19 +19,15 @@ import { allMyPuzzles, duePuzzles, type MyPuzzle, recordResult, toPuzzle } from 
 import { loadLog, logAttempt } from '../lib/puzzleLog'
 import { PuzzleProgress } from '../components/PuzzleProgress'
 import { usePersistentState } from '../lib/storage'
-import type { Color } from '../lib/types'
 
-type Phase = 'loading' | 'playing' | 'solution' | 'done' | 'error' | 'empty'
+type Phase = 'loading' | 'ready' | 'empty'
 type PuzzleSource = 'local' | 'lichess' | 'mine'
-
 
 const DIFFICULTIES: { value: Difficulty; label: string }[] = [
   { value: 'easiest', label: 'Muy fácil' },
   { value: 'easier', label: 'Fácil' },
   { value: 'normal', label: 'Normal' },
 ]
-
-const parseUci = (uci: string) => ({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
 
 export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [stats, setStats] = usePersistentState<PuzzleStats>('puzzleStats', INITIAL_PUZZLE_STATS)
@@ -47,33 +42,20 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [packCount, setPackCount] = useState(packSize)
 
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null)
-  const [fen, setFen] = useState('')
-  const [step, setStep] = useState(0)
   const [phase, setPhase] = useState<Phase>('loading')
-  const [lastMove, setLastMove] = useState<[string, string] | undefined>()
-  const [arrows, setArrows] = useState<Arrow[]>([])
-  const [feedback, setFeedback] = useState<{ kind: 'ok' | 'error' | 'info'; text: string } | null>(null)
-  const [resetKey, setResetKey] = useState(0)
-  const [flags, setFlags] = useState({ mistake: false, hint: false, rated: false })
   const [notice, setNotice] = useState<string | null>(null)
+  // Cada problema cuenta una sola vez para el nivel (o para el repaso, si es uno de tus errores).
+  const rated = useRef(false)
+  // Cada problema monta el tablero de cero, aunque se repita el mismo.
+  const [round, setRound] = useState(0)
   const recommendation = useMemo(() => recommendThemes(getGames()), [])
 
   const begin = (p: Puzzle, own: MyPuzzle | null = null) => {
+    rated.current = false
+    setRound((r) => r + 1)
     setMine(own)
     setPuzzle(p)
-    setFen(p.fen)
-    setStep(0)
-    setLastMove(p.lastMove)
-    setArrows([])
-    setFlags({ mistake: false, hint: false, rated: false })
-    setPhase('playing')
-    const side = p.fen.split(' ')[1] === 'w' ? 'blancas' : 'negras'
-    setFeedback({
-      kind: 'info',
-      text: own
-        ? `Posición de tu partida contra ${own.opponent}. Juegan las ${side}: encuentra la jugada que se te escapó.`
-        : `Juegan las ${side}. Encuentra la mejor jugada.`,
-    })
+    setPhase('ready')
   }
 
   const pickLocal = useCallback(
@@ -97,7 +79,6 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
           setPuzzle(null)
           setMine(null)
           setPhase('empty')
-          setFeedback(null)
           return
         }
         begin(toPuzzle(due[0]), due[0])
@@ -129,7 +110,8 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const rate = (win: boolean) => {
-    if (!puzzle || flags.rated) return
+    if (!puzzle || rated.current) return
+    rated.current = true
     // Los problemas de tus errores no cambian tu nivel: solo deciden cuándo vuelven a salir.
     if (puzzle.source === 'mine') {
       void recordResult(puzzle.id, win).then(() => setDueCount(duePuzzles().length))
@@ -140,101 +122,6 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
       logAttempt({ t: Date.now(), win, source: puzzle.source, difficulty: puzzle.rating || null, prev: stats.rating, rating: updated.rating })
     }
     setLog(loadLog())
-    setFlags((f) => ({ ...f, rated: true }))
-  }
-
-  const finish = (byUser: boolean) => {
-    setPhase('done')
-    if (!byUser) return
-    if (mine) {
-      const clean = !flags.mistake && !flags.hint
-      if (!flags.rated) rate(clean)
-      setFeedback({
-        kind: 'ok',
-        text: `${clean ? '¡Bien visto!' : 'Resuelto.'} En la partida jugaste ${mine.playedSan}; lo mejor era ${mine.bestSan}. ${clean ? 'Volverá dentro de unos días para repasarlo.' : 'Volverá a salir pronto.'}`,
-      })
-      return
-    }
-    if (!flags.mistake && !flags.hint) {
-      rate(true)
-      setFeedback({ kind: 'ok', text: '¡Correcto! Problema resuelto.' })
-    } else {
-      setFeedback({ kind: 'ok', text: flags.mistake ? 'Resuelto, aunque con algún fallo.' : 'Resuelto con pista. No cuenta para tu nivel.' })
-      setFlags((f) => ({ ...f, rated: true }))
-    }
-  }
-
-  // Respuesta automática del rival y reproducción de la solución.
-  useEffect(() => {
-    if (!puzzle || step >= puzzle.moves.length) return
-    const opponentTurn = step % 2 === 1
-    if (!(phase === 'solution' || (phase === 'playing' && opponentTurn))) return
-    const timer = setTimeout(
-      () => {
-        const chess = new Chess(fen)
-        let m
-        try {
-          m = chess.move(parseUci(puzzle.moves[step]))
-        } catch {
-          // Problema con datos defectuosos: se pasa al siguiente.
-          void next()
-          return
-        }
-        setFen(chess.fen())
-        setLastMove([m.from, m.to])
-        setArrows(phase === 'solution' ? [{ orig: m.from, dest: m.to, brush: 'green' }] : [])
-        const nextStep = step + 1
-        setStep(nextStep)
-        if (nextStep >= puzzle.moves.length) finish(phase === 'playing')
-      },
-      phase === 'solution' ? 800 : 450,
-    )
-    return () => clearTimeout(timer)
-  }, [puzzle, step, phase, fen, flags]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const onMove = (from: string, to: string) => {
-    if (!puzzle || phase !== 'playing') return
-    const chess = new Chess(fen)
-    const piece = chess.get(from as Parameters<typeof chess.get>[0])
-    // Si la solución corona en otra pieza (subpromoción), se respeta; si no, dama.
-    const expectedPromo = puzzle.moves[step]?.slice(0, 4) === from + to ? puzzle.moves[step][4] : undefined
-    const promotion = piece?.type === 'p' && (to[1] === '8' || to[1] === '1') ? (expectedPromo ?? 'q') : undefined
-    let played
-    try {
-      played = chess.move({ from, to, promotion })
-    } catch {
-      setResetKey((k) => k + 1)
-      return
-    }
-    const expected = puzzle.moves[step]
-    if (played.lan === expected || chess.isCheckmate()) {
-      setFen(chess.fen())
-      setLastMove([from, to])
-      setArrows([])
-      const nextStep = step + 1
-      setStep(nextStep)
-      if (nextStep >= puzzle.moves.length || chess.isCheckmate()) finish(true)
-      else setFeedback({ kind: 'ok', text: 'Bien. Sigue.' })
-    } else {
-      if (!flags.rated && !flags.mistake) rate(false)
-      setFlags((f) => ({ ...f, mistake: true }))
-      setFeedback({ kind: 'error', text: 'Esa no es la mejor. Inténtalo otra vez.' })
-      setResetKey((k) => k + 1)
-    }
-  }
-
-  const hint = () => {
-    if (!puzzle || phase !== 'playing') return
-    setFlags((f) => ({ ...f, hint: true }))
-    setArrows([{ orig: puzzle.moves[step].slice(0, 2), brush: 'green' }])
-    setFeedback({ kind: 'info', text: 'Pista: mueve la pieza marcada.' })
-  }
-
-  const showSolution = () => {
-    if (!puzzle || phase !== 'playing') return
-    if (!flags.rated) rate(false)
-    setPhase('solution')
-    setFeedback({ kind: 'info', text: 'Esta es la solución.' })
   }
 
   const changeTheme = (t: string) => {
@@ -247,89 +134,139 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     void next(theme, s)
   }
 
-  const orientation: Color = puzzle?.fen.split(' ')[1] === 'b' ? 'black' : 'white'
-  const userTurn = phase === 'playing' && step % 2 === 0
+  const side = puzzle?.fen.split(' ')[1] === 'w' ? 'blancas' : 'negras'
+  const intro = mine
+    ? `Posición de tu partida contra ${mine.opponent}. Juegan las ${side}: encuentra la jugada que se te escapó.`
+    : `Juegan las ${side}. Encuentra la mejor jugada.`
+  const solvedText = (clean: boolean, flags: { mistake: boolean; hint: boolean }) => {
+    if (mine)
+      return `${clean ? '¡Bien visto!' : 'Resuelto.'} En la partida jugaste ${mine.playedSan}; lo mejor era ${mine.bestSan}. ${clean ? 'Volverá dentro de unos días para repasarlo.' : 'Volverá a salir pronto.'}`
+    if (clean) return '¡Correcto! Problema resuelto.'
+    return flags.mistake ? 'Resuelto, aunque con algún fallo.' : 'Resuelto con pista. No cuenta para tu nivel.'
+  }
 
-  return (
-    <div className="page puzzles">
-      <div className="puzzle-board">
-        {puzzle ? (
-          <Board
-            fen={fen}
-            orientation={orientation}
-            movableColor={userTurn ? orientation : undefined}
-            lastMove={lastMove}
-            arrows={arrows}
-            onMove={onMove}
-            resetKey={resetKey}
-          />
-        ) : (
-          <div className="board placeholder">{phase === 'empty' ? 'Sin errores pendientes' : 'Cargando problema…'}</div>
-        )}
+  const statsCard = (
+    <section className="card">
+      <h2>Problemas</h2>
+      <div className="kpis">
+        <div className="kpi">
+          <span className="kpi-value">{stats.rating}</span>
+          <span className="kpi-label">Tu nivel</span>
+        </div>
+        <div className="kpi good">
+          <span className="kpi-value">{stats.streak}</span>
+          <span className="kpi-label">Racha</span>
+        </div>
+        <div className="kpi">
+          <span className="kpi-value">
+            {stats.solved}/{stats.solved + stats.failed}
+          </span>
+          <span className="kpi-label">Acertados</span>
+        </div>
       </div>
-      <div className="puzzle-side">
-        <section className="card">
-          <h2>Problemas</h2>
-          <div className="kpis">
-            <div className="kpi">
-              <span className="kpi-value">{stats.rating}</span>
-              <span className="kpi-label">Tu nivel</span>
-            </div>
-            <div className="kpi good">
-              <span className="kpi-value">{stats.streak}</span>
-              <span className="kpi-label">Racha</span>
-            </div>
-            <div className="kpi">
-              <span className="kpi-value">
-                {stats.solved}/{stats.solved + stats.failed}
-              </span>
-              <span className="kpi-label">Acertados</span>
-            </div>
-          </div>
-          <div className="history">
-            {stats.history.slice(0, 15).map((h, i) => (
-              <span key={i} className={`dot ${h.win ? 'win' : 'loss'}`} title={h.win ? 'Acertado' : 'Fallado'} />
-            ))}
-          </div>
-          <a className="small" href="#evolucion" onClick={(e) => (e.preventDefault(), document.getElementById('evolucion')?.scrollIntoView({ behavior: 'smooth' }))}>
-            Ver tu evolución
-          </a>
-        </section>
+      <div className="history">
+        {stats.history.slice(0, 15).map((h, i) => (
+          <span key={i} className={`dot ${h.win ? 'win' : 'loss'}`} title={h.win ? 'Acertado' : 'Fallado'} />
+        ))}
+      </div>
+      <a className="small" href="#evolucion" onClick={(e) => (e.preventDefault(), document.getElementById('evolucion')?.scrollIntoView({ behavior: 'smooth' }))}>
+        Ver tu evolución
+      </a>
+    </section>
+  )
 
-        <section className="card">
-          {phase === 'empty' && (
-            <div className="msg info">
-              <p>
-                No tienes errores pendientes de repasar.{' '}
-                {allMyPuzzles().length
-                  ? 'Los que ya acertaste volverán en unos días.'
-                  : 'Cuando se analicen tus partidas, aquí aparecerán las posiciones donde fallaste.'}
-              </p>
-              <button className="btn small" onClick={() => changeSource('local')}>
-                Ir a otros problemas
-              </button>
+  const otherCards = (
+    <>
+      <section className="card">
+        <h3>Recomendado para ti</h3>
+        {recommendation.themes.length ? (
+          <>
+            <p className="muted small">
+              Según los errores de {recommendation.games === 1 ? 'tu última partida analizada' : `tus últimas ${recommendation.games} partidas analizadas`}:
+            </p>
+            <div className="reco">
+              {recommendation.themes.slice(0, 4).map((t) => (
+                <button key={t.theme} className={`reco-item ${theme === t.theme ? 'active' : ''}`} onClick={() => changeTheme(t.theme)}>
+                  <span>{themeName(t.theme)}</span>
+                  <span className="muted small">
+                    {t.count} {t.count === 1 ? 'error' : 'errores'}
+                  </span>
+                </button>
+              ))}
             </div>
-          )}
-          {feedback && <p className={`msg ${feedback.kind}`}>{feedback.text}</p>}
-          {notice && <p className="msg info small">{notice}</p>}
-          <div className="toolbar">
-            {phase === 'playing' && (
-              <>
-                <button className="btn" onClick={hint} disabled={flags.hint}>
-                  Pista
-                </button>
-                <button className="btn" onClick={showSolution}>
-                  Ver solución
-                </button>
-              </>
-            )}
-            {(phase === 'done' || phase === 'playing') && (
-              <button className={`btn ${phase === 'done' ? 'primary' : ''}`} onClick={() => next()}>
-                {phase === 'done' ? 'Siguiente problema' : 'Saltar'}
-              </button>
-            )}
-          </div>
-          {phase === 'done' && puzzle && (
+            <ResourceLinks theme={recommendation.themes.some((t) => t.theme === theme) ? theme : recommendation.themes[0].theme} />
+          </>
+        ) : (
+          <p className="muted small">Importa y analiza algunas partidas tuyas y te diré qué temas practicar según tus errores.</p>
+        )}
+      </section>
+
+      <PuzzleProgress log={log} rating={stats.rating} />
+
+      <section className="card">
+        <h3>Opciones</h3>
+        <label className="field">
+          <span>Origen</span>
+          <select value={source} onChange={(e) => changeSource(e.target.value as PuzzleSource)}>
+            <option value="mine">Mis errores ({dueCount} pendientes hoy)</option>
+            <option value="local">Sin conexión ({LOCAL_PUZZLES.length + packCount} problemas de tu nivel)</option>
+            <option value="lichess">Lichess (millones de problemas, requiere conexión)</option>
+          </select>
+        </label>
+        <label className="field" hidden={source === 'mine'}>
+          <span>Tema</span>
+          <select value={theme} onChange={(e) => changeTheme(e.target.value)}>
+            {BEGINNER_THEMES.map((t) => (
+              <option key={t} value={t}>
+                {themeName(t)}
+              </option>
+            ))}
+          </select>
+        </label>
+        {source === 'lichess' && (
+          <label className="field">
+            <span>Dificultad</span>
+            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}>
+              {DIFFICULTIES.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </section>
+    </>
+  )
+
+  // Mientras carga el siguiente se sigue viendo el anterior.
+  if (puzzle && phase !== 'empty')
+    return (
+      <PuzzleSolver
+        key={`${puzzle.id}-${round}`}
+        puzzle={puzzle}
+        intro={intro}
+        solvedText={solvedText}
+        events={{
+          onFirstMistake: () => rate(false),
+          // Con pista no cuenta para el nivel; en tus errores, decide cuándo vuelve a salir.
+          onSolved: (clean) => {
+            if (mine || clean) rate(clean)
+            else rated.current = true
+          },
+          onGaveUp: () => rate(false),
+          onInvalid: () => void next(),
+        }}
+        header={notice && <p className="msg info small">{notice}</p>}
+        actions={(p) =>
+          (p === 'done' || p === 'playing') && (
+            <button className={`btn ${p === 'done' ? 'primary' : ''}`} onClick={() => next()}>
+              {p === 'done' ? 'Siguiente problema' : 'Saltar'}
+            </button>
+          )
+        }
+        footer={(p) =>
+          p === 'done' && (
             <div className="puzzle-info">
               {puzzle.rating > 0 && (
                 <p className="small">
@@ -349,68 +286,37 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
                 </a>
               )}
             </div>
-          )}
-        </section>
+          )
+        }
+        before={statsCard}
+        after={otherCards}
+      />
+    )
 
+  return (
+    <div className="page puzzles">
+      <div className="puzzle-board">
+        <div className="board placeholder">{phase === 'empty' ? 'Sin errores pendientes' : 'Cargando problema…'}</div>
+      </div>
+      <div className="puzzle-side">
+        {statsCard}
         <section className="card">
-          <h3>Recomendado para ti</h3>
-          {recommendation.themes.length ? (
-            <>
-              <p className="muted small">
-                Según los errores de {recommendation.games === 1 ? 'tu última partida analizada' : `tus últimas ${recommendation.games} partidas analizadas`}:
+          {phase === 'empty' && (
+            <div className="msg info">
+              <p>
+                No tienes errores pendientes de repasar.{' '}
+                {allMyPuzzles().length
+                  ? 'Los que ya acertaste volverán en unos días.'
+                  : 'Cuando se analicen tus partidas, aquí aparecerán las posiciones donde fallaste.'}
               </p>
-              <div className="reco">
-                {recommendation.themes.slice(0, 4).map((t) => (
-                  <button key={t.theme} className={`reco-item ${theme === t.theme ? 'active' : ''}`} onClick={() => changeTheme(t.theme)}>
-                    <span>{themeName(t.theme)}</span>
-                    <span className="muted small">
-                      {t.count} {t.count === 1 ? 'error' : 'errores'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <ResourceLinks theme={recommendation.themes.some((t) => t.theme === theme) ? theme : recommendation.themes[0].theme} />
-            </>
-          ) : (
-            <p className="muted small">Importa y analiza algunas partidas tuyas y te diré qué temas practicar según tus errores.</p>
+              <button className="btn small" onClick={() => changeSource('local')}>
+                Ir a otros problemas
+              </button>
+            </div>
           )}
+          {notice && <p className="msg info small">{notice}</p>}
         </section>
-
-        <PuzzleProgress log={log} rating={stats.rating} />
-
-        <section className="card">
-          <h3>Opciones</h3>
-          <label className="field">
-            <span>Origen</span>
-            <select value={source} onChange={(e) => changeSource(e.target.value as PuzzleSource)}>
-              <option value="mine">Mis errores ({dueCount} pendientes hoy)</option>
-              <option value="local">Sin conexión ({LOCAL_PUZZLES.length + packCount} problemas de tu nivel)</option>
-              <option value="lichess">Lichess (millones de problemas, requiere conexión)</option>
-            </select>
-          </label>
-          <label className="field" hidden={source === 'mine'}>
-            <span>Tema</span>
-            <select value={theme} onChange={(e) => changeTheme(e.target.value)}>
-              {BEGINNER_THEMES.map((t) => (
-                <option key={t} value={t}>
-                  {themeName(t)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {source === 'lichess' && (
-            <label className="field">
-              <span>Dificultad</span>
-              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}>
-                {DIFFICULTIES.map((d) => (
-                  <option key={d.value} value={d.value}>
-                    {d.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
-        </section>
+        {otherCards}
       </div>
     </div>
   )

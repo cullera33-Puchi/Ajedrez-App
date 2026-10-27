@@ -7,7 +7,7 @@ import type { Settings } from '../lib/settings'
 import { getSummary } from '../lib/games'
 import { setBackgroundEnabled, useBackgroundState } from '../lib/background'
 import { load, save, usePersistentState } from '../lib/storage'
-import { outcomeFor, type GameSummary } from '../lib/types'
+import { opponentOf, outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
   settings: Settings
@@ -232,7 +232,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
             {!bg.enabled
               ? 'En pausa.'
               : bg.current
-                ? `Analizando la partida contra ${bg.current.userColor === 'white' ? bg.current.black.name : bg.current.white.name}…`
+                ? `Analizando la partida contra ${opponentOf(bg.current)}…`
                 : bg.paused === 'ocupado'
                   ? 'En espera mientras usas el motor.'
                   : 'Sigue mientras la app esté abierta.'}

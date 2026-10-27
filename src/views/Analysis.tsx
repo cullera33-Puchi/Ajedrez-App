@@ -269,13 +269,12 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
   )
 
   // «Inténtalo tú»: en un error del usuario, volver a la posición anterior y buscar la buena.
-  const userSideColor = game.userColor === 'white' ? 'w' : game.userColor === 'black' ? 'b' : undefined
   const bestBefore = analysis && ply > 0 ? analysis.positions[ply - 1]?.best : undefined
   const canRetry = Boolean(
     moveAnalysis &&
       bestBefore &&
       ['imprecision', 'error', 'grave'].includes(moveAnalysis.classification) &&
-      (!userSideColor || move?.color === userSideColor),
+      (!userSide || move?.color === userSide),
   )
 
   const startRetry = () => setRetry({ ply, tries: 0, status: 'playing', resetKey: 0 })
@@ -299,7 +298,13 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
     }
     // ¿Es igual de buena? Se comprueba con el motor la posición resultante.
     setRetry({ ...retry, checking: true })
-    const res = await getEngine('main').evaluate(chess.fen(), 10)
+    let res
+    try {
+      res = await getEngine('main').evaluate(chess.fen(), 10)
+    } catch {
+      setRetry((cur) => (cur && cur.ply === retry.ply && cur.checking ? { ...cur, checking: false, resetKey: cur.resetKey + 1, lastWrong: 'No se ha podido comprobar la jugada con el motor. Inténtalo otra vez.' } : cur))
+      return
+    }
     // La evaluación es del rival: se pasa al punto de vista de las blancas.
     const sign = played.color === 'w' ? 1 : -1
     const afterWhite = { cp: res.cp !== undefined ? -res.cp * sign : undefined, mate: res.mate !== undefined ? -res.mate * sign : undefined, pv: [] }

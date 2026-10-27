@@ -1,5 +1,8 @@
 /// <reference types="vitest/config" />
-import { pbkdf2Sync } from 'node:crypto'
+import { createHash, pbkdf2Sync } from 'node:crypto'
+import { readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import type { Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 import { coachPlugin } from './server/coach.ts'
@@ -16,6 +19,29 @@ function pinConfig(pin: string | undefined) {
   return { hash: pbkdf2Sync(pin, salt, iterations, 32, 'sha256').toString('hex'), salt, iterations }
 }
 
+/**
+ * Pone en dist/sw.js una versión sacada de los nombres de los archivos generados: si cambia algo,
+ * el navegador instala el service worker nuevo, que guarda las partes nuevas y borra las viejas.
+ */
+function swVersion(): Plugin {
+  let version = 'dev'
+  let outDir = 'dist'
+  return {
+    name: 'sw-version',
+    apply: 'build',
+    configResolved: (c) => {
+      outDir = c.build.outDir
+    },
+    generateBundle: (_options, bundle) => {
+      version = createHash('sha256').update(Object.keys(bundle).sort().join('|')).digest('hex').slice(0, 12)
+    },
+    writeBundle: () => {
+      const file = join(outDir, 'sw.js')
+      writeFileSync(file, readFileSync(file, 'utf8').replace('__BUILD__', version))
+    },
+  }
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
@@ -25,6 +51,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       coachPlugin(),
+      swVersion(),
     ],
     server: { open: true },
     preview: { open: true },

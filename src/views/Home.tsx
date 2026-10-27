@@ -16,8 +16,8 @@ import { allMyPuzzles } from '../lib/myPuzzles'
 import type { Settings } from '../lib/settings'
 import { load, save } from '../lib/storage'
 import { getSummary } from '../lib/games'
-import { loadDays, planComplete, planSteps, stepComplete, storedPlan, streak } from '../lib/training'
-import { outcomeFor, type GameSummary } from '../lib/types'
+import { loadDays, planComplete, planSteps, refreshTodayPlan, stepComplete, streak } from '../lib/training'
+import { opponentOf, outcomeFor, type GameSummary } from '../lib/types'
 
 interface Props {
   settings: Settings
@@ -95,7 +95,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
     .filter((g) => getSummary(g.id))
     .map((g) => getSummary(g.id)!.counts[g.userColor!].grave)
   // Entrenamiento de hoy: estado del plan (si ya se ha empezado) y racha.
-  const plan = storedPlan()
+  const plan = refreshTodayPlan()
   const days = streak(loadDays())
   const steps = plan ? planSteps(plan) : []
   const stepsDone = steps.filter(stepComplete).length
@@ -203,7 +203,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
                 <div>
                   <strong>Revisa tu última derrota</strong>
                   <p className="muted">
-                    Contra {lastLoss.userColor === 'white' ? lastLoss.black.name : lastLoss.white.name}. Busca el momento en que se torció la partida.
+                    Contra {opponentOf(lastLoss)}. Busca el momento en que se torció la partida.
                   </p>
                 </div>
                 <button className="btn" onClick={() => onOpenGame(lastLoss.id)}>

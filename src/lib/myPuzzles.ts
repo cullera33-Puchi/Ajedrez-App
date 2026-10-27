@@ -5,7 +5,7 @@ import { db } from './db'
 import { getEngine } from './engine'
 import type { Puzzle } from './puzzles'
 import { mistakeThemes } from './recommend'
-import type { GameSummary } from './types'
+import { type GameSummary, opponentOf } from './types'
 
 /**
  * Problemas con las posiciones de los errores del propio usuario, con repaso espaciado:
@@ -98,7 +98,7 @@ export function candidatePlies(game: GameSummary, parsed: ParsedGame, analysis: 
 export async function generateForGame(game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis): Promise<number> {
   const engine = getEngine('main')
   const made: MyPuzzle[] = []
-  const opponent = game.userColor === 'white' ? game.black.name : game.white.name
+  const opponent = opponentOf(game)
   if (game.source === 'demo') return 0
   for (const c of candidatePlies(game, parsed, analysis)) {
     if (made.length >= MAX_PER_GAME) break

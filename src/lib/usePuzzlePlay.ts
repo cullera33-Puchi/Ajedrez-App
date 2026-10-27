@@ -16,6 +16,8 @@ export interface PuzzleEvents {
   onFirstMistake?: () => void
   onSolved?: (clean: boolean) => void
   onGaveUp?: () => void
+  /** El problema trae una jugada imposible: quien lo usa suele pasar al siguiente. */
+  onInvalid?: () => void
 }
 
 const parseUci = (uci: string) => ({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
@@ -51,7 +53,8 @@ export function usePuzzlePlay(puzzle: Puzzle, events: PuzzleEvents) {
         try {
           m = chess.move(parseUci(puzzle.moves[step]))
         } catch {
-          finish(false)
+          if (ev.current.onInvalid) ev.current.onInvalid()
+          else finish(false)
           return
         }
         setFen(chess.fen())

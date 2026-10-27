@@ -32,7 +32,7 @@ Piezas principales:
 | Vistas | `src/views/` (Home, Training, Play, Games, Analysis, Puzzles, Learn, Lessons, Openings, Scan, Progress) |
 | Bots | `src/lib/bots.ts` (nivel de 250 a 2000 de 50 en 50, `makeBot`) |
 | Análisis | `src/lib/analysis.ts`, `src/lib/engine.ts`, `src/lib/background.ts` |
-| Problemas | `src/lib/puzzles.ts` (nivel tipo Elo), `src/lib/myPuzzles.ts` (tus errores con repaso espaciado), `src/lib/puzzleLog.ts` (histórico por día) |
+| Problemas | `src/components/PuzzleSolver.tsx` y `src/lib/usePuzzlePlay.ts` (resolver un problema: lo comparten Problemas y Entrenar), `src/lib/puzzles.ts` (nivel tipo Elo), `src/lib/myPuzzles.ts` (tus errores con repaso espaciado), `src/lib/puzzleLog.ts` (histórico por día) |
 | Recomendaciones | `src/lib/recommend.ts` (solo partidas de Chess.com y Lichess, nunca las de bots) |
 | Importación | `src/lib/chesscom.ts`, `src/lib/lichess.ts`, `src/lib/pgnImport.ts` |
 | Escáner | `src/lib/scan/` (detección del tablero, siluetas, plantillas en `templates.json`), `src/views/Scan.tsx`. Las plantillas se regeneran con `scripts/build-piece-templates.ts` a partir de los SVG de `lichess-org/lila/public/piece` |
@@ -43,8 +43,8 @@ Piezas principales:
 | Aperturas | `src/lib/openings.ts` (árbol, revisión, repertorio, repasos), `src/views/Openings.tsx` |
 | Problemas sin conexión | `scripts/build-puzzle-pack.mjs` (se ejecuta en el workflow de Pages con la base de Lichess), `src/lib/puzzlePack.ts`. `public/puzzles/` no se versiona |
 | Juego online | `src/lib/lichessAuth.ts` (OAuth PKCE y token personal), `src/lib/lichessPlay.ts` (Board API, flujos NDJSON con reconexión), `src/views/PlayOnline.tsx`, `src/components/LiveLock.tsx` (bloqueo del análisis durante la partida) |
-| Entrenamiento de hoy | `src/lib/training.ts` (plan del día, racha, momentos del repaso guiado), `src/views/Training.tsx` (sesión y repaso guiado), `src/lib/usePuzzlePlay.ts` (resolver un problema en el tablero). Desde el análisis, *Repaso guiado* abre `entreno` con `review` en el estado de navegación; la apertura y la lección se abren en Aprender con `learnTarget` y vuelven al entrenamiento |
-| Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
+| Entrenamiento de hoy | `src/lib/training.ts` (plan del día, racha, momentos del repaso guiado), `src/views/Training.tsx` (sesión y repaso guiado), `PuzzleSolver`. Desde el análisis, *Repaso guiado* abre `entreno` con `review` en el estado de navegación; la apertura y la lección se abren en Aprender con `learnTarget` y vuelven al entrenamiento |
+| Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage; con la huella `syncHash` no fusiona ni sube si nada ha cambiado, y solo un «no encontrado» cuenta como nube vacía), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
 
 Reglas de negocio a respetar:
 
@@ -54,7 +54,7 @@ Reglas de negocio a respetar:
 - Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección, apertura) antes de cambiar de pantalla.
 - Gesto del borde izquierdo en el móvil (`src/components/MobileMenu.tsx`): abre el menú siguiendo el dedo; si hay un `useBackHandler` activo, en su lugar va atrás. En la app instalada en iOS no se toca el historial (el sistema mostraría una página gris al deslizar); el botón atrás del sistema en Android, Safari y PC usa una entrada de historial de reserva.
 - Iconos de botones: SVG con `currentColor` (`src/components/NavIcons.tsx`), no caracteres como ⏮ o ▶, que iOS pinta como emoji azules.
-- El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión. Precarga todas las partes recorriendo los JS de forma recursiva; si se añade una pantalla con `lazy`, no hace falta tocarlo.
+- El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión. Precarga todas las partes recorriendo los JS de forma recursiva; si se añade una pantalla con `lazy`, no hace falta tocarlo. Su versión (`__BUILD__`) la pone el plugin `swVersion` de `vite.config.ts` en cada compilación: cada publicación instala uno nuevo y borra la caché anterior. El motor y el paquete de problemas van en una caché aparte (`ajedrez-static-v1`) para no descargarlos en cada publicación.
 - Las pantallas se cargan con `lazy` desde `src/App.tsx` (objeto `VIEWS`) y se precargan en segundo plano. Una pantalla no debe importar otra (rompe la división); lo compartido va a `src/lib/`.
 - Motor: `evaluate(fen, depth, multipv, tag)`. Con `tag`, una búsqueda nueva sustituye a la anterior de la misma etiqueta (se usa en las líneas del motor). Tras un `await` al motor, comprobar que la pantalla sigue en el mismo estado antes de aplicar el resultado.
 - Partidas: `mergeGames` evita duplicados por enlace (la API gana al PGN). Las partidas contra Stockfish de Lichess llevan `source: 'bot'`. Para «solo partidas reales» usar `isOnlineGame` (`src/lib/progress.ts`).

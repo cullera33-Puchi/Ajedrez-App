@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { type Arrow, Board } from '../components/Board'
+import { PuzzleSolver } from '../components/PuzzleSolver'
 import { setBusy } from '../lib/activity'
 import { type GameAnalysis, type MoveAnalysis, type ParsedGame, parsePgn, toSpanishSan } from '../lib/analysis'
 import { getEngine } from '../lib/engine'
@@ -37,8 +38,8 @@ import {
   type Verdict,
   winAfterReply,
 } from '../lib/training'
-import { usePuzzlePlay } from '../lib/usePuzzlePlay'
-import type { GameSummary } from '../lib/types'
+import type { PuzzleEvents } from '../lib/usePuzzlePlay'
+import { type GameSummary, opponentOf } from '../lib/types'
 
 interface Props {
   games: GameSummary[]
@@ -76,11 +77,11 @@ async function todayPlan(games: GameSummary[]): Promise<TrainingPlan> {
       lessonProgress: loadLessonProgress(),
     })
   const fresh = refreshPlan(plan, loadOpeningSrs(), loadLessonProgress(), reviewed)
+  // Si la partida del repaso ya no está (por ejemplo, tras borrar datos), el paso no se puede hacer.
+  if (fresh.review && !games.some((g) => g.id === fresh.review!.gameId)) fresh.done.review = true
   savePlan(fresh)
   return fresh
 }
-
-const opponentOf = (g: GameSummary) => (g.userColor === 'white' ? g.black.name : g.white.name)
 
 export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, onOpenOpening, onStartSession }: Props) {
   const [plan, setPlanState] = useState<TrainingPlan | null>(null)
@@ -155,6 +156,11 @@ export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, on
           header={back}
           onFinish={() => {
             markReviewed(game.id)
+            update((p) => ({ ...p, done: { ...p.done, review: true } }))
+          }}
+          onUnavailable={(reason) => {
+            // Sin errores que repasar, la partida queda repasada; sin análisis, solo se salta por hoy.
+            if (reason === 'clean') markReviewed(game.id)
             update((p) => ({ ...p, done: { ...p.done, review: true } }))
           }}
           actions={
@@ -408,59 +414,34 @@ interface PuzzleStepProps {
   count: string
   intro: string
   solvedText: (clean: boolean) => string
-  events: Parameters<typeof usePuzzlePlay>[1]
+  events: PuzzleEvents
   onNext: () => void
   nextLabel: string
 }
 
 function PuzzleStep({ puzzle, header, title, count, intro, solvedText, events, onNext, nextLabel }: PuzzleStepProps) {
-  const play = usePuzzlePlay(puzzle, {
-    ...events,
-    onSolved: (clean) => {
-      events.onSolved?.(clean)
-      play.setFeedback({ kind: 'ok', text: solvedText(clean) })
-    },
-  })
-  const feedback = play.feedback ?? { kind: 'info' as const, text: intro }
   return (
-    <div className="page puzzles training-run">
-      <div className="puzzle-board">
-        <Board
-          fen={play.fen}
-          orientation={play.orientation}
-          movableColor={play.userTurn ? play.orientation : undefined}
-          lastMove={play.lastMove}
-          arrows={play.arrows}
-          onMove={play.onMove}
-          resetKey={play.resetKey}
-        />
-      </div>
-      <div className="puzzle-side">
-        <section className="card">
+    <PuzzleSolver
+      puzzle={puzzle}
+      className="training-run"
+      intro={intro}
+      solvedText={solvedText}
+      events={events}
+      header={
+        <>
           {header}
           <h2>{title}</h2>
           <p className="muted small">{count}</p>
-          <p className={`msg ${feedback.kind}`}>{feedback.text}</p>
-          <div className="toolbar">
-            {play.phase === 'playing' && (
-              <>
-                <button className="btn" onClick={play.hint} disabled={play.flags.hint}>
-                  Pista
-                </button>
-                <button className="btn" onClick={play.showSolution}>
-                  Ver solución
-                </button>
-              </>
-            )}
-            {play.phase === 'done' && (
-              <button className="btn primary" onClick={onNext}>
-                {nextLabel}
-              </button>
-            )}
-          </div>
-        </section>
-      </div>
-    </div>
+        </>
+      }
+      actions={(phase) =>
+        phase === 'done' && (
+          <button className="btn primary" onClick={onNext}>
+            {nextLabel}
+          </button>
+        )
+      }
+    />
   )
 }
 
@@ -514,7 +495,16 @@ function verdictText(m: MoveAnalysis, a: Answer): { kind: 'ok' | 'error' | 'info
 /** Comentario del análisis sin la primera frase («Error. Era mejor…»), que ya dice el veredicto. */
 const explanation = (m: MoveAnalysis) => m.comment.replace(/^(Error grave|Error|Imprecisión)\. Era mejor [^.]*\.\s*/, '').trim()
 
-function GuidedReview({ game, header, actions, onFinish }: { game: GameSummary; header?: React.ReactNode; actions: React.ReactNode; onFinish: () => void }) {
+interface ReviewProps {
+  game: GameSummary
+  header?: React.ReactNode
+  actions: React.ReactNode
+  onFinish: () => void
+  /** La partida no se puede repasar: sin análisis guardado o sin errores. */
+  onUnavailable?: (reason: 'missing' | 'clean') => void
+}
+
+function GuidedReview({ game, header, actions, onFinish, onUnavailable }: ReviewProps) {
   const [data, setData] = useState<{ parsed: ParsedGame; analysis: GameAnalysis } | null | 'missing'>(null)
   const [idx, setIdx] = useState(0)
   const [answers, setAnswers] = useState<Answer[]>([])
@@ -549,6 +539,11 @@ function GuidedReview({ game, header, actions, onFinish }: { game: GameSummary; 
   const moments = useMemo(() => (data && data !== 'missing' ? reviewMoments(game, data.analysis) : []), [data, game])
   const allAnswered = moments.length > 0 && answers.length >= moments.length
   const done = moments.length > 0 && idx >= moments.length
+
+  useEffect(() => {
+    if (data === 'missing') onUnavailable?.('missing')
+    else if (data && moments.length === 0) onUnavailable?.('clean')
+  }, [data, moments.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // La partida cuenta como repasada al responder el último momento.
   useEffect(() => {

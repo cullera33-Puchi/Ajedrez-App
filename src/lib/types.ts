@@ -23,6 +23,9 @@ export interface GameSummary {
   pgn: string
 }
 
+/** Nombre del rival del usuario en una partida. */
+export const opponentOf = (g: GameSummary) => (g.userColor === 'white' ? g.black.name : g.white.name)
+
 export type Outcome = 'victoria' | 'derrota' | 'tablas'
 
 export function outcomeFor(game: GameSummary): Outcome | undefined {
