@@ -20,6 +20,11 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Escanear posición desde una captura (7.1) | Partidas, *Escanear captura*. Reconocimiento en el dispositivo, sin conexión ni IA; aprende de las correcciones. Fotos de libros con claude.ai |
 | Panel de progreso de partidas (4.3) | Rating por ritmo, precisión por semana, temas más fallados y aperturas. Solo Chess.com y Lichess |
 | Lecciones de finales elementales (4.4) | Aprender, *Lecciones prácticas*: seis lecciones contra Stockfish |
+| Tus aperturas (4.5, versión 1) | Aprender: las 5 más jugadas con cada color, línea habitual, revisión con Stockfish, lo que te juegan y práctica con repaso espaciado |
+| Problemas sin conexión (1.6, parte sin conexión) | 5.493 problemas de Lichess de 400 a 1500, generados al publicar a partir de la base oficial (CC0) |
+| Jugar desde cualquier posición (1.9) | Desde el escáner, el análisis, las lecciones y las aperturas; opción de máxima fuerza |
+| Más lecciones (4.6) | Mate del pasillo, mate de la coz, oposición, Lucena y Philidor (once en total) |
+| Sincronización automática (2.2) | Con Supabase gratuito; guía en `docs/SINCRONIZACION.md`. Falta que crees la cuenta |
 | Volver atrás deslizando (5.10) | Gesto desde el borde izquierdo en la app del iPhone y botón atrás del sistema. No saca de una partida en marcha; en el análisis cierra antes la variante |
 | Partida contra bot a medias | Se guarda sola; aviso en Inicio con *Continuar* y punto en la pestaña Jugar |
 | Uso sin conexión completo | Corregida la caché para que la app abra sin red; el escáner y el motor también funcionan sin conexión |
@@ -47,15 +52,14 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
 | 1.5 | Jugar online en Lichess (rápidas y clásicas), retos a amigos y a los bots de Lichess, con análisis bloqueado durante la partida. Necesita tu cuenta de Lichess y probarlo contigo | Alto | Media |
-| 1.6 | Problemas de Lichess sincronizados con tu cuenta y paquete de problemas de tu nivel para usar sin conexión | Medio | Media |
+| 1.6 | Problemas de Lichess sincronizados con tu cuenta (el paquete sin conexión ya está hecho) | Medio | Baja |
 | 1.8 | Calibrar la fuerza de los bots con tus valoraciones (*Copiar para Claude*), registradas en `docs/AJUSTE_BOTS.md` | Bajo | Continua |
-| 1.9 | Jugar contra un bot o contra Stockfish desde una posición escaneada o desde una lección | Bajo | Media |
 
 ### 2. Sincronización entre ordenador y móvil
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 2.2 | Sincronización automática en la nube (Supabase, gratuito) con inicio de sesión por correo. Necesita que crees la cuenta | Medio | Media |
+| 2.3 | Probar la sincronización con tu cuenta real de Supabase | Bajo | Alta |
 
 ### 3. Entrenador con Claude
 
@@ -68,8 +72,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | # | Mejora | Esfuerzo | Prioridad |
 |---|---|---|---|
-| 4.6 | Más lecciones: mates de pasillo y de la coz, oposición avanzada, Lucena y Philidor | Medio | Media |
-| 4.5 | Repertorio de aperturas con repetición espaciada | Alto | Baja |
+| 4.7 | Más lecciones: mate con alfil y caballo, finales de dama contra peón, triangulación | Medio | Baja |
+| 4.5 | Aperturas, versión 2: repertorio propio editable y variantes del rival que aún no te han jugado | Alto | Baja |
 
 ### 5. Pendiente de verificar o pulir
 

@@ -29,7 +29,7 @@ Piezas principales:
 
 | Zona | Archivos |
 |---|---|
-| Vistas | `src/views/` (Home, Play, Games, Analysis, Puzzles, Learn, Lessons, Scan, Progress) |
+| Vistas | `src/views/` (Home, Play, Games, Analysis, Puzzles, Learn, Lessons, Openings, Scan, Progress) |
 | Bots | `src/lib/bots.ts` (nivel de 250 a 2000 de 50 en 50, `makeBot`) |
 | Análisis | `src/lib/analysis.ts`, `src/lib/engine.ts`, `src/lib/background.ts` |
 | Problemas | `src/lib/puzzles.ts` (nivel tipo Elo), `src/lib/myPuzzles.ts` (tus errores con repaso espaciado), `src/lib/puzzleLog.ts` (histórico por día) |
@@ -40,6 +40,9 @@ Piezas principales:
 | Progreso | `src/lib/progress.ts`, `src/views/Progress.tsx` |
 | Lecciones | `src/lib/lessons.ts`, `src/views/Lessons.tsx` |
 | Valoraciones de bots | `src/lib/botFeedback.ts` (texto para pegar a Claude) |
+| Aperturas | `src/lib/openings.ts` (árbol, revisión, repertorio, repasos), `src/views/Openings.tsx` |
+| Problemas sin conexión | `scripts/build-puzzle-pack.mjs` (se ejecuta en el workflow de Pages con la base de Lichess), `src/lib/puzzlePack.ts`. `public/puzzles/` no se versiona |
+| Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
 
 Reglas de negocio a respetar:
 
@@ -69,4 +72,5 @@ BASE_PATH=/Ajedrez-App/ npx vite build   # build como en GitHub Pages
 
 - No usar `pkill -f` ni `pgrep -f` en este entorno: matan la propia terminal. Usar `ps aux | grep … | awk` y `kill`.
 - En `useEffect`, nunca devolver un valor que no sea una función de limpieza.
-- Desde el entorno en la nube no hay acceso a chess.com ni a lichess.org: probar la importación con datos simulados.
+- Desde el entorno en la nube no hay acceso a chess.com, lichess.org, supabase.co ni a github.io: probar con datos y servidores simulados (rutas de Playwright). El resultado del paquete de problemas se lee en las anotaciones del workflow (`gh api repos/cullera33-Puchi/Ajedrez-App/check-runs/<job>/annotations`).
+- Las copias de seguridad nunca incluyen `syncConfig`, `syncSession`, `syncLast` ni `botGame` (`DEVICE_ONLY` en `src/lib/backup.ts`).
