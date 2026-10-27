@@ -100,7 +100,6 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | 5.1 | Importación de Lichess con datos reales | Programada según la documentación; sin probar con datos reales |
 | 5.2 | Problemas online de Lichess con datos reales | Sin verificar |
 | 5.3 | Análisis rápido en el móvil con la evaluación en la nube de Lichess; calibrar profundidad y umbrales | Pendiente, propuesto como siguiente paso |
-| 5.6 | Borrar la rama temporal `diagnostico-chesscom` en GitHub | Hay que hacerlo desde la web de GitHub (*Branches*) |
 | 5.7 | Importación completa de Chess.com con un historial grande | Probada con datos simulados; falta verificarla con tu historial real |
 | 5.8 | Modo Tinta en la BOOX real | Revisado en simulación; falta probar el refresco de la pantalla real |
 | 5.9 | Escáner con capturas reales de Chess.com | Probado con capturas simuladas y juegos de piezas no vistos (99,3 % de casillas); falta probarlo con tus capturas |
