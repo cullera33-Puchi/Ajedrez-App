@@ -162,9 +162,10 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
           ))}
           <RatingRow title="Chess.com" items={stats.chesscom} />
           <RatingRow title="Lichess" items={stats.lichess} />
-          {settings.lichessUser && stats.lichess && !stats.lichess.length && (
+          {settings.lichessUser && stats.lichess && !stats.lichess.some((r) => r.label !== 'Problemas') && (
             <p className="muted small">
-              Lichess: aún no tienes partidas con puntuación. Las amistosas no dan rating; para tenerlo, marca <em>Con puntuación</em> al buscar rival en Jugar.
+              Lichess: aún no tienes partidas con puntuación, por eso no sale rating de partidas. Ni las amistosas ni las partidas contra Stockfish dan rating; para
+              tenerlo, marca <em>Con puntuación</em> al buscar rival en Jugar.
             </p>
           )}
         </section>
