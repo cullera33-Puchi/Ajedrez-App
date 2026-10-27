@@ -32,7 +32,7 @@ jobs:
       # se publica igual y usa el set de iniciación.
       - id: month
         run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: /tmp/lichess_db_puzzle.csv.zst
           key: lichess-puzzles-${{ steps.month.outputs.month }}
@@ -48,7 +48,7 @@ jobs:
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 

@@ -21,6 +21,8 @@ export interface Lesson {
   par: number
   /** Máximo de jugadas del alumno antes de dar la lección por fallada (en «tablas», las que hay que aguantar). */
   limit: number
+  /** La solución incluye entregar material: perder una pieza no da la lección por fallada. */
+  allowSacrifice?: boolean
 }
 
 export const LESSONS: Lesson[] = [
@@ -71,6 +73,38 @@ export const LESSONS: Lesson[] = [
     limit: 50,
   },
   {
+    id: 'back-rank',
+    title: 'Mate del pasillo',
+    summary: 'El rey encerrado por sus propios peones en la última fila.',
+    steps: [
+      'Si el rey rival está en la última fila y sus peones le tapan la salida, un jaque de torre o dama en esa fila puede ser mate.',
+      'Si una pieza rival defiende la fila, elimínala o desvíala: a veces conviene entregar la dama para que la torre entre después.',
+      'Busca piezas alineadas en la misma columna (dama y torre): la de delante puede sacrificarse y la de detrás remata.',
+      'Para evitarlo en tus partidas, abre una salida al rey (por ejemplo, h3 o g3) cuando tengas tiempo.',
+    ],
+    fen: '3r2k1/2q2ppp/8/8/8/3Q4/5PPP/3R2K1 w - - 0 1',
+    goal: 'mate',
+    par: 2,
+    limit: 4,
+    allowSacrifice: true,
+  },
+  {
+    id: 'smothered',
+    title: 'Mate de la coz',
+    summary: 'El caballo da mate a un rey ahogado por sus propias piezas.',
+    steps: [
+      'Jaque de caballo para obligar al rey a moverse a la esquina o junto a ella.',
+      'Jaque doble (caballo y dama a la vez): el rey solo puede volver a la esquina.',
+      'Sacrifica la dama junto al rey para obligar a la torre a taparle la última casilla.',
+      'El caballo da el jaque final: el rey no puede moverse porque está rodeado de sus propias piezas.',
+    ],
+    fen: 'r6k/6pp/8/6N1/2Q5/8/6PP/6K1 w - - 0 1',
+    goal: 'mate',
+    par: 4,
+    limit: 6,
+    allowSacrifice: true,
+  },
+  {
     id: 'square',
     title: 'La regla del cuadrado',
     summary: '¿Alcanza tu rey al peón? Se sabe sin calcular.',
@@ -101,6 +135,21 @@ export const LESSONS: Lesson[] = [
     limit: 25,
   },
   {
+    id: 'opposition',
+    title: 'La oposición',
+    summary: 'Ganar con el rey y el peón aunque los reyes estén lejos.',
+    steps: [
+      'Hay oposición cuando los reyes están en la misma columna con un número impar de casillas entre ellos. El que no mueve la tiene.',
+      'Lleva tu rey por delante del peón, hacia las casillas clave (dos filas por delante del peón).',
+      'Si el rey rival te bloquea, usa una jugada de peón para cederle el turno y recuperar la oposición.',
+      'Objetivo: corona el peón sin que te capturen la dama nueva y sin ahogar al rival.',
+    ],
+    fen: '8/8/4k3/8/8/4K3/4P3/8 w - - 0 1',
+    goal: 'promote',
+    par: 14,
+    limit: 30,
+  },
+  {
     id: 'kp-draw',
     title: 'Rey y peón: defender las tablas',
     summary: 'Juegas con negras. Si tu rey se pone delante del peón, no pueden ganarte.',
@@ -111,6 +160,36 @@ export const LESSONS: Lesson[] = [
       'Objetivo: aguanta sin que el peón corone. Si te quedas sin jugadas sin estar en jaque (ahogado), son tablas: también vale.',
     ],
     fen: '8/8/8/4k3/8/8/4P3/4K3 w - - 0 1',
+    goal: 'draw',
+    par: 25,
+    limit: 25,
+  },
+  {
+    id: 'lucena',
+    title: 'Final de torres: Lucena',
+    summary: 'Torre y peón contra torre: hacer el puente para coronar.',
+    steps: [
+      'Tu rey está delante del peón, pero las torres rivales dan jaques y le impiden salir.',
+      'Primero, corta al rey rival con tu torre en la columna de al lado (jaque en esa columna).',
+      'Después, sube la torre a la cuarta fila: será el «puente» que tapará los jaques.',
+      'Saca el rey y, cuando lleguen los jaques, interpón la torre. El peón corona.',
+    ],
+    fen: '1K1k4/1P6/8/8/8/8/r7/2R5 w - - 0 1',
+    goal: 'promote',
+    par: 10,
+    limit: 25,
+  },
+  {
+    id: 'philidor',
+    title: 'Final de torres: Philidor',
+    summary: 'Juegas con negras. La defensa que convierte en tablas torre y peón contra torre.',
+    steps: [
+      'Tu rey está delante del peón. Mantén la torre en tu sexta fila (la tercera de las blancas) para que su rey no pueda avanzar.',
+      'No muevas la torre de esa fila mientras el peón no avance.',
+      'Cuando el peón llegue a tu sexta fila, el rey blanco ya no tiene dónde esconderse: baja la torre al fondo y da jaques desde atrás.',
+      'Objetivo: aguanta sin perder la torre y sin que el peón corone.',
+    ],
+    fen: '4k3/7R/r7/3KP3/8/8/8/8 w - - 0 1',
     goal: 'draw',
     par: 25,
     limit: 25,
@@ -157,7 +236,9 @@ export function checkLesson(lesson: Lesson, chess: Chess, userMoves: number, sta
   if (lesson.goal === 'mate') {
     if (chess.isCheckmate()) return { state: 'won', text: `¡Mate en ${userMoves} jugadas!` }
     if (chess.isStalemate()) return { state: 'lost', text: 'Ahogado: el rey rival no tiene jugadas y no está en jaque. Es tablas. Deja siempre una casilla libre hasta que puedas dar mate.' }
-    if (pieceCount(chess, user) < startPieces[user]) return { state: 'lost', text: 'Te han capturado una pieza. Mantén tus piezas lejos del rey rival o protegidas por tu rey.' }
+    if (!lesson.allowSacrifice && pieceCount(chess, user) < startPieces[user]) {
+      return { state: 'lost', text: 'Te han capturado una pieza. Mantén tus piezas lejos del rey rival o protegidas por tu rey.' }
+    }
     if (chess.isDraw()) return { state: 'lost', text: 'La partida ha acabado en tablas.' }
     if (userMoves >= lesson.limit && chess.turn() === rival) return { state: 'lost', text: `Has llegado a ${lesson.limit} jugadas sin dar mate. Repasa la técnica y vuelve a probar.` }
   }
@@ -169,7 +250,7 @@ export function checkLesson(lesson: Lesson, chess: Chess, userMoves: number, sta
 
   if (lesson.goal === 'promote') {
     if (chess.isStalemate()) return { state: 'lost', text: 'Ahogado: es tablas. Al coronar, comprueba que el rey rival tenga alguna jugada.' }
-    if (pieceCount(chess, user) < startPieces[user]) return { state: 'lost', text: 'Te han capturado el peón. El rey tiene que ir por delante para protegerlo.' }
+    if (pieceCount(chess, user) < startPieces[user]) return { state: 'lost', text: 'Te han capturado una pieza. Protégela con el rey (o con la torre) antes de avanzar.' }
     if (last?.promotion && last.color === user) {
       const attacked = chess.isAttacked(last.to, rival)
       const defended = chess.isAttacked(last.to, user)
@@ -180,6 +261,8 @@ export function checkLesson(lesson: Lesson, chess: Chess, userMoves: number, sta
   }
 
   if (lesson.goal === 'draw') {
+    if (chess.isCheckmate()) return { state: 'lost', text: 'Te han dado mate. Mantén el rey cerca de la casilla de coronación y la torre lejos.' }
+    if (pieceCount(chess, user) < startPieces[user]) return { state: 'lost', text: 'Has perdido una pieza. Revisa qué casillas ataca el rival antes de mover.' }
     if (last?.promotion && last.color === rival) return { state: 'lost', text: 'El peón ha coronado. Tu rey tenía que quedarse delante del peón.' }
     if (pieceCount(chess, rival) < startPieces[rival]) return { state: 'won', text: '¡Has capturado el peón! Tablas seguras.' }
     if (chess.isStalemate()) return { state: 'won', text: '¡Ahogado! Son tablas: has defendido bien.' }

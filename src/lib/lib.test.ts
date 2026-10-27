@@ -610,3 +610,28 @@ describe('paquete de problemas', () => {
     expect(pickNear([], 600, new Set())).toBeNull()
   })
 })
+
+describe('lecciones', () => {
+  it('tienen posiciones válidas y empieza el bando correcto', async () => {
+    const { LESSONS, lessonColor } = await import('./lessons')
+    expect(LESSONS.length).toBe(11)
+    for (const l of LESSONS) {
+      const c = new Chess(l.fen)
+      expect(c.isGameOver()).toBe(false)
+      // Siempre empiezan las blancas: el alumno o, en las de defensa (alumno con negras), el motor.
+      expect(c.turn()).toBe('w')
+      expect(lessonColor(l)).toBe(l.goal === 'draw' ? 'black' : 'white')
+    }
+  })
+
+  it('reconoce el mate de la coz y el fallo por pieza perdida', async () => {
+    const { LESSONS, checkLesson } = await import('./lessons')
+    const coz = LESSONS.find((l) => l.id === 'smothered')!
+    const c = new Chess(coz.fen)
+    for (const m of ['Nf7+', 'Kg8', 'Nh6+', 'Kh8', 'Qg8+', 'Rxg8', 'Nf7#']) c.move(m)
+    expect(checkLesson(coz, c, 4, { w: 2, b: 1 }).state).toBe('won')
+    const phil = LESSONS.find((l) => l.id === 'philidor')!
+    const p = new Chess('4k3/7R/8/3KP3/8/8/8/8 b - - 0 1')
+    expect(checkLesson(phil, p, 3, { w: 2, b: 1 }).state).toBe('lost')
+  })
+})
