@@ -59,7 +59,6 @@ export default function App() {
   const [, refresh] = useReducer((x: number) => x + 1, 0)
   const history = useRef<NavState[]>([])
   const navRef = useRef(nav)
-  const indicator = useRef<HTMLDivElement>(null)
 
   /** Cambia de pantalla guardando la actual para poder volver con el gesto atrás. */
   const go = (next: Partial<NavState>) => {
@@ -82,7 +81,7 @@ export default function App() {
       return true
     })
     onToast((msg) => setToast(msg))
-    const remove = installBackNavigation(indicator.current!)
+    const remove = installBackNavigation()
     return () => {
       remove()
       setViewBack(null)
@@ -226,9 +225,7 @@ export default function App() {
         )}
         </Suspense>
       </main>
-      <div ref={indicator} className="back-indicator" aria-hidden="true">
-        ‹
-      </div>
+
       {toast && (
         <div className="toast" role="status">
           {toast}

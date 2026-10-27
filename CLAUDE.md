@@ -49,7 +49,8 @@ Reglas de negocio a respetar:
 
 - Las partidas contra bots se guardan y analizan, pero van separadas (apartado *Contra bots* en Partidas) y no cuentan en recomendaciones ni en el resumen de Inicio.
 - Los problemas de *Mis errores* no cambian el nivel de problemas.
-- Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección) antes de cambiar de pantalla.
+- Volver atrás (`src/lib/nav.ts`): `useBackGuard` en partidas en marcha (bot, lección empezada) para que el gesto no saque de ellas; `useBackHandler` para cerrar algo abierto (variante, lección, apertura) antes de cambiar de pantalla.
+- Gesto del borde izquierdo en el móvil (`src/components/MobileMenu.tsx`): abre el menú siguiendo el dedo; si hay un `useBackHandler` activo, en su lugar va atrás. En la app instalada en iOS no se toca el historial (el sistema mostraría una página gris al deslizar); el botón atrás del sistema en Android, Safari y PC usa una entrada de historial de reserva.
 - El service worker (`public/sw.js`) usa `ignoreVary` al buscar en caché: sin eso la app no abre sin conexión. Precarga todas las partes recorriendo los JS de forma recursiva; si se añade una pantalla con `lazy`, no hace falta tocarlo.
 - Las pantallas se cargan con `lazy` desde `src/App.tsx` (objeto `VIEWS`) y se precargan en segundo plano. Una pantalla no debe importar otra (rompe la división); lo compartido va a `src/lib/`.
 - Motor: `evaluate(fen, depth, multipv, tag)`. Con `tag`, una búsqueda nueva sustituye a la anterior de la misma etiqueta (se usa en las líneas del motor). Tras un `await` al motor, comprobar que la pantalla sigue en el mismo estado antes de aplicar el resultado.

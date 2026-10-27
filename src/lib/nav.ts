@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 
 /**
- * Navegación hacia atrás: el gesto de deslizar desde el borde izquierdo (en la app instalada en el
- * iPhone), el gesto o botón atrás del sistema (Android, Safari) y el botón atrás del navegador.
+ * Navegación hacia atrás: el gesto o botón atrás del sistema (Android, Safari), el botón atrás del
+ * navegador y, en el móvil, el gesto del borde izquierdo cuando hay algo abierto que cerrar.
  *
  * Orden de prioridad al ir atrás:
  * 1. Si hay una partida en marcha (contra un bot o una lección empezada), no se sale: solo se avisa.
@@ -76,14 +76,20 @@ export function useBackHandler(active: boolean, fn: () => void) {
   }, [active])
 }
 
-/** ¿Es la app instalada en un iPhone o iPad? Ahí el sistema no tiene gesto de volver atrás. */
+/** ¿Hay algo abierto que el gesto atrás deba cerrar (una variante, una lección, una apertura…)? */
+export const hasBackHandler = () => handlers.length > 0
+
+/** ¿Es la app instalada en un iPhone o iPad? */
 const isIosStandalone = () => (navigator as Navigator & { standalone?: boolean }).standalone === true
 
 /**
- * Conecta el botón y el gesto atrás del sistema (a través del historial del navegador) y, en la app
- * instalada en iOS, el gesto de deslizar desde el borde izquierdo. Devuelve la función para quitarlo.
+ * Conecta el botón y el gesto atrás del sistema (Android, Safari, navegador del PC) con `goBack`,
+ * a través del historial. En la app instalada en iOS no hay botón atrás y el gesto del borde
+ * izquierdo abre el menú (src/components/MobileMenu.tsx): ahí no se toca el historial, porque el
+ * sistema mostraría al deslizar una página anterior vacía (gris).
  */
-export function installBackNavigation(indicator: HTMLElement): () => void {
+export function installBackNavigation(): () => void {
+  if (isIosStandalone()) return () => undefined
   // Una entrada de historial de reserva: cada «atrás» del sistema la consume y se vuelve a poner.
   history.replaceState({ ajedrez: 'base' }, '')
   history.pushState({ ajedrez: 'app' }, '')
@@ -92,52 +98,5 @@ export function installBackNavigation(indicator: HTMLElement): () => void {
     goBack()
   }
   window.addEventListener('popstate', onPop)
-
-  const EDGE = 22
-  const TRIGGER = 70
-  let start: { x: number; y: number } | null = null
-  let dx = 0
-  const reset = () => {
-    start = null
-    dx = 0
-    indicator.style.transform = ''
-    indicator.style.opacity = '0'
-  }
-  const onStart = (e: TouchEvent) => {
-    const t = e.touches[0]
-    if (e.touches.length !== 1 || t.clientX > EDGE) return
-    // Sobre el tablero, el toque es para mover piezas.
-    if ((e.target as Element | null)?.closest?.('cg-board, .scan-editor, input, textarea')) return
-    start = { x: t.clientX, y: t.clientY }
-  }
-  const onMove = (e: TouchEvent) => {
-    if (!start) return
-    const t = e.touches[0]
-    dx = t.clientX - start.x
-    if (Math.abs(t.clientY - start.y) > 60) return reset()
-    const shown = Math.max(0, Math.min(TRIGGER, dx))
-    indicator.style.opacity = String(shown / TRIGGER)
-    indicator.style.transform = `translate(${shown}px, -50%)`
-  }
-  const onEnd = () => {
-    const go = start && dx >= TRIGGER
-    reset()
-    if (go) goBack()
-  }
-  const touch = isIosStandalone()
-  if (touch) {
-    document.addEventListener('touchstart', onStart, { passive: true })
-    document.addEventListener('touchmove', onMove, { passive: true })
-    document.addEventListener('touchend', onEnd)
-    document.addEventListener('touchcancel', reset)
-  }
-  return () => {
-    window.removeEventListener('popstate', onPop)
-    if (touch) {
-      document.removeEventListener('touchstart', onStart)
-      document.removeEventListener('touchmove', onMove)
-      document.removeEventListener('touchend', onEnd)
-      document.removeEventListener('touchcancel', reset)
-    }
-  }
+  return () => window.removeEventListener('popstate', onPop)
 }
