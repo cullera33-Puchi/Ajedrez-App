@@ -149,3 +149,28 @@ export async function fetchLichessPuzzle(theme: string, difficulty: Difficulty):
   const res = await request(`${BASE}/api/puzzle/next?${params}`)
   return puzzleFromLichess((await res.json()) as LiPuzzleResponse)
 }
+
+export interface ExplorerMove {
+  uci: string
+  san: string
+  /** Partidas en la base del explorador con esa jugada. */
+  games: number
+  /** Puntuación del bando que mueve con esa jugada (0 a 100). */
+  score: number
+}
+
+/**
+ * Jugadas más populares en Lichess en una posición, entre jugadores de 1000 a 1400 en partidas
+ * rápidas y blitz (explorador de aperturas de Lichess, gratuito). Necesita conexión.
+ */
+export async function fetchExplorer(fen: string): Promise<ExplorerMove[]> {
+  const params = new URLSearchParams({ variant: 'standard', speeds: 'blitz,rapid', ratings: '1000,1200', fen, moves: '4' })
+  const res = await request(`https://explorer.lichess.ovh/lichess?${params}`)
+  const data = (await res.json()) as { moves?: { uci: string; san: string; white: number; draws: number; black: number }[] }
+  const whiteToMove = fen.split(' ')[1] === 'w'
+  return (data.moves ?? []).map((m) => {
+    const games = m.white + m.draws + m.black
+    const wins = whiteToMove ? m.white : m.black
+    return { uci: m.uci, san: m.san, games, score: games ? Math.round(((wins + m.draws / 2) / games) * 100) : 0 }
+  })
+}

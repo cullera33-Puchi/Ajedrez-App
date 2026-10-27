@@ -635,3 +635,54 @@ describe('lecciones', () => {
     expect(checkLesson(phil, p, 3, { w: 2, b: 1 }).state).toBe('lost')
   })
 })
+
+describe('aperturas', () => {
+  const mkGame = (id: string, pgn: string, color: 'white' | 'black', opening: string, result: '1-0' | '0-1' = '1-0'): GameSummary => ({
+    id,
+    source: 'chesscom',
+    white: { name: 'w' },
+    black: { name: 'b' },
+    userColor: color,
+    result,
+    date: 0,
+    opening,
+    pgn,
+  })
+
+  it('agrupa, construye el árbol y saca la línea habitual con la corrección de Stockfish', async () => {
+    const o = await import('./openings')
+    const games = [
+      mkGame('1', '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 d5', 'white', 'Italian Game Two Knights'),
+      mkGame('2', '1. e4 e5 2. Nf3 Nc6 3. Bc4 Nf6 4. Ng5 Bc5', 'white', 'Italian Game'),
+      mkGame('3', '1. e4 e5 2. Nf3 Nc6 3. Bc4 Bc5 4. c3 Nf6', 'white', 'Italian Game: Giuoco Piano', '0-1'),
+      mkGame('4', '1. d4 d5 2. c4 e6', 'black', 'Queens Gambit Declined'),
+      mkGame('5', '1. e4 e5 2. Nf3 Nc6', 'white', 'Italian Game', '1-0'),
+    ]
+    games[4].source = 'bot'
+    const top = o.topOpenings(games)
+    expect(top.white.map((g) => [g.family, g.games.length])).toEqual([['Italian Game', 3]])
+    expect(top.black[0].family).toBe('Queens Gambit')
+    const tree = o.buildTree(top.white[0])
+    const root = tree.get(o.START_KEY)!
+    expect(root.userToMove).toBe(true)
+    expect(root.moves[0]).toMatchObject({ san: 'e4', count: 3 })
+    const line = o.mainLine(tree, {})
+    expect(line.map((s) => s.san)).toEqual(['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Nf6', 'Ng5', 'd5'])
+    // Si Stockfish ve peor Cg5 (pierde un 12 %), el repertorio propone d4.
+    const g5 = line[6]
+    const reviews = { [`${g5.key}|${g5.uci}`]: { best: 'd2d4', bestSan: 'd4', drop: 12 } }
+    const fixed = o.mainLine(tree, reviews)
+    expect(fixed[6]).toMatchObject({ san: 'd4', rep: { corrected: { yourSan: 'Ng5', drop: 12 } } })
+    expect(o.reviewLabel(12)).toBe('error')
+  })
+
+  it('elige la respuesta del rival según lo que te juegan y programa los repasos', async () => {
+    const o = await import('./openings')
+    const node = { key: 'k', fen: '', ply: 1, count: 5, userToMove: false, moves: [{ san: 'e5', uci: 'e7e5', count: 4 }, { san: 'c5', uci: 'c7c5', count: 1 }] }
+    expect(o.pickReply(node, () => 0.99)!.san).toBe('e5')
+    o.recordPractice('x', true, 0)
+    expect(o.isDue(o.loadOpeningSrs(), 'x', 1000)).toBe(false)
+    o.recordPractice('x', false, 0)
+    expect(o.isDue(o.loadOpeningSrs(), 'x', 11 * 60 * 1000)).toBe(true)
+  })
+})

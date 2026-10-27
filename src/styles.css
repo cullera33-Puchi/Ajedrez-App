@@ -2570,3 +2570,35 @@ label {
 .start-position-board coords {
   display: none;
 }
+
+/* Aperturas */
+.openings-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+.openings-cols h3 {
+  margin: 0 0 0.4rem;
+}
+.due-tag {
+  color: var(--c-error);
+  font-weight: 600;
+}
+.var-move.mine {
+  font-weight: 700;
+}
+.var-move.imprecision {
+  color: var(--c-imprecision);
+}
+.var-move.error {
+  color: var(--c-grave);
+}
+.var-move.corrected {
+  color: var(--c-mejor);
+  text-decoration: underline;
+}
+.var-move.active.imprecision,
+.var-move.active.error,
+.var-move.active.corrected {
+  color: #fff;
+}

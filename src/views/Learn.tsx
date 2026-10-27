@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { ResourceLinks } from '../components/ResourceLinks'
 import { type Lesson, LESSONS } from '../lib/lessons'
 import { LessonList, LessonPlayer } from './Lessons'
+import { OpeningDetail, OpeningsCard } from './Openings'
+import { getGames } from '../lib/games'
+import type { OpeningGroup } from '../lib/openings'
 
 interface Props {
   onPractice: (theme: string) => void
@@ -34,6 +37,8 @@ const MODULES = [
 
 export function LearnView({ onPractice, onPlayFrom }: Props) {
   const [lesson, setLesson] = useState<Lesson | null>(null)
+  const [opening, setOpening] = useState<OpeningGroup | null>(null)
+  if (opening) return <OpeningDetail key={opening.id} group={opening} onBack={() => setOpening(null)} onPlayFrom={onPlayFrom} />
   if (lesson) {
     const next = LESSONS[LESSONS.indexOf(lesson) + 1]
     return <LessonPlayer key={lesson.id} lesson={lesson} onBack={() => setLesson(null)} onNext={next ? () => setLesson(next) : undefined} onPlayFrom={onPlayFrom} />
@@ -50,6 +55,12 @@ export function LearnView({ onPractice, onPlayFrom }: Props) {
           <h2>Lecciones prácticas</h2>
           <p className="muted">Finales que hay que saber ganar (y uno que hay que saber defender). Juegas contra Stockfish, que defiende lo mejor posible.</p>
           <LessonList onOpen={setLesson} />
+        </section>
+
+        <section className="card span-2">
+          <h2>Tus aperturas</h2>
+          <p className="muted">Las 5 que más juegas con cada color, sacadas de tus partidas. Revisa tu línea habitual con Stockfish y practícala.</p>
+          <OpeningsCard games={getGames()} onOpen={setOpening} />
         </section>
 
         <section className="card">
