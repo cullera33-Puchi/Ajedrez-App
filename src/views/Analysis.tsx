@@ -268,7 +268,12 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
   const evalNow = analysis?.positions[ply]
   const coachComment = report?.comentarios.find((c) => c.ply === ply)?.comentario ?? report?.momentos_clave.find((m) => m.ply === ply)?.explicacion
   const bestNow = evalNow?.best
-  const arrows: Arrow[] = showBest && bestNow ? [{ orig: bestNow.slice(0, 2), dest: bestNow.slice(2, 4), brush: 'paleBlue' }] : []
+  // Si la jugada fue mejorable, la que había que hacer se marca en verde (es la que dice el comentario).
+  const betterUci = moveAnalysis && moveAnalysis.classification !== 'mejor' && moveAnalysis.classification !== 'buena' ? analysis?.positions[ply - 1]?.best : undefined
+  const arrows: Arrow[] = [
+    ...(betterUci && betterUci !== move?.uci ? [{ orig: betterUci.slice(0, 2), dest: betterUci.slice(2, 4), brush: 'green' as const }] : []),
+    ...(showBest && bestNow ? [{ orig: bestNow.slice(0, 2), dest: bestNow.slice(2, 4), brush: 'paleBlue' as const }] : []),
+  ]
   const liveBest = exploring ? live?.lines[0]?.move : undefined
   const boardArrows: Arrow[] = variation || showLines ? (showBest && liveBest ? [{ orig: liveBest.slice(0, 2), dest: liveBest.slice(2, 4), brush: 'paleBlue' }] : []) : arrows
   const varMove = variation && variation.idx ? variation.moves[variation.idx - 1] : undefined
@@ -386,8 +391,9 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
   const playUci = (uci: string) => playMove(uci.slice(0, 2), uci.slice(2, 4), uci[4])
 
   /** Ayuda del motor, oculta hasta que se pide: la flecha de la mejor jugada y las 3 mejores líneas. */
-  const engineToggles = (
+  const engineToggles = (first?: React.ReactNode) => (
     <div className="engine-toggles">
+      {first}
       <button className={`chip ${showBest ? 'active' : ''}`} onClick={() => setShowBest(!showBest)} aria-pressed={showBest}>
         {showBest ? 'Ocultar la mejor jugada' : 'Ver la mejor jugada'}
       </button>
@@ -428,7 +434,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
         <button className="btn small" onClick={() => go(variation.base)}>
           Volver a la partida
         </button>
-        {engineToggles}
+        {engineToggles()}
       </section>
     )
   }
@@ -506,12 +512,14 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
                     : `Pensada en ${formatSeconds(timeSpent.spent)}; quedaban ${formatClock(timeSpent.left)}.`}
                 </p>
               )}
-              {canRetry && (
-                <button className="btn small primary retry-btn" onClick={startRetry}>
-                  Inténtalo tú
-                </button>
+              {betterUci && betterUci !== move?.uci && <p className="small muted">En verde, en el tablero, la jugada que había que hacer.</p>}
+              {engineToggles(
+                canRetry && (
+                  <button className="btn small primary retry-btn" onClick={startRetry}>
+                    Inténtalo tú
+                  </button>
+                ),
               )}
-              {engineToggles}
             </>
           )}
           {coachComment && (
@@ -526,7 +534,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
           <p className="muted">
             {total ? 'Posición inicial. Avanza con los botones de la barra o mueve una pieza para explorar una variante.' : 'Mueve una pieza para explorar una variante.'}
           </p>
-          {engineToggles}
+          {engineToggles()}
           {showLines && !retry && <EngineLines fen={fen} lines={live} onPlay={playUci} />}
         </>
       )}

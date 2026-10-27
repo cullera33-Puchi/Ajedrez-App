@@ -3058,3 +3058,26 @@ label {
   border-width: 3px;
   background: #e8e8e8;
 }
+.engine-toggles {
+  align-items: center;
+}
+
+/*
+ * Tablet en vertical (la BOOX, entre 600 y 800 px de ancho): el análisis con el tablero más grande;
+ * debajo se ve la jugada actual y la lista de jugadas queda para bajar con el dedo.
+ */
+@media (min-width: 600px) and (max-width: 800px) {
+  .page.analysis .board-row,
+  .page.analysis .player-line {
+    max-width: calc(60dvh + 26px);
+  }
+}
+
+/* Tinta: las flechas y círculos del tablero, en negro (chessground los pinta de colores) */
+:root[data-theme='eink'] cg-container svg line,
+:root[data-theme='eink'] cg-container svg circle {
+  stroke: #000 !important;
+}
+:root[data-theme='eink'] cg-container svg marker path {
+  fill: #000 !important;
+}
