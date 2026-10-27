@@ -22,11 +22,16 @@ interface Props {
 type Filter = 'todas' | 'victoria' | 'derrota' | 'tablas'
 
 /** Las partidas reales (Chess.com y Lichess) y las jugadas contra bots se muestran por separado. */
-type GameGroup = 'online' | 'bots' | 'otras'
+type GameGroup = 'chesscom' | 'lichess' | 'bots' | 'otras'
 
-const GROUP_LABEL: Record<GameGroup, string> = { online: 'Chess.com y Lichess', bots: 'Contra bots', otras: 'Otras' }
+const GROUPS: { id: GameGroup; label: string; hint: string }[] = [
+  { id: 'chesscom', label: 'Chess.com', hint: 'Tus partidas' },
+  { id: 'lichess', label: 'Lichess', hint: 'Tus partidas' },
+  { id: 'bots', label: 'Contra bots', hint: 'De la app' },
+  { id: 'otras', label: 'Otras', hint: 'PGN y posiciones' },
+]
 
-const groupOf = (g: GameSummary): GameGroup => (g.source === 'bot' ? 'bots' : g.source === 'chesscom' || g.source === 'lichess' ? 'online' : 'otras')
+const groupOf = (g: GameSummary): GameGroup => (g.source === 'bot' ? 'bots' : g.source === 'chesscom' || g.source === 'lichess' ? g.source : 'otras')
 
 const SOURCE_LABEL: Record<GameSummary['source'], string> = {
   chesscom: 'Chess.com',
@@ -57,7 +62,9 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
   const [limit, setLimit] = useState(50)
   const bg = useBackgroundState()
   const [filter, setFilter] = useState<Filter>('todas')
-  const [group, setGroup] = usePersistentState<GameGroup>('gamesGroup', 'online')
+  const [storedGroup, setGroup] = usePersistentState<GameGroup | 'online'>('gamesGroup', 'chesscom')
+  // El antiguo apartado conjunto «Chess.com y Lichess» pasa a Chess.com.
+  const group: GameGroup = storedGroup === 'online' ? 'chesscom' : storedGroup
   const [showPgn, setShowPgn] = useState(false)
   const [pgn, setPgn] = useState('')
 
@@ -67,7 +74,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     try {
       const g = await fn()
       onAddGames(g)
-      setMsg({ kind: 'ok', text: g.length ? `Importadas ${g.length} partidas de ${label}.` : `No hay partidas recientes en ${label}.` })
+      setMsg({ kind: 'ok', text: g.length ? `${g.length === 1 ? 'Importada 1 partida' : `Importadas ${g.length} partidas`} de ${label}.` : `No hay partidas nuevas en ${label}.` })
     } catch (e) {
       setMsg({ kind: 'error', text: (e as Error).message, detail: e instanceof ImportError ? e.detail : String(e) })
       logWarn(`Importación de ${label}: ${(e as Error).message}`, e instanceof ImportError ? e.detail : e)
@@ -80,6 +87,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     const user = ccUser.trim()
     if (!user || busy) return
     if (user !== settings.chesscomUser) onSettings({ ...settings, chesscomUser: user })
+    setGroup('chesscom')
     setBusy('Chess.com')
     setMsg(null)
     try {
@@ -87,7 +95,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       setMsg({
         kind: 'ok',
         text: r.games
-          ? `Importadas ${r.games} partidas de Chess.com (${r.months} ${r.months === 1 ? 'mes revisado' : 'meses revisados'}).`
+          ? `${r.games === 1 ? 'Importada 1 partida' : `Importadas ${r.games} partidas`} de Chess.com (${r.months} ${r.months === 1 ? 'mes revisado' : 'meses revisados'}).`
           : 'No hay partidas nuevas en Chess.com.',
       })
     } catch (e) {
@@ -99,7 +107,10 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     }
   }
 
-  const importLichess = () => void run('Lichess', () => importLichessNew(settings.lichessUser))
+  const importLichess = () => {
+    setGroup('lichess')
+    void run('Lichess', () => importLichessNew(settings.lichessUser))
+  }
 
   const importFile = async (file: File | undefined) => {
     if (!file) return
@@ -124,7 +135,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
     }
   }
 
-  const counts = { online: 0, bots: 0, otras: 0 }
+  const counts: Record<GameGroup, number> = { chesscom: 0, lichess: 0, bots: 0, otras: 0 }
   for (const g of games) counts[groupOf(g)]++
   const list = games.filter((g) => groupOf(g) === group && (filter === 'todas' || outcomeFor(g) === filter))
   const noAccounts = !settings.chesscomUser && !settings.lichessUser
@@ -238,23 +249,23 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       )}
 
       <section className="card">
-        <div className="segmented groups" role="tablist" aria-label="Tipo de partidas">
-          {(['online', 'bots', 'otras'] as GameGroup[])
-            .filter((g) => g !== 'otras' || counts.otras > 0)
-            .map((g) => (
-              <button
-                key={g}
-                role="tab"
-                aria-selected={group === g}
-                className={group === g ? 'active' : ''}
-                onClick={() => {
-                  setGroup(g)
-                  setLimit(50)
-                }}
-              >
-                {GROUP_LABEL[g]} ({counts[g]})
-              </button>
-            ))}
+        <div className="game-groups" role="tablist" aria-label="Tipo de partidas">
+          {GROUPS.filter((g) => g.id !== 'otras' || counts.otras > 0).map((g) => (
+            <button
+              key={g.id}
+              role="tab"
+              aria-selected={group === g.id}
+              className={`game-group group-${g.id} ${group === g.id ? 'active' : ''}`}
+              onClick={() => {
+                setGroup(g.id)
+                setLimit(50)
+              }}
+            >
+              <span className="game-group-name">{g.label}</span>
+              <span className="game-group-count">{counts[g.id]}</span>
+              <span className="game-group-hint">{g.hint}</span>
+            </button>
+          ))}
         </div>
         <div className="tabs">
           {(['todas', 'victoria', 'derrota', 'tablas'] as Filter[]).map((f) => (
@@ -311,8 +322,8 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
                   Ir a Jugar
                 </button>
               </>
-            ) : group === 'online' && !counts.online ? (
-              'Aún no has importado partidas de Chess.com o Lichess.'
+            ) : (group === 'chesscom' || group === 'lichess') && !counts[group] ? (
+              group === 'chesscom' ? 'Aún no has importado partidas de Chess.com: pulsa Importar de Chess.com.' : 'Aún no has importado partidas de Lichess: pon tu usuario en Inicio y pulsa Importar de Lichess.'
             ) : (
               'No hay partidas con este filtro.'
             )}
@@ -325,7 +336,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
         )}
         <p className="muted small">
           {list.length} {list.length === 1 ? 'partida' : 'partidas'}.{' '}
-          {group === 'online' && counts.online >= 3 && (
+          {(group === 'chesscom' || group === 'lichess') && counts.chesscom + counts.lichess >= 3 && (
             <button className="link" onClick={() => onNavigate('progreso')}>
               Ver tu progreso
             </button>

@@ -2993,3 +2993,68 @@ label {
 .engine-toggles .chip {
   font-size: 0.8rem;
 }
+
+/* Mis partidas: un apartado por origen, en fichas (dos por fila en el móvil) */
+.game-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.5rem;
+  margin: 0 0 0.8rem;
+}
+.game-group {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: baseline;
+  gap: 0 0.5rem;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-2);
+  border: 2px solid var(--line);
+  border-left: 5px solid var(--group-color, var(--line));
+  border-radius: 10px;
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+.game-group-name {
+  font-weight: 700;
+}
+.game-group-count {
+  font-size: 1.15rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.game-group-hint {
+  grid-column: 1 / -1;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.game-group.active {
+  border-color: var(--group-color, var(--accent));
+  background: var(--card-2);
+}
+.group-chesscom {
+  --group-color: var(--accent);
+}
+.group-lichess {
+  --group-color: var(--text);
+}
+.group-bots {
+  --group-color: var(--c-imprecision);
+}
+.group-otras {
+  --group-color: var(--muted);
+}
+@media (max-width: 800px) {
+  .game-groups {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+:root[data-theme='eink'] .game-group {
+  --group-color: #000;
+  border-left-width: 2px;
+}
+:root[data-theme='eink'] .game-group.active {
+  border-width: 3px;
+  background: #e8e8e8;
+}
