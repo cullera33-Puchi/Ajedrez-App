@@ -67,10 +67,9 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 
 | Orden | Mejora | Por qué | Esfuerzo | ¿Te necesito? |
 |---|---|---|---|---|
-| 1 | Terminar las pruebas reales: búsqueda de rival en Lichess tras la corrección (2.4), escáner con capturas de Chess.com (5.9), importación de Lichess (5.1), modo Tinta en la BOOX (5.8) y comprobar que la app pide el código de acceso | Es lo único que no se puede probar desde aquí | Bajo | Sí |
-| 2 | Usar unos días el entrenamiento diario y contarme qué sobra o falta (duración, número de problemas, orden de los pasos) | Ajustarlo a cómo entrenas de verdad | Bajo | Sí |
-| 3 | Contarme qué tal los avisos de pieza colgada y los ejercicios de visión (si avisan demasiado o poco) | Ajustar los umbrales a tu juego | Bajo | Sí |
-| 3b | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
+| 1 | Terminar las pruebas reales: búsqueda de rival en Lichess tras la corrección (2.4), escáner con capturas de Chess.com (5.9), importación de Lichess (5.1) y comprobar que la app pide el código de acceso. Si algo falla, pegar el *Registro de errores* | Es lo único que no se puede probar desde aquí | Bajo | Sí |
+| 2 | Usar unos días el entrenamiento diario, los avisos de pieza colgada y la visión del tablero, y contarme qué sobra o falta (duración, número de problemas, si avisa demasiado o poco) | Ajustarlo a cómo entrenas de verdad | Bajo | Sí |
+| 3 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
 | 4 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
 | 5 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
 | 6 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |
@@ -113,7 +112,7 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | 5.2 | Problemas online de Lichess con datos reales | Sin verificar |
 | 5.3 | Análisis rápido en el móvil con la evaluación en la nube de Lichess; calibrar profundidad y umbrales | Pendiente, propuesto como siguiente paso |
 | 5.7 | Importación completa de Chess.com con un historial grande | Probada con datos simulados; falta verificarla con tu historial real |
-| 5.8 | Modo Tinta en la BOOX real | Revisado en simulación; falta probar el refresco de la pantalla real |
+| 5.8 | Modo Tinta en la BOOX real | Probado por ti en la BOOX; ajustado el tamaño del tablero en Problemas y las líneas del motor. Falta confirmar que el análisis ya se ve bien |
 | 5.9 | Escáner con capturas reales de Chess.com | Probado con capturas simuladas y juegos de piezas no vistos (99,3 % de casillas); falta probarlo con tus capturas |
 
 ## Por analizar
