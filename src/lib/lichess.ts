@@ -49,9 +49,11 @@ export function normalizeLichessGame(g: LiGame, username: string): GameSummary |
   const u = username.toLowerCase()
   const w = g.players.white.user?.name.toLowerCase()
   const b = g.players.black.user?.name.toLowerCase()
+  // Las partidas contra Stockfish de Lichess son partidas contra un bot: van con las de los bots.
+  const vsAi = Boolean(g.players.white.aiLevel || g.players.black.aiLevel)
   return {
     id: 'li-' + g.id,
-    source: 'lichess',
+    source: vsAi ? 'bot' : 'lichess',
     url: `${BASE}/${g.id}`,
     white: { name: playerName(g.players.white), rating: g.players.white.rating },
     black: { name: playerName(g.players.black), rating: g.players.black.rating },

@@ -117,12 +117,24 @@ const sleep = (ms: number, signal?: AbortSignal) =>
 
 /** Mantiene abierto un flujo y lo reabre si se corta, hasta que `signal` se cancele o `stop()` devuelva true. */
 async function keepStreaming(path: string, onLine: (obj: Record<string, unknown>) => void, signal: AbortSignal, stop: () => boolean, onError?: (msg: string) => void) {
+  let headers: Record<string, string>
+  try {
+    headers = auth()
+  } catch (e) {
+    onError?.((e as Error).message)
+    return
+  }
   let delay = 1000
   while (!signal.aborted && !stop()) {
     try {
-      const res = await fetch(`${LICHESS}${path}`, { headers: auth(), signal })
+      const res = await fetch(`${LICHESS}${path}`, { headers, signal })
       if (res.status === 401) {
         onError?.('El permiso de Lichess no es válido o ha caducado. Vuelve a conectar la cuenta.')
+        return
+      }
+      // Los errores de la petición (partida inexistente, sin permiso…) no se arreglan reintentando.
+      if (res.status >= 400 && res.status < 500 && res.status !== 429) {
+        onError?.(res.status === 404 ? 'Lichess no encuentra esa partida.' : `Lichess ha respondido con un error (${res.status}).`)
         return
       }
       if (res.ok) {
@@ -273,8 +285,8 @@ export function clockLeft(g: LiveGame, side: Color, now = Date.now()): number | 
 
 export function formatClock(ms?: number): string {
   if (ms === undefined) return ''
-  // Con menos de 10 segundos se muestran las décimas.
-  if (ms < 10_000) return `0:0${(ms / 1000).toFixed(1).replace('.', ',')}`
+  // Con menos de 10 segundos se muestran las décimas (truncadas, para no mostrar «10,0»).
+  if (ms < 10_000) return `0:0${(Math.floor(ms / 100) / 10).toFixed(1).replace('.', ',')}`
   const s = Math.ceil(ms / 1000)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
@@ -285,9 +297,25 @@ export function formatClock(ms?: number): string {
 const LIVE_KEY = 'lichessLiveGame'
 
 /** Id de la partida online en curso en este dispositivo, si la hay. */
+/**
+ * Id de la partida online sin terminar, o null. Es la única marca: se pone al empezar y se quita al
+ * terminar (o si Lichess ya no la tiene en curso), así nunca queda el análisis bloqueado sin motivo.
+ */
 export const liveGameId = () => load<string | null>(LIVE_KEY, null)
-
-const ACTIVE_KEY = 'lichessLiveActive'
+export const setLiveGameId = (id: string | null) => save(LIVE_KEY, id)
 /** ¿Hay una partida online sin terminar? Mientras la haya, el análisis y el escáner se bloquean. */
-export const isLiveActive = () => load<boolean>(ACTIVE_KEY, false)
-export const setLiveActive = (on: boolean) => save(ACTIVE_KEY, on)
+export const isLiveActive = () => Boolean(liveGameId())
+
+/** Comprueba con Lichess que la partida marcada sigue en curso; si no, quita la marca. */
+export async function verifyLiveGame(): Promise<boolean> {
+  const id = liveGameId()
+  if (!id) return false
+  try {
+    const playing = await nowPlaying()
+    if (playing.some((p) => p.gameId === id)) return true
+    setLiveGameId(null)
+    return false
+  } catch {
+    return true
+  }
+}

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useReducer, useRef, useState } from 'react'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadBotGame } from './lib/bots'
@@ -46,6 +46,7 @@ export default function App() {
   const [games, setGames] = useState<GameSummary[]>(getGames)
   const [toast, setToast] = useState<string | null>(null)
   const [playFrom, setPlayFrom] = useState<string | null>(null)
+  const [, refresh] = useReducer((x: number) => x + 1, 0)
   const history = useRef<NavState[]>([])
   const navRef = useRef(nav)
   const indicator = useRef<HTMLDivElement>(null)
@@ -169,7 +170,7 @@ export default function App() {
         {view === 'partidas' && (
           <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}
-        {(view === 'analisis' || view === 'escanear') && isLiveActive() && <LiveLock onGoToGame={() => setView('jugar')} />}
+        {(view === 'analisis' || view === 'escanear') && isLiveActive() && <LiveLock onGoToGame={() => setView('jugar')} onUnlock={refresh} />}
         {view === 'analisis' && !isLiveActive() && (
           <AnalysisView
             key={currentGame?.id ?? 'none'}

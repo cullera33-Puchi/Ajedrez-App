@@ -20,7 +20,9 @@ import {
   nowPlaying,
   resignGame,
   seek,
-  setLiveActive,
+  liveGameId,
+  setLiveGameId,
+  verifyLiveGame,
   sendMove,
   statusText,
   watchEvents,
@@ -48,13 +50,22 @@ const clockLabel = (c: ClockChoice) => `${c.minutes}+${c.increment}`
 
 type Waiting = { text: string; cancel: () => void } | null
 
+/** Partidas que terminan sin jugarse: no se guardan. */
+const NO_GAME = new Set(['aborted', 'noStart'])
+
 export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
   const [token, setToken] = useState(loadLichessToken)
   const [account, setAccount] = useState<LichessAccount | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<string | null>(null)
-  const [gameId, setGameId] = usePersistentState<string | null>('lichessLiveGame', null)
-  const [waiting, setWaiting] = useState<Waiting>(null)
+  // Partida que se muestra: al abrir, la que esté en curso (si la hay).
+  const [gameId, setGameId] = useState<string | null>(liveGameId)
+  const [waiting, setWaitingState] = useState<Waiting>(null)
+  const waitingRef = useRef<Waiting>(null)
+  const setWaiting = (w: Waiting) => {
+    waitingRef.current = w
+    setWaitingState(w)
+  }
   const [playing, setPlaying] = useState<Awaited<ReturnType<typeof nowPlaying>>>([])
   const [clock, setClock] = usePersistentState('lichessClock', 0)
   const [rated, setRated] = usePersistentState('lichessRated', false)
@@ -81,9 +92,13 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
     const ctrl = new AbortController()
     void watchEvents(
       (e) => {
-        if (e.type === 'gameStart' && e.game) {
+        // Lichess repite gameStart de todas las partidas en curso al reconectar (también las de
+        // correspondencia o las jugadas en su web): solo cuenta la que se está esperando.
+        if (e.type === 'gameStart' && e.game && waitingRef.current) {
+          const id = e.game.gameId ?? e.game.id ?? null
           setWaiting(null)
-          setGameId(e.game.gameId ?? e.game.id ?? null)
+          setGameId(id)
+          setLiveGameId(id)
         } else if (e.type === 'challengeDeclined') {
           setWaiting(null)
           setInfo('Tu amigo ha rechazado el reto.')
@@ -95,8 +110,13 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
     nowPlaying()
       .then(setPlaying)
       .catch(() => undefined)
+    // Si la partida marcada como en curso ya no lo está en Lichess, se quita la marca.
+    void verifyLiveGame()
     return () => ctrl.abort()
   }, [account]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Al salir de la pantalla se retira la búsqueda o el reto pendiente: si no, la partida empezaría sin nadie mirando.
+  useEffect(() => () => waitingRef.current?.cancel(), [])
 
   const savePasted = async () => {
     setError(null)
@@ -111,6 +131,8 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
   }
 
   const disconnect = async () => {
+    setLiveGameId(null)
+    setGameId(null)
     await revokeLichess()
     setToken(null)
     setAccount(null)
@@ -132,7 +154,9 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
   const doAi = async () => {
     setError(null)
     try {
-      setGameId(await challengeAi(aiLevel, c, color))
+      const id = await challengeAi(aiLevel, c, color)
+      setGameId(id)
+      setLiveGameId(id)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -146,7 +170,6 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
         text: `Reto enviado a ${friend.trim()}. Esperando a que lo acepte…`,
         cancel: () => {
           if (id) void cancelChallenge(id)
-          setWaiting(null)
         },
       })
     } catch (e) {
@@ -315,7 +338,13 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
               <span className="grow small">
                 Contra {p.opponent?.ai ? `Stockfish nivel ${p.opponent.ai}` : (p.opponent?.username ?? 'rival')} con {p.color === 'white' ? 'blancas' : 'negras'}
               </span>
-              <button className="btn small primary" onClick={() => setGameId(p.gameId)}>
+              <button
+              className="btn small primary"
+              onClick={() => {
+                setGameId(p.gameId)
+                setLiveGameId(p.gameId)
+              }}
+            >
                 Continuar
               </button>
             </div>
@@ -351,13 +380,21 @@ function LiveGameView({
 }) {
   const [game, setGame] = useState<LiveGame | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [pending, setPending] = useState<string | null>(null)
+  /** Jugada enviada y aún sin confirmar, con la posición en la lista de jugadas que ocupará. */
+  const [pending, setPending] = useState<{ uci: string; at: number } | null>(null)
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
   const [resetKey, setResetKey] = useState(0)
   const [now, setNow] = useState(() => Date.now())
   const [saved, setSaved] = useState<string | null>(null)
   const [flipped, setFlipped] = useState(false)
   const savedOnce = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   useEffect(() => {
     const ctrl = new AbortController()
@@ -369,9 +406,10 @@ function LiveGameView({
   useBackGuard(Boolean(game && !finished), 'Partida online en curso. Para salir, termínala (o ríndete).')
   useEffect(() => {
     setBusy('play', Boolean(game && !finished))
-    if (game) setLiveActive(!finished)
+    // La marca de partida en curso se quita al terminar (y con ella el bloqueo del análisis).
+    if (game) setLiveGameId(finished ? null : id)
     return () => setBusy('play', false)
-  }, [game, finished])
+  }, [game, finished, id])
 
   // Relojes en marcha.
   useEffect(() => {
@@ -380,26 +418,28 @@ function LiveGameView({
     return () => clearInterval(t)
   }, [game, finished])
 
-  // Al terminar, se guarda en Mis partidas (y se libera el bloqueo del análisis).
+  // Al terminar, se guarda en Mis partidas. No depende de que la pantalla siga abierta, y se
+  // reintenta unas veces porque Lichess puede tardar un momento en tener la partida lista.
   useEffect(() => {
-    if (!game || !finished || savedOnce.current) return
+    if (!game || !finished || savedOnce.current || NO_GAME.has(game.status)) return
     savedOnce.current = true
-    const t = setTimeout(() => {
-      exportFinishedGame(id, account.username)
-        .then((g) => {
-          if (g) {
-            onSaveGame(g)
-            setSaved(g.id)
-          }
-        })
-        .catch(() => undefined)
-    }, 1500)
-    return () => clearTimeout(t)
+    void (async () => {
+      for (const wait of [1500, 4000, 10000]) {
+        await new Promise((r) => setTimeout(r, wait))
+        const g = await exportFinishedGame(id, account.username).catch(() => null)
+        if (g) {
+          onSaveGame(g)
+          if (mounted.current) setSaved(g.id)
+          return
+        }
+      }
+      if (mounted.current) setError('No se ha podido guardar la partida. Puedes importarla después desde Mis partidas, con tu usuario de Lichess.')
+    })()
   }, [game, finished]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const chess = useMemo(() => {
     const c = new Chess(game && game.initialFen !== 'startpos' ? game.initialFen : undefined)
-    for (const uci of [...(game?.moves ?? []), ...(pending ? [pending] : [])]) {
+    for (const uci of [...(game?.moves ?? []), ...(pending ? [pending.uci] : [])]) {
       try {
         c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
       } catch {
@@ -411,7 +451,7 @@ function LiveGameView({
 
   // Cuando Lichess confirma la jugada, deja de ser «pendiente».
   useEffect(() => {
-    if (pending && game?.moves.includes(pending)) setPending(null)
+    if (pending && game && game.moves.length > pending.at) setPending(null)
   }, [game, pending])
 
   if (!game) {
@@ -445,7 +485,7 @@ function LiveGameView({
       setResetKey((k) => k + 1)
       return
     }
-    setPending(uci)
+    setPending({ uci, at: game.moves.length })
     setError(null)
     try {
       await sendMove(game.id, uci)
@@ -486,7 +526,8 @@ function LiveGameView({
     )
   }
 
-  const result = game.winner ? (game.winner === game.color ? '¡Has ganado!' : 'Has perdido') : game.status === 'aborted' ? 'Partida anulada' : 'Tablas'
+  const noGame = NO_GAME.has(game.status)
+  const result = game.winner ? (game.winner === game.color ? '¡Has ganado!' : 'Has perdido') : noGame ? 'Partida anulada' : 'Tablas'
 
   return (
     <div className="page play online" data-fen={chess.fen()}>
@@ -500,7 +541,7 @@ function LiveGameView({
           <section className={`card play-result ${game.winner === game.color ? 'win' : game.winner ? 'loss' : 'draw'}`}>
             <h2>{result}</h2>
             <p className="muted">
-              {statusText(game.status)}. {saved ? 'La partida está guardada en Mis partidas.' : game.status === 'aborted' ? '' : 'Guardando en Mis partidas…'}
+              {statusText(game.status)}. {saved ? 'La partida está guardada en Mis partidas.' : noGame ? 'No se guarda porque no llegó a jugarse.' : 'Guardando en Mis partidas…'}
             </p>
             <div className="toolbar">
               {saved && (

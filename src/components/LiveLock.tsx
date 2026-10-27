@@ -1,5 +1,13 @@
+import { useEffect } from 'react'
+import { verifyLiveGame } from '../lib/lichessPlay'
+
 /** Aviso que sustituye al análisis y al escáner mientras hay una partida online sin terminar. */
-export function LiveLock({ onGoToGame }: { onGoToGame: () => void }) {
+export function LiveLock({ onGoToGame, onUnlock }: { onGoToGame: () => void; onUnlock: () => void }) {
+  // Si la partida ya terminó en Lichess (por ejemplo, con la app cerrada), se desbloquea.
+  useEffect(() => {
+    void verifyLiveGame().then((live) => !live && onUnlock())
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <div className="page">
       <section className="card empty">
