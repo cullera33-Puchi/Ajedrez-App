@@ -2,6 +2,7 @@ import { importChesscomHistory } from './chesscom'
 import { getGames, mergeGames } from './games'
 import { importLichessNew, lichessImported } from './lichess'
 import type { Settings } from './settings'
+import { logWarn } from './log'
 import { load, save } from './storage'
 import type { GameSummary } from './types'
 
@@ -39,8 +40,8 @@ export async function autoImport(settings: Settings, onGames: (games: GameSummar
   }
   try {
     // Cada fuente por separado: si una falla (sin conexión, servicio caído), la otra sigue.
-    if (doCc) await importChesscomHistory(cc, add).catch(() => undefined)
-    if (doLi) add(await importLichessNew(li).catch(() => []))
+    if (doCc) await importChesscomHistory(cc, add).catch((e) => logWarn('Importación automática de Chess.com fallida', e, 'Importación'))
+    if (doLi) add(await importLichessNew(li).catch((e) => (logWarn('Importación automática de Lichess fallida', e, 'Importación'), [])))
   } finally {
     running = false
   }

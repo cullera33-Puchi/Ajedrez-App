@@ -1,3 +1,5 @@
+import { logError } from './log'
+
 /** Una línea candidata del motor (con MultiPV hay varias), desde el punto de vista del bando que mueve. */
 export interface EngineLine {
   move: string
@@ -34,6 +36,7 @@ export class Engine {
     this.worker.onmessage = (e) => this.listener?.(String(e.data))
     this.worker.onerror = () => {
       this.failed = new Error('No se ha podido cargar el motor de análisis.')
+      logError(this.failed.message, undefined, 'Motor')
       this.listener?.('__error__')
     }
     this.queue = this.init()

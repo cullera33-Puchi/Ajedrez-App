@@ -1,3 +1,4 @@
+import { logWarn } from './log'
 import { LOCAL_PUZZLES, type Puzzle } from './puzzles'
 
 /**
@@ -30,7 +31,8 @@ export function loadPack(): Promise<Puzzle[]> {
       return r.json() as Promise<{ puzzles: Row[] }>
     })
     .then((d) => (pack = d.puzzles.map(toPuzzle)))
-    .catch(() => {
+    .catch((e) => {
+      logWarn('No se ha podido cargar el paquete de problemas sin conexión', e, 'Problemas')
       loading = null
       return []
     })

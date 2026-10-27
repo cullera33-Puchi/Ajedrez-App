@@ -49,6 +49,7 @@ Piezas principales:
 | Tiempo | `src/lib/clock.ts` (relojes `%clk` del PGN; Lichess se importa con `clocks=true`), `timing` en `AnalysisSummary` (los antiguos se completan con `backfillTiming`) |
 | Resumen semanal | `src/lib/weekly.ts`, `src/components/WeeklyCard.tsx` |
 | Visión del tablero | `src/lib/vision.ts` (mejores marcas `visionBest`, con regla en `MERGERS`), `src/views/Vision.tsx` (dentro de Aprender, como Lessons y Openings). `Board` acepta `onSelect` y `coordinates` |
+| Registro de errores | `src/lib/log.ts` (`log`, `logError`, `logWarn`, `redact`; `appLog` en `DEVICE_ONLY`; versión con `__APP_VERSION__`), `src/components/LogCard.tsx` en Inicio, `src/components/ErrorBoundary.tsx` alrededor de cada pantalla en `App.tsx`. Los fallos nuevos que ya se muestran al usuario conviene apuntarlos también con `logWarn` o `logError` |
 | Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage; con la huella `syncHash` no fusiona ni sube si nada ha cambiado, y solo un «no encontrado» cuenta como nube vacía), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
 
 Reglas de negocio a respetar:

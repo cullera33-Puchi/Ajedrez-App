@@ -45,7 +45,11 @@ function swVersion(): Plugin {
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   return {
-    define: { __PIN__: JSON.stringify(pinConfig(env.APP_PIN?.trim())) },
+    define: {
+      __PIN__: JSON.stringify(pinConfig(env.APP_PIN?.trim())),
+      // Versión que se ve en el registro de errores: el commit publicado y la fecha.
+      __APP_VERSION__: JSON.stringify(`${(process.env.GITHUB_SHA ?? 'local').slice(0, 7)} del ${new Date().toISOString().slice(0, 16).replace('T', ' ')}`),
+    },
     // En GitHub Pages la app vive en /Ajedrez-App/ (el nombre del repositorio); en el PC, en la raíz.
     base: env.BASE_PATH || '/',
     plugins: [

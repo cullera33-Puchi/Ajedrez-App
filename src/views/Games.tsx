@@ -1,3 +1,4 @@
+import { logWarn } from '../lib/log'
 import { useState } from 'react'
 import type { View } from '../App'
 import { importChesscomHistory, type ImportProgress, ImportError } from '../lib/chesscom'
@@ -69,6 +70,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       setMsg({ kind: 'ok', text: g.length ? `Importadas ${g.length} partidas de ${label}.` : `No hay partidas recientes en ${label}.` })
     } catch (e) {
       setMsg({ kind: 'error', text: (e as Error).message, detail: e instanceof ImportError ? e.detail : String(e) })
+      logWarn(`Importación de ${label}: ${(e as Error).message}`, e instanceof ImportError ? e.detail : e)
     } finally {
       setBusy(null)
     }
@@ -90,6 +92,7 @@ export function GamesView({ settings, onSettings, games, onAddGames, onOpenGame,
       })
     } catch (e) {
       setMsg({ kind: 'error', text: (e as Error).message, detail: e instanceof ImportError ? e.detail : String(e) })
+      logWarn(`Importación de Chess.com: ${(e as Error).message}`, e instanceof ImportError ? e.detail : e)
     } finally {
       setBusy(null)
       setProgress(null)

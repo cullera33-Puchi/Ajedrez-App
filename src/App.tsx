@@ -6,6 +6,7 @@ import { loadBotGame } from './lib/bots'
 import { isLiveActive } from './lib/lichessPlay'
 import { finishLichessLogin } from './lib/lichessAuth'
 import { save } from './lib/storage'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { LiveLock } from './components/LiveLock'
 import { IconBook, IconBulb, IconCamera, IconHome, IconList, IconPawn, IconSearch, IconTarget, IconTrend } from './components/MenuIcons'
 import { MobileMenu } from './components/MobileMenu'
@@ -13,6 +14,7 @@ import { installBackNavigation, onToast, setViewBack, showToast } from './lib/na
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
 import { refreshTodayPlan } from './lib/training'
+import { setLogView } from './lib/log'
 import type { GameSummary } from './lib/types'
 import { HomeView } from './views/Home'
 
@@ -47,6 +49,19 @@ const NAV: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: 'problemas', label: 'Problemas', icon: <IconBulb /> },
   { id: 'aprender', label: 'Aprender', icon: <IconBook /> },
 ]
+
+/** Nombre de cada pantalla en el registro de errores. */
+const VIEW_NAME: Record<View, string> = {
+  inicio: 'Inicio',
+  entreno: 'Entrenar',
+  jugar: 'Jugar',
+  partidas: 'Partidas',
+  analisis: 'Análisis',
+  problemas: 'Problemas',
+  aprender: 'Aprender',
+  escanear: 'Escanear',
+  progreso: 'Tu progreso',
+}
 
 /** Estado de navegación que se recupera al volver atrás. */
 interface NavState {
@@ -170,6 +185,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
     refreshTodayPlan()
+    setLogView(VIEW_NAME[view])
   }, [view])
 
   const allGames = [...games, ...DEMO_GAMES.filter((d) => !games.some((g) => g.id === d.id))]
@@ -223,6 +239,7 @@ export default function App() {
         onSelect={setView}
       />
       <main className="content">
+        <ErrorBoundary key={view} onHome={() => setView('inicio')}>
         <Suspense fallback={<p className="muted page">Cargando…</p>}>
         {view === 'inicio' && (
           <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} onPractice={openPuzzles} />
@@ -282,6 +299,7 @@ export default function App() {
           </Suspense>
         )}
         </Suspense>
+        </ErrorBoundary>
       </main>
 
       {toast && (

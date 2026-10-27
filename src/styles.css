@@ -2914,3 +2914,31 @@ label {
     order: -1;
   }
 }
+
+/* Registro de errores */
+.log-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.6rem 0 0;
+  max-height: 320px;
+  overflow-y: auto;
+  font-size: 0.82rem;
+}
+.log-list li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+}
+.log-list .log-when {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.log-list .log-error strong {
+  color: var(--bad);
+}
+.log-list .log-aviso strong {
+  color: var(--c-error);
+}
+:root[data-theme='eink'] .log-list strong {
+  color: inherit;
+}

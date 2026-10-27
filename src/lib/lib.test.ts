@@ -983,3 +983,16 @@ describe('visión del tablero', () => {
     expect(randomSquare('e4', () => 0.5)).toMatch(/^[a-h][1-8]$/)
   })
 })
+
+describe('registro de errores', () => {
+  it('quita permisos, claves y correos, y no repite el mismo error seguido', async () => {
+    const { clearLog, loadAppLog, log, redact } = await import('./log')
+    expect(redact('token lip_AbC123 y Bearer xyz.abc, sb_publishable_TE0w_x, yo@correo.es')).toBe('token lip_*** y Bearer ***, sb_publishable_***, ***@***')
+    clearLog()
+    log('error', 'Falló con lip_secreto', 'detalle', 'Pruebas')
+    log('error', 'Falló con lip_secreto', 'detalle', 'Pruebas')
+    log('aviso', 'Otro aviso', undefined, 'Pruebas')
+    const all = loadAppLog()
+    expect(all.map((e) => [e.level, e.msg])).toEqual([['error', 'Falló con lip_***'], ['aviso', 'Otro aviso']])
+  })
+})

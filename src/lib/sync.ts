@@ -1,4 +1,5 @@
 import { exportBackup, importBackup, parseBackup, type Backup } from './backup'
+import { logWarn } from './log'
 import { load, save } from './storage'
 
 /**
@@ -243,6 +244,7 @@ export async function syncNow(force = true): Promise<{ downloaded: boolean }> {
     return { downloaded }
   } catch (e) {
     lastError = e instanceof SyncError ? e.message : 'Error inesperado al sincronizar.'
+    logWarn(`Sincronización: ${lastError}`, e instanceof SyncError ? undefined : e, 'Sincronización')
     throw e
   } finally {
     syncing = false

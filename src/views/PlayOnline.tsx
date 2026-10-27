@@ -1,3 +1,4 @@
+import { logWarn } from '../lib/log'
 import { Chess } from 'chess.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Board } from '../components/Board'
@@ -87,6 +88,11 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
   const [color, setColor] = usePersistentState<Color | 'random'>('lichessColor', 'random')
   const [friend, setFriend] = useState('')
   const [pasted, setPasted] = useState('')
+
+  // Los errores de Lichess quedan en el registro.
+  useEffect(() => {
+    if (error) logWarn(`Lichess: ${error}`)
+  }, [error])
 
   // Cuenta conectada.
   useEffect(() => {

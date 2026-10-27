@@ -37,7 +37,7 @@ export interface ImportResult {
 }
 
 /** Datos propios de cada dispositivo que no viajan en la copia (la sesión de sincronización, entre otros). */
-const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'syncHash', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk', 'trainingPlan', 'autoImportLast'])
+const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'syncHash', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk', 'trainingPlan', 'autoImportLast', 'appLog'])
 
 export async function exportBackup(includeAnalyses = true): Promise<Backup> {
   const store = await db()

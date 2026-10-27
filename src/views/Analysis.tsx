@@ -1,3 +1,4 @@
+import { logError } from '../lib/log'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { View } from '../App'
 import { type Arrow, Board } from '../components/Board'
@@ -155,7 +156,10 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
         // Problemas con los errores de esta partida (sin esperar).
         void makePuzzles(game, parsed, a)
       } catch (e) {
-        if ((e as Error).name !== 'AbortError') setError((e as Error).message)
+        if ((e as Error).name !== 'AbortError') {
+          setError((e as Error).message)
+          logError(`Análisis de la partida fallido: ${(e as Error).message}`, e)
+        }
       } finally {
         if (abortRef.current === ctrl) setProgress(null)
       }

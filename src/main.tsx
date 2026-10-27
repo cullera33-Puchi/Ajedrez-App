@@ -5,10 +5,12 @@ import { PinGate } from './components/PinGate'
 import { initStore } from './lib/games'
 import { initMyPuzzles } from './lib/myPuzzles'
 import { summarizeStored } from './lib/recommend'
+import { installLogCapture } from './lib/log'
 import { applyTheme, loadTheme } from './lib/theme'
 import './styles.css'
 
 applyTheme(loadTheme())
+installLogCapture()
 
 // Se abre la base de datos (y se migran los datos antiguos) antes de mostrar la app.
 Promise.all([initStore(summarizeStored), initMyPuzzles()])
