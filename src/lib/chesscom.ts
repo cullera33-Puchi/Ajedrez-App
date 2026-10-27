@@ -161,6 +161,8 @@ export interface RatingInfo {
   label: string
   rating: number
   games?: number
+  /** Rating provisional (pocas partidas todavía): Lichess lo marca con «?». */
+  provisional?: boolean
 }
 
 interface CcStat {

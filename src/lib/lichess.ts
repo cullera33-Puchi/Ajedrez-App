@@ -105,7 +105,7 @@ export const lichessImported = (username: string) => Boolean(load<Record<string,
 
 export async function fetchLichessStats(username: string): Promise<RatingInfo[]> {
   const res = await request(`${BASE}/api/user/${encodeURIComponent(username.trim())}`)
-  const data = (await res.json()) as { perfs?: Record<string, { rating: number; games: number }> }
+  const data = (await res.json()) as { perfs?: Record<string, { rating: number; games: number; prov?: boolean }> }
   const modes: [string, string][] = [
     ['rapid', 'Rápidas'],
     ['blitz', 'Blitz'],
@@ -113,9 +113,10 @@ export async function fetchLichessStats(username: string): Promise<RatingInfo[]>
     ['classical', 'Clásicas'],
     ['puzzle', 'Problemas'],
   ]
+  // Solo los ritmos con partidas con puntuación: las amistosas no dan rating.
   return modes
     .filter(([k]) => data.perfs?.[k]?.games)
-    .map(([k, label]) => ({ label, rating: data.perfs![k].rating, games: data.perfs![k].games }))
+    .map(([k, label]) => ({ label, rating: data.perfs![k].rating, games: data.perfs![k].games, provisional: Boolean(data.perfs![k].prov) }))
 }
 
 export interface LiPuzzleResponse {

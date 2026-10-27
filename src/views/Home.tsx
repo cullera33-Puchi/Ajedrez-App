@@ -4,6 +4,7 @@ import { fetchChesscomStats, type RatingInfo } from '../lib/chesscom'
 import { type CoachStatus, fetchCoachStatus } from '../lib/coach'
 import { loadBotGame, makeBot } from '../lib/bots'
 import { fetchLichessStats } from '../lib/lichess'
+import { fetchAccount, loadLichessToken } from '../lib/lichessAuth'
 import { INITIAL_PUZZLE_STATS, MY_ERRORS, type PuzzleStats, themeName } from '../lib/puzzles'
 import { recommendThemes } from '../lib/recommend'
 import { isOnlineGame } from '../lib/progress'
@@ -68,6 +69,18 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
   }
 
   useEffect(() => {
+    // Si la cuenta de Lichess está conectada para jugar online pero falta el usuario aquí, se toma de ella.
+    if (!settings.lichessUser && loadLichessToken()) {
+      void fetchAccount()
+        .then((a) => {
+          const s = { ...settings, lichessUser: a.username }
+          setLi(a.username)
+          onSettings(s)
+          void refresh(s)
+        })
+        .catch(() => (settings.chesscomUser ? refresh(settings) : undefined))
+      return
+    }
     if (settings.chesscomUser || settings.lichessUser) void refresh(settings)
     // Solo al entrar en la pantalla.
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -149,6 +162,11 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
           ))}
           <RatingRow title="Chess.com" items={stats.chesscom} />
           <RatingRow title="Lichess" items={stats.lichess} />
+          {settings.lichessUser && stats.lichess && !stats.lichess.length && (
+            <p className="muted small">
+              Lichess: aún no tienes partidas con puntuación. Las amistosas no dan rating; para tenerlo, marca <em>Con puntuación</em> al buscar rival en Jugar.
+            </p>
+          )}
         </section>
 
         <section className="card">
@@ -307,7 +325,7 @@ function RatingRow({ title, items }: { title: string; items?: RatingInfo[] }) {
       <h3>{title}</h3>
       <div className="kpis">
         {items.map((r) => (
-          <Kpi key={r.label} label={r.label} value={r.rating} />
+          <Kpi key={r.label} label={r.provisional ? `${r.label} (provisional)` : r.label} value={r.provisional ? `${r.rating}?` : r.rating} />
         ))}
       </div>
     </div>
