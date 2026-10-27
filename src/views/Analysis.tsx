@@ -15,6 +15,7 @@ import { Chess } from 'chess.js'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
 import { formatClock, formatSeconds, parseClocks, quickLimit } from '../lib/clock'
 import { getEngine } from '../lib/engine'
+import { isEink } from '../lib/theme'
 import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
 import { themeName } from '../lib/puzzles'
@@ -512,7 +513,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
                     : `Pensada en ${formatSeconds(timeSpent.spent)}; quedaban ${formatClock(timeSpent.left)}.`}
                 </p>
               )}
-              {betterUci && betterUci !== move?.uci && <p className="small muted">En verde, en el tablero, la jugada que había que hacer.</p>}
+              {betterUci && betterUci !== move?.uci && <p className="small muted">{isEink() ? 'La flecha del tablero marca la jugada que había que hacer.' : 'En verde, en el tablero, la jugada que había que hacer.'}</p>}
               {engineToggles(
                 canRetry && (
                   <button className="btn small primary retry-btn" onClick={startRetry}>

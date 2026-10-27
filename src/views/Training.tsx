@@ -39,6 +39,7 @@ import {
   winAfterReply,
 } from '../lib/training'
 import type { PuzzleEvents } from '../lib/usePuzzlePlay'
+import { isEink } from '../lib/theme'
 import { type GameSummary, opponentOf } from '../lib/types'
 
 interface Props {
@@ -697,7 +698,11 @@ function GuidedReview({ game, header, actions, onFinish, onUnavailable }: Review
           {answer && (
             <>
               <p className={`msg ${verdictText(m, answer).kind}`}>{verdictText(m, answer).text}</p>
-              <p className="small muted">En el tablero: en rojo lo que jugaste y en verde la mejor jugada{answer.uci && answer.uci !== best && answer.uci !== m.uci ? '; en azul, tu respuesta' : ''}.</p>
+              <p className="small muted">
+                {isEink()
+                  ? 'En el tablero, las flechas marcan lo que jugaste, la mejor jugada y, si es distinta, tu respuesta.'
+                  : `En el tablero: en rojo lo que jugaste y en verde la mejor jugada${answer.uci && answer.uci !== best && answer.uci !== m.uci ? '; en azul, tu respuesta' : ''}.`}
+              </p>
               {explanation(m) && <p className="small">{explanation(m)}</p>}
             </>
           )}

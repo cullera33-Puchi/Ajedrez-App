@@ -98,7 +98,7 @@ function fmt(t: number) {
 export function deviceInfo(): string {
   const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true || window.matchMedia?.('(display-mode: standalone)').matches
   const set = document.documentElement.dataset.theme
-  const theme = set ? ({ light: 'día', dark: 'noche', eink: 'tinta' }[set] ?? set) : window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'día (sistema)' : 'noche (sistema)'
+  const theme = set ? (document.documentElement.dataset.ink === 'dark' ? 'tinta noche' : ({ light: 'día', dark: 'noche', eink: 'tinta' }[set] ?? set)) : window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'día (sistema)' : 'noche (sistema)'
   return [
     `Versión: ${typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'desarrollo'}`,
     `Navegador: ${navigator.userAgent}`,

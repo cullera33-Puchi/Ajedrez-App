@@ -3081,3 +3081,108 @@ label {
 :root[data-theme='eink'] cg-container svg marker path {
   fill: #000 !important;
 }
+
+/*
+ * Tinta noche: las mismas reglas que tinta (data-theme="eink") con los colores al revés, fondo negro y
+ * letras blancas. Solo blanco, negro y grises.
+ */
+:root[data-theme='eink'][data-ink='dark'] {
+  --bg: #000000;
+  --bg-2: #000000;
+  --card: #000000;
+  --card-2: #2b2b2b;
+  --line: #ffffff;
+  --text: #ffffff;
+  --muted: #cccccc;
+  --accent: #ffffff;
+  --accent-2: #ffffff;
+  --accent-soft: #222222;
+  --on-accent: #000000;
+  --good: #ffffff;
+  --bad: #ffffff;
+  --c-mejor: #ffffff;
+  --c-buena: #ffffff;
+  --c-imprecision: #ffffff;
+  --c-error: #ffffff;
+  --c-grave: #ffffff;
+  --err-bg: #000000;
+  --err-text: #ffffff;
+  --ok-bg: #000000;
+  --ok-text: #ffffff;
+  --info-bg: #000000;
+  --info-text: #ffffff;
+  --eval-white: #ffffff;
+  --eval-black: #3a3a3a;
+  --coach-line: #ffffff;
+  --coach-accent: #ffffff;
+  --coach-bg: #000000;
+  --coach-bubble: #1e1e1e;
+  --status-band: #000000;
+  color-scheme: dark;
+}
+:root[data-theme='eink'][data-ink='dark'] .card,
+:root[data-theme='eink'][data-ink='dark'] .btn,
+:root[data-theme='eink'][data-ink='dark'] .msg,
+:root[data-theme='eink'][data-ink='dark'] .chip,
+:root[data-theme='eink'][data-ink='dark'] .badge,
+:root[data-theme='eink'][data-ink='dark'] .kpi,
+:root[data-theme='eink'][data-ink='dark'] .resource-link {
+  border-color: #fff;
+}
+:root[data-theme='eink'][data-ink='dark'] .btn.primary,
+:root[data-theme='eink'][data-ink='dark'] .segmented button.active,
+:root[data-theme='eink'][data-ink='dark'] .move.active,
+:root[data-theme='eink'][data-ink='dark'] .nav-item.active {
+  background: #fff;
+  color: #000;
+}
+/* Tablero en grises medios: las piezas negras siguen viéndose sobre las casillas oscuras */
+:root[data-theme='eink'][data-ink='dark'] .cg-wrap cg-board {
+  background-color: #6f6f6f;
+  background-image: repeating-conic-gradient(#6f6f6f 0 25%, #a8a8a8 0 50%);
+}
+:root[data-theme='eink'][data-ink='dark'] .cg-wrap cg-board square.last-move,
+:root[data-theme='eink'][data-ink='dark'] .cg-wrap cg-board square.selected {
+  box-shadow: inset 0 0 0 4px #fff !important;
+}
+:root[data-theme='eink'][data-ink='dark'] .spinner {
+  border-top-color: #fff;
+}
+:root[data-theme='eink'][data-ink='dark'] .bar-win,
+:root[data-theme='eink'][data-ink='dark'] .sw.win {
+  fill: #fff;
+  background: #fff;
+}
+:root[data-theme='eink'][data-ink='dark'] .game-group {
+  --group-color: #fff;
+}
+:root[data-theme='eink'][data-ink='dark'] .game-group.active {
+  background: #2b2b2b;
+}
+:root[data-theme='eink'][data-ink='dark'] cg-container svg line,
+:root[data-theme='eink'][data-ink='dark'] cg-container svg circle {
+  stroke: #fff !important;
+}
+:root[data-theme='eink'][data-ink='dark'] cg-container svg marker path {
+  fill: #fff !important;
+}
+:root[data-theme='eink'][data-ink='dark'] .scan-sq.light {
+  background: #a8a8a8;
+}
+:root[data-theme='eink'][data-ink='dark'] .scan-sq.dark {
+  background: #6f6f6f;
+}
+
+/* Apariencia: cinco opciones, que en el móvil pasan a dos filas */
+.theme-choices {
+  flex-wrap: wrap;
+}
+.theme-choices button {
+  flex: 1 1 30%;
+  white-space: nowrap;
+}
+/* Tinta (día y noche): casillas y controles del navegador sin su color azul */
+:root[data-theme='eink'] input,
+:root[data-theme='eink'] select {
+  accent-color: var(--text);
+}

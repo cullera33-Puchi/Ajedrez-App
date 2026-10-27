@@ -425,6 +425,7 @@ const THEMES: { value: ThemeChoice; label: string }[] = [
   { value: 'light', label: 'Día' },
   { value: 'dark', label: 'Noche' },
   { value: 'eink', label: 'Tinta' },
+  { value: 'eink-dark', label: 'Tinta noche' },
 ]
 
 function ThemeCard() {
@@ -436,7 +437,7 @@ function ThemeCard() {
   return (
     <section className="card">
       <h2>Apariencia</h2>
-      <div className="segmented" role="radiogroup" aria-label="Modo de color">
+      <div className="segmented theme-choices" role="radiogroup" aria-label="Modo de color">
         {THEMES.map((t) => (
           <button key={t.value} role="radio" aria-checked={choice === t.value} className={choice === t.value ? 'active' : ''} onClick={() => pick(t.value)}>
             {t.label}
@@ -445,7 +446,7 @@ function ThemeCard() {
       </div>
       <p className="muted small">
         Automático usa el modo día o noche que tengas puesto en el móvil o en el ordenador. Tinta es para tablets de tinta electrónica (como
-        BOOX): alto contraste y sin animaciones.
+        BOOX): alto contraste y sin animaciones. Tinta noche es lo mismo con fondo negro, para jugar de noche.
       </p>
     </section>
   )
