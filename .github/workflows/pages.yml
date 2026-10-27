@@ -40,7 +40,11 @@ jobs:
         continue-on-error: true
         run: |
           [ -s /tmp/lichess_db_puzzle.csv.zst ] || curl -fsSL --retry 3 -o /tmp/lichess_db_puzzle.csv.zst https://database.lichess.org/lichess_db_puzzle.csv.zst
-          zstdcat /tmp/lichess_db_puzzle.csv.zst | node scripts/build-puzzle-pack.mjs public/puzzles/pack.json
+          zstdcat /tmp/lichess_db_puzzle.csv.zst | node scripts/build-puzzle-pack.mjs public/puzzles/pack.json | tee /tmp/pack.log
+          echo "::notice title=Paquete de problemas::$(tail -1 /tmp/pack.log)"
+      - name: Aviso si no hay paquete
+        if: hashFiles('public/puzzles/pack.json') == ''
+        run: echo "::warning title=Paquete de problemas::No se ha generado; la app usará el set de iniciación." 
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/

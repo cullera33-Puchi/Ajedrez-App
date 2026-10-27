@@ -34,6 +34,9 @@ interface Props {
   settings: Settings
   onSaveGame: (g: GameSummary) => void
   onAnalyze: (id: string) => void
+  /** Posición preparada para la próxima partida (desde el escáner, el análisis o una lección). */
+  startFen?: string | null
+  onClearStart?: () => void
 }
 
 type ColorChoice = 'white' | 'random' | 'black'
@@ -46,8 +49,8 @@ interface Finished {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
-function replay(moves: string[]): Chess {
-  const c = new Chess()
+function replay(moves: string[], startFen?: string): Chess {
+  const c = new Chess(startFen)
   for (const uci of moves) c.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
   return c
 }
@@ -60,7 +63,7 @@ function endReason(c: Chess): string {
   return 'Regla de las 50 jugadas'
 }
 
-export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
+export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearStart }: Props) {
   const [game, setGame] = useState<BotGame | null>(loadBotGame)
   const [elo, setElo] = usePersistentState('botElo', 400)
   const [style, setStyle] = usePersistentState<BotStyle>('botStyle', 'equilibrado')
@@ -73,7 +76,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
   const [record, setRecord] = useState(loadBotRecord)
   const [flipped, setFlipped] = useState(false)
 
-  const chess = useMemo(() => replay(game?.moves ?? []), [game])
+  const chess = useMemo(() => replay(game?.moves ?? [], game?.startFen), [game])
   const fen = chess.fen()
   const turn: Color = chess.turn() === 'w' ? 'white' : 'black'
   const bot = game ? makeBot(game.elo, game.style) : makeBot(elo, style)
@@ -93,7 +96,8 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     const summary = botGameToSummary(g, result, userName, reason)
     onSaveGame(summary)
     const userWon = (result === '1-0') === (g.userColor === 'white') && result !== '1/2-1/2'
-    setRecord(addToRecord(makeBot(g.elo).id, result === '1/2-1/2' ? 'd' : userWon ? 'w' : 'l'))
+    // Las partidas desde una posición preparada no cuentan en el récord.
+    if (!g.startFen) setRecord(addToRecord(makeBot(g.elo).id, result === '1/2-1/2' ? 'd' : userWon ? 'w' : 'l'))
     saveBotGame(null)
     setFinished({ result, reason, summaryId: summary.id })
   }
@@ -102,7 +106,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     const next: BotGame = { ...g, moves: [...g.moves, uci] }
     setGame(next)
     setMsg(null)
-    const c = replay(next.moves)
+    const c = replay(next.moves, next.startFen)
     if (c.isGameOver()) {
       const result: Result = c.isCheckmate() ? (c.turn() === 'w' ? '0-1' : '1-0') : '1/2-1/2'
       finish(next, result, endReason(c))
@@ -130,9 +134,10 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     }
   }, [game, finished]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const start = () => {
+  const start = (from: string | undefined = startFen ?? undefined) => {
     const userColor: Color = colorChoice === 'random' ? (Math.random() < 0.5 ? 'white' : 'black') : colorChoice
-    const g: BotGame = { elo: clampElo(elo), style, userColor, moves: [], startedAt: Date.now(), undos: 0 }
+    const g: BotGame = { elo: clampElo(elo), style, userColor, moves: [], startedAt: Date.now(), undos: 0, ...(from ? { startFen: from } : {}) }
+    if (from && from === startFen) onClearStart?.()
     setGame(g)
     saveBotGame(g)
     setFinished(null)
@@ -161,7 +166,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
     const moves = [...game.moves]
     // Se deshace hasta que vuelva a ser tu turno (tu jugada y la respuesta del bot).
     do moves.pop()
-    while (moves.length && replay(moves).turn() !== game.userColor[0])
+    while (moves.length && replay(moves, game.startFen).turn() !== game.userColor[0])
     const next = { ...game, moves, undos: game.undos + 1 }
     setGame(next)
     saveBotGame(next)
@@ -257,6 +262,27 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
           </div>
         </section>
         <section className="card start-card">
+          {startFen && (
+            <div className="start-position">
+              <div className="start-position-board">
+                <Board fen={startFen} orientation={colorChoice === 'black' ? 'black' : 'white'} />
+              </div>
+              <div>
+                <h3>Desde una posición</h3>
+                <p className="small muted">
+                  Juegan las {startFen.split(' ')[1] === 'w' ? 'blancas' : 'negras'}. Si le toca al bot, mueve él primero. No cuenta en tu récord.
+                </p>
+                <div className="toolbar">
+                  <button className={`btn small ${elo === MAX_ELO ? 'active' : ''}`} onClick={() => setElo(MAX_ELO)}>
+                    Máxima fuerza
+                  </button>
+                  <button className="btn small" onClick={onClearStart}>
+                    Quitar posición
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <h3>Juegas con</h3>
           <div className="segmented" role="radiogroup" aria-label="Color">
             {(['white', 'random', 'black'] as ColorChoice[]).map((c) => (
@@ -265,7 +291,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
               </button>
             ))}
           </div>
-          <button className="btn primary play-start" onClick={start}>
+          <button className="btn primary play-start" onClick={() => start()}>
             Jugar contra {bot.name} ({bot.elo})
           </button>
         </section>
@@ -321,7 +347,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
               <button className="btn primary" onClick={() => onAnalyze(finished.summaryId)}>
                 Analizar la partida
               </button>
-              <button className="btn" onClick={start}>
+              <button className="btn" onClick={() => start(game.startFen)}>
                 Revancha
               </button>
               <button className="btn" onClick={newGame}>
@@ -347,7 +373,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze }: Props) {
           </section>
         )}
         <section className="card">
-          <MoveList sans={sans} ply={sans.length} onSelect={() => undefined} />
+          <MoveList sans={sans} ply={sans.length} onSelect={() => undefined} startFen={game.startFen} />
         </section>
         <div className="view-controls">
           <button className="btn small" onClick={() => setFlipped((f) => !f)}>

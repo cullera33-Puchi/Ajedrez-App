@@ -5,6 +5,7 @@ import { LessonList, LessonPlayer } from './Lessons'
 
 interface Props {
   onPractice: (theme: string) => void
+  onPlayFrom: (fen: string) => void
 }
 
 const PIECES = [
@@ -31,11 +32,11 @@ const MODULES = [
   { title: 'Clavadas', text: 'Una pieza que no puede moverse sin dejar expuesta otra más valiosa.', theme: 'pin' },
 ]
 
-export function LearnView({ onPractice }: Props) {
+export function LearnView({ onPractice, onPlayFrom }: Props) {
   const [lesson, setLesson] = useState<Lesson | null>(null)
   if (lesson) {
     const next = LESSONS[LESSONS.indexOf(lesson) + 1]
-    return <LessonPlayer key={lesson.id} lesson={lesson} onBack={() => setLesson(null)} onNext={next ? () => setLesson(next) : undefined} />
+    return <LessonPlayer key={lesson.id} lesson={lesson} onBack={() => setLesson(null)} onNext={next ? () => setLesson(next) : undefined} onPlayFrom={onPlayFrom} />
   }
   return (
     <div className="page">

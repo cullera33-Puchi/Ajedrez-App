@@ -28,6 +28,7 @@ interface Props {
   onSettings: (s: Settings) => void
   onNavigate: (v: View) => void
   onPractice: (theme: string) => void
+  onPlayFrom: (fen: string) => void
 }
 
 interface Retry {
@@ -76,7 +77,7 @@ const DEPTHS = [
   { value: 16, label: 'Profundo' },
 ]
 
-export function AnalysisView({ game, settings, onSettings, onNavigate, onPractice }: Props) {
+export function AnalysisView({ game, settings, onSettings, onNavigate, onPractice, onPlayFrom }: Props) {
   if (!game) {
     return (
       <div className="page">
@@ -97,10 +98,10 @@ export function AnalysisView({ game, settings, onSettings, onNavigate, onPractic
       </div>
     )
   }
-  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} onPractice={onPractice} />
+  return <GameAnalysisView game={game} settings={settings} onSettings={onSettings} onPractice={onPractice} onPlayFrom={onPlayFrom} />
 }
 
-function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props, 'game' | 'onNavigate'> & { game: GameSummary }) {
+function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom }: Omit<Props, 'game' | 'onNavigate'> & { game: GameSummary }) {
   const parsed = useMemo(() => {
     try {
       return parsePgn(game.pgn)
@@ -394,6 +395,11 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
       <label className="check">
         <input type="checkbox" checked={showLines} onChange={(e) => setShowLines(e.target.checked)} /> Líneas del motor
       </label>
+      {boardFen && !new Chess(boardFen).isGameOver() && (
+        <button className="btn small" onClick={() => onPlayFrom(boardFen)}>
+          Jugar desde aquí
+        </button>
+      )}
     </div>
   )
 
@@ -668,7 +674,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice }: Omit<Props
           )}
 
           <section className="card m-order-1">
-            <MoveList sans={parsed.moves.map((m) => m.san)} analysis={analysis?.moves} ply={ply} onSelect={go} />
+            <MoveList sans={parsed.moves.map((m) => m.san)} analysis={analysis?.moves} ply={ply} onSelect={go} startFen={parsed.fens[0]} />
           </section>
 
           <div className="m-order-9">

@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadBotGame } from './lib/bots'
-import { installBackNavigation, onToast, setViewBack } from './lib/nav'
+import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import type { GameSummary } from './lib/types'
 import { AnalysisView } from './views/Analysis'
@@ -40,6 +40,7 @@ export default function App() {
   const [settings, setSettingsState] = useState<Settings>(loadSettings)
   const [games, setGames] = useState<GameSummary[]>(getGames)
   const [toast, setToast] = useState<string | null>(null)
+  const [playFrom, setPlayFrom] = useState<string | null>(null)
   const history = useRef<NavState[]>([])
   const navRef = useRef(nav)
   const indicator = useRef<HTMLDivElement>(null)
@@ -103,6 +104,12 @@ export default function App() {
   const openGame = (id: string) => go({ view: 'analisis', gameId: id })
   const openPuzzles = (theme: string) => go({ view: 'problemas', puzzleTheme: theme })
   const pendingBotGame = view !== 'jugar' && Boolean(loadBotGame())
+  /** Prepara una partida contra un bot desde una posición. */
+  const playPosition = (fen: string) => {
+    setPlayFrom(fen)
+    if (loadBotGame()) showToast('Tienes una partida a medias. La posición queda preparada para cuando la termines.')
+    setView('jugar')
+  }
 
   return (
     <div className="app">
@@ -129,7 +136,9 @@ export default function App() {
         {view === 'inicio' && (
           <HomeView settings={settings} onSettings={setSettings} games={games} onOpenGame={openGame} onNavigate={setView} onPractice={openPuzzles} />
         )}
-        {view === 'jugar' && <PlayView settings={settings} onSaveGame={(g) => addGames([g])} onAnalyze={openGame} />}
+        {view === 'jugar' && (
+          <PlayView settings={settings} onSaveGame={(g) => addGames([g])} onAnalyze={openGame} startFen={playFrom} onClearStart={() => setPlayFrom(null)} />
+        )}
         {view === 'partidas' && (
           <GamesView settings={settings} onSettings={setSettings} games={allGames} onAddGames={addGames} onOpenGame={openGame} onNavigate={setView} />
         )}
@@ -141,10 +150,11 @@ export default function App() {
             onSettings={setSettings}
             onNavigate={setView}
             onPractice={openPuzzles}
+            onPlayFrom={playPosition}
           />
         )}
         {view === 'problemas' && <PuzzlesView key={puzzleTheme} initialTheme={puzzleTheme} />}
-        {view === 'aprender' && <LearnView onPractice={openPuzzles} />}
+        {view === 'aprender' && <LearnView onPractice={openPuzzles} onPlayFrom={playPosition} />}
         {view === 'progreso' && <ProgressView games={games} onNavigate={setView} onOpenGame={openGame} onPractice={openPuzzles} />}
         {view === 'escanear' && (
           <Suspense fallback={<p className="muted page">Cargando el escáner…</p>}>
@@ -154,6 +164,7 @@ export default function App() {
                 openGame(g.id)
               }}
               onBack={() => setView('partidas')}
+              onPlay={playPosition}
             />
           </Suspense>
         )}

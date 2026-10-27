@@ -19,6 +19,7 @@ import type { GameSummary } from '../lib/types'
 interface Props {
   onAnalyze: (game: GameSummary) => void
   onBack: () => void
+  onPlay: (fen: string) => void
 }
 
 type Board = (PieceCode | null)[]
@@ -63,7 +64,7 @@ function positionProblem(board: Board, fen: string): string | null {
   return null
 }
 
-export function ScanView({ onAnalyze, onBack }: Props) {
+export function ScanView({ onAnalyze, onBack, onPlay }: Props) {
   const [image, setImage] = useState<{ img: Img; url: string } | null>(null)
   const [scan, setScan] = useState<ScanResult | null>(null)
   const [board, setBoard] = useState<Board>(() => fenToBoard(START_FEN)!)
@@ -291,6 +292,16 @@ export function ScanView({ onAnalyze, onBack }: Props) {
         <div className="toolbar">
           <button className="btn primary" onClick={analyze} disabled={Boolean(problem)}>
             Analizar posición
+          </button>
+          <button
+            className="btn"
+            disabled={Boolean(problem)}
+            onClick={() => {
+              if (scan) learnFromCorrection(scan.squares, scanFlipped ? [...board].reverse() : board)
+              onPlay(fen)
+            }}
+          >
+            Jugar desde aquí
           </button>
           <button className="btn small" onClick={() => void copyText(fen).then(() => setMsg({ kind: 'ok', text: 'FEN copiada.' }))}>
             Copiar FEN

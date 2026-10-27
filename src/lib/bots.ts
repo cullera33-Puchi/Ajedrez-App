@@ -140,6 +140,8 @@ export interface BotGame {
   startedAt: number
   /** Si se ha deshecho alguna jugada. */
   undos: number
+  /** Posición de salida si no es la inicial (desde el escáner, el análisis o una lección). */
+  startFen?: string
 }
 
 export function loadBotGame(): BotGame | null {
@@ -187,7 +189,7 @@ export function bestWin(rec: BotRecord): number | undefined {
 /** Convierte una partida contra un bot en una partida de Mis partidas, lista para analizar. */
 export function botGameToSummary(g: BotGame, result: Result, userName: string, endReason: string): GameSummary {
   const bot = makeBot(g.elo, g.style)
-  const chess = new Chess()
+  const chess = new Chess(g.startFen)
   for (const uci of g.moves) chess.move({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
   const white = g.userColor === 'white' ? userName : `${bot.name} (bot)`
   const black = g.userColor === 'black' ? userName : `${bot.name} (bot)`
@@ -199,6 +201,10 @@ export function botGameToSummary(g: BotGame, result: Result, userName: string, e
   chess.setHeader('Black', black)
   chess.setHeader('Result', result)
   chess.setHeader('Termination', endReason)
+  if (g.startFen) {
+    chess.setHeader('SetUp', '1')
+    chess.setHeader('FEN', g.startFen)
+  }
   return {
     id: `bot-${g.startedAt}`,
     source: 'bot',
@@ -208,6 +214,7 @@ export function botGameToSummary(g: BotGame, result: Result, userName: string, e
     userColor: g.userColor,
     timeClass: 'sin reloj',
     date: g.startedAt,
+    ...(g.startFen ? { opening: 'Desde una posición' } : {}),
     pgn: chess.pgn(),
   }
 }

@@ -37,7 +37,7 @@ export function LessonList({ onOpen }: { onOpen: (l: Lesson) => void }) {
 
 const ENGINE_DEPTH = 14
 
-export function LessonPlayer({ lesson, onBack, onNext }: { lesson: Lesson; onBack: () => void; onNext?: () => void }) {
+export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom }: { lesson: Lesson; onBack: () => void; onNext?: () => void; onPlayFrom?: (fen: string) => void }) {
   const userColor = lessonColor(lesson)
   const userTurnChar = userColor === 'white' ? 'w' : 'b'
   const [chess] = useState(() => new Chess(lesson.fen))
@@ -181,6 +181,11 @@ export function LessonPlayer({ lesson, onBack, onNext }: { lesson: Lesson; onBac
             <button className="btn" onClick={restart}>
               {status.state === 'playing' ? 'Empezar de nuevo' : 'Repetir'}
             </button>
+            {status.state !== 'playing' && onPlayFrom && (
+              <button className="btn" onClick={() => onPlayFrom(lesson.fen)}>
+                Practicar contra un bot
+              </button>
+            )}
             {status.state === 'won' && onNext && (
               <button className="btn primary" onClick={onNext}>
                 Siguiente lección

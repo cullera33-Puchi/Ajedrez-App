@@ -2542,3 +2542,31 @@ label {
     margin-left: 0.4rem;
   }
 }
+
+/* Jugar desde una posición */
+.start-position {
+  display: flex;
+  gap: 0.8rem;
+  align-items: flex-start;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--line);
+}
+.start-position-board {
+  flex: 0 0 132px;
+  width: 132px;
+}
+.start-position-board .board,
+.start-position-board .cg-wrap {
+  width: 132px;
+  height: 132px;
+}
+.start-position h3 {
+  margin: 0 0 0.3rem;
+}
+.btn.active {
+  outline: 2px solid var(--accent);
+}
+.start-position-board coords {
+  display: none;
+}
