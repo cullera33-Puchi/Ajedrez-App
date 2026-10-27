@@ -8,7 +8,9 @@
     <meta name="color-scheme" content="dark light" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- default y no black-translucent: con la barra translúcida, iOS 26 difumina lo que queda debajo de
+         la hora (la parte de arriba del tablero). Así la app empieza bajo la barra, del color de theme-color. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Ajedrez" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
