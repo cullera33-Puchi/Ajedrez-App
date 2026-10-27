@@ -6,7 +6,6 @@ import { type Difficulty, fetchLichessPuzzle } from '../lib/lichess'
 import {
   BEGINNER_THEMES,
   INITIAL_PUZZLE_STATS,
-  localPuzzlesFor,
   LOCAL_PUZZLES,
   type Puzzle,
   type PuzzleStats,
@@ -14,6 +13,7 @@ import {
   updateRating,
 } from '../lib/puzzles'
 import { getGames } from '../lib/games'
+import { loadPack, offlinePuzzles, packSize, pickNear } from '../lib/puzzlePack'
 import { recommendThemes } from '../lib/recommend'
 import { allMyPuzzles, duePuzzles, type MyPuzzle, recordResult, toPuzzle } from '../lib/myPuzzles'
 import { loadLog, logAttempt } from '../lib/puzzleLog'
@@ -45,6 +45,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [mine, setMine] = useState<MyPuzzle | null>(null)
   const [dueCount, setDueCount] = useState(() => duePuzzles().length)
   const [log, setLog] = useState(loadLog)
+  const [packCount, setPackCount] = useState(packSize)
 
   const [puzzle, setPuzzle] = useState<Puzzle | null>(null)
   const [fen, setFen] = useState('')
@@ -78,13 +79,10 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
 
   const pickLocal = useCallback(
     (t: string): Puzzle => {
-      const pool = localPuzzlesFor(t).length ? localPuzzlesFor(t) : LOCAL_PUZZLES
-      const solved = new Set(stats.history.filter((h) => h.win).map((h) => h.id))
-      const pending = pool.filter((p) => !solved.has(p.id) && p.id !== puzzle?.id)
-      const candidates = pending.length ? pending : pool.filter((p) => p.id !== puzzle?.id)
-      const list = candidates.length ? candidates : pool
-      // El más cercano al nivel del usuario.
-      return [...list].sort((a, b) => Math.abs(a.rating - stats.rating) - Math.abs(b.rating - stats.rating))[0]
+      const pool = offlinePuzzles(t).length ? offlinePuzzles(t) : offlinePuzzles('mix')
+      // Se evitan los resueltos y los vistos hace poco (incluido el actual).
+      const avoid = new Set([...stats.history.map((h) => h.id), ...(puzzle ? [puzzle.id] : [])])
+      return pickNear(pool, stats.rating, avoid) ?? LOCAL_PUZZLES[0]
     },
     [stats, puzzle],
   )
@@ -106,8 +104,12 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
         begin(toPuzzle(due[0]), due[0])
         return
       }
-      // Si el set sin conexión casi no tiene problemas de ese tema, se usan los de Lichess.
-      const sparse = src === 'local' && t !== 'mix' && localPuzzlesFor(t).length < 3 && navigator.onLine
+      if (src === 'local') {
+        await loadPack()
+        setPackCount(packSize())
+      }
+      // Si los problemas sin conexión casi no tienen ese tema, se usan los de Lichess.
+      const sparse = src === 'local' && t !== 'mix' && offlinePuzzles(t).length < 3 && navigator.onLine
       if (sparse) setNotice(`Hay pocos problemas de ${themeName(t).toLowerCase()} sin conexión: se usan los de Lichess.`)
       if (src === 'lichess' || sparse) {
         try {
@@ -171,7 +173,14 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
     const timer = setTimeout(
       () => {
         const chess = new Chess(fen)
-        const m = chess.move(parseUci(puzzle.moves[step]))
+        let m
+        try {
+          m = chess.move(parseUci(puzzle.moves[step]))
+        } catch {
+          // Problema con datos defectuosos: se pasa al siguiente.
+          void next()
+          return
+        }
         setFen(chess.fen())
         setLastMove([m.from, m.to])
         setArrows(phase === 'solution' ? [{ orig: m.from, dest: m.to, brush: 'green' }] : [])
@@ -376,7 +385,7 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
             <span>Origen</span>
             <select value={source} onChange={(e) => changeSource(e.target.value as PuzzleSource)}>
               <option value="mine">Mis errores ({dueCount} pendientes hoy)</option>
-              <option value="local">Set de iniciación ({LOCAL_PUZZLES.length} problemas, sin conexión)</option>
+              <option value="local">Sin conexión ({LOCAL_PUZZLES.length + packCount} problemas de tu nivel)</option>
               <option value="lichess">Lichess (millones de problemas, requiere conexión)</option>
             </select>
           </label>

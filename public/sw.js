@@ -1,9 +1,10 @@
 // Service worker: permite instalar la app en el móvil y abrirla sin conexión.
 // Páginas: primero la red (para recibir actualizaciones); el resto de archivos: primero la caché.
-const CACHE = 'ajedrez-app-v2'
+const CACHE = 'ajedrez-app-v3'
 // ignoreVary: el servidor puede responder con «Vary: Origin» y los scripts de módulo llevan Origin;
 // sin esta opción, la copia guardada no se encontraría sin conexión.
-const ENGINE = ['engine/stockfish-19-lite-single.js', 'engine/stockfish-19-lite-single.wasm']
+// Motor de análisis y paquete de problemas sin conexión.
+const ENGINE = ['engine/stockfish-19-lite-single.js', 'engine/stockfish-19-lite-single.wasm', 'puzzles/pack.json']
 
 /**
  * Al instalar se guarda la página principal, los archivos que enlaza (JS y CSS con hash), las partes

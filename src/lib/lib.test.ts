@@ -598,3 +598,15 @@ describe('valoraciones de bots', () => {
     expect(mergeFeedback([f], [{ ...f, t: f.t + 1, feel: 'adecuado' }])[0].feel).toBe('adecuado')
   })
 })
+
+describe('paquete de problemas', () => {
+  it('elige cerca del nivel y evita los ya vistos', async () => {
+    const { pickNear } = await import('./puzzlePack')
+    const mk = (id: string, rating: number) => ({ id, fen: '', moves: [], rating, themes: [], source: 'local' as const })
+    const pool = [mk('a', 400), mk('b', 620), mk('c', 650), mk('d', 1400)]
+    expect(['b', 'c']).toContain(pickNear(pool, 600, new Set())!.id)
+    expect(pickNear(pool, 600, new Set(['b']), () => 0)!.id).toBe('c')
+    expect(pickNear(pool, 600, new Set(['b', 'c']), () => 0)!.id).toBe('a')
+    expect(pickNear([], 600, new Set())).toBeNull()
+  })
+})

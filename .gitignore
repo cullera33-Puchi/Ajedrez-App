@@ -7,3 +7,4 @@ public/engine
 .vscode/*
 !.vscode/extensions.json
 .idea
+public/puzzles/

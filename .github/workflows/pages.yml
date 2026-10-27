@@ -27,6 +27,20 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      # Problemas sin conexión: se genera un paquete a partir de la base de problemas de Lichess (CC0).
+      # La base se guarda en caché un mes para no descargarla en cada publicación. Si falla, la app
+      # se publica igual y usa el set de iniciación.
+      - id: month
+        run: echo "month=$(date +%Y-%m)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v4
+        with:
+          path: /tmp/lichess_db_puzzle.csv.zst
+          key: lichess-puzzles-${{ steps.month.outputs.month }}
+      - name: Paquete de problemas de Lichess
+        continue-on-error: true
+        run: |
+          [ -s /tmp/lichess_db_puzzle.csv.zst ] || curl -fsSL --retry 3 -o /tmp/lichess_db_puzzle.csv.zst https://database.lichess.org/lichess_db_puzzle.csv.zst
+          zstdcat /tmp/lichess_db_puzzle.csv.zst | node scripts/build-puzzle-pack.mjs public/puzzles/pack.json
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
