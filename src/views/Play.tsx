@@ -328,7 +328,11 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   const orientation: Color = flipped ? (game.userColor === 'white' ? 'black' : 'white') : game.userColor
   const last = game.moves[game.moves.length - 1]
   const sans = chess.history()
-  const botLine = `${bot.avatar} ${bot.name} (${bot.elo})`
+  const botLine = (
+    <>
+      <span className="emoji">{bot.avatar}</span> {bot.name} ({bot.elo})
+    </>
+  )
   const top = orientation === game.userColor ? botLine : userName
   const bottom = orientation === game.userColor ? userName : botLine
   const userWon = finished && finished.result !== '1/2-1/2' && (finished.result === '1-0') === (game.userColor === 'white')

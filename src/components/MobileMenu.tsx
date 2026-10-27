@@ -4,7 +4,7 @@ import { goBack, hasBackHandler, useBackHandler } from '../lib/nav'
 export interface MenuItem<V extends string> {
   id: V
   label: string
-  icon: string
+  icon: React.ReactNode
   /** Punto de aviso (por ejemplo, una partida a medias). */
   dot?: boolean
 }

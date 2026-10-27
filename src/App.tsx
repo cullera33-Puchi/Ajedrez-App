@@ -6,6 +6,7 @@ import { isLiveActive } from './lib/lichessPlay'
 import { finishLichessLogin } from './lib/lichessAuth'
 import { save } from './lib/storage'
 import { LiveLock } from './components/LiveLock'
+import { IconBook, IconBulb, IconCamera, IconHome, IconList, IconPawn, IconSearch, IconTarget, IconTrend } from './components/MenuIcons'
 import { MobileMenu } from './components/MobileMenu'
 import { installBackNavigation, onToast, setViewBack, showToast } from './lib/nav'
 import { loadSettings, saveSettings, type Settings } from './lib/settings'
@@ -36,14 +37,14 @@ const ScanView = lazy(() => import('./views/Scan').then((m) => ({ default: m.Sca
 
 export type View = 'inicio' | 'entreno' | 'jugar' | 'partidas' | 'analisis' | 'problemas' | 'aprender' | 'escanear' | 'progreso'
 
-const NAV: { id: View; label: string; icon: string }[] = [
-  { id: 'inicio', label: 'Inicio', icon: '⌂' },
-  { id: 'entreno', label: 'Entrenar', icon: '★' },
-  { id: 'jugar', label: 'Jugar', icon: '♟' },
-  { id: 'partidas', label: 'Partidas', icon: '☰' },
-  { id: 'analisis', label: 'Análisis', icon: '♘' },
-  { id: 'problemas', label: 'Problemas', icon: '♛' },
-  { id: 'aprender', label: 'Aprender', icon: '♙' },
+const NAV: { id: View; label: string; icon: React.ReactNode }[] = [
+  { id: 'inicio', label: 'Inicio', icon: <IconHome /> },
+  { id: 'entreno', label: 'Entrenar', icon: <IconTarget /> },
+  { id: 'jugar', label: 'Jugar', icon: <IconPawn /> },
+  { id: 'partidas', label: 'Partidas', icon: <IconList /> },
+  { id: 'analisis', label: 'Análisis', icon: <IconSearch /> },
+  { id: 'problemas', label: 'Problemas', icon: <IconBulb /> },
+  { id: 'aprender', label: 'Aprender', icon: <IconBook /> },
 ]
 
 /** Estado de navegación que se recupera al volver atrás. */
@@ -199,8 +200,8 @@ export default function App() {
       <MobileMenu
         items={NAV.map((n) => ({ ...n, dot: n.id === 'jugar' && pendingBotGame }))}
         extra={[
-          { id: 'progreso', label: 'Tu progreso', icon: '📈' },
-          { id: 'escanear', label: 'Escanear posición', icon: '📷' },
+          { id: 'progreso', label: 'Tu progreso', icon: <IconTrend /> },
+          { id: 'escanear', label: 'Escanear posición', icon: <IconCamera /> },
         ]}
         isActive={(id) => view === id}
         onSelect={setView}

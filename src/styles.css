@@ -2833,3 +2833,32 @@ label {
     justify-self: start;
   }
 }
+
+/* Iconos del menú (SVG en el color del texto) */
+.nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.menu-svg {
+  display: block;
+  flex-shrink: 0;
+}
+.nav-item .nav-icon,
+.drawer-item .nav-icon {
+  color: var(--muted);
+}
+.nav-item.active .nav-icon,
+.drawer-item.active .nav-icon {
+  color: inherit;
+}
+
+/* En tinta electrónica, nada a color: los avatares de los bots en gris */
+:root[data-theme='eink'] .emoji,
+:root[data-theme='eink'] .bot-avatar {
+  filter: grayscale(1) contrast(1.3);
+}
+:root[data-theme='eink'] .nav-item .nav-icon,
+:root[data-theme='eink'] .drawer-item .nav-icon {
+  color: inherit;
+}
