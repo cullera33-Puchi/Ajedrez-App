@@ -44,6 +44,11 @@ Piezas principales:
 | Problemas sin conexión | `scripts/build-puzzle-pack.mjs` (se ejecuta en el workflow de Pages con la base de Lichess), `src/lib/puzzlePack.ts`. `public/puzzles/` no se versiona |
 | Juego online | `src/lib/lichessAuth.ts` (OAuth PKCE y token personal), `src/lib/lichessPlay.ts` (Board API, flujos NDJSON con reconexión), `src/views/PlayOnline.tsx`, `src/components/LiveLock.tsx` (bloqueo del análisis durante la partida) |
 | Entrenamiento de hoy | `src/lib/training.ts` (plan del día, racha, momentos del repaso guiado), `src/views/Training.tsx` (sesión y repaso guiado), `PuzzleSolver`. Desde el análisis, *Repaso guiado* abre `entreno` con `review` en el estado de navegación; la apertura y la lección se abren en Aprender con `learnTarget` y vuelven al entrenamiento |
+| Importación automática | `src/lib/autoImport.ts` (al abrir y al volver tras 30 minutos; solo si ya se importó a mano; `autoImportLast` en `DEVICE_ONLY`), `importLichessNew` en `src/lib/lichess.ts` |
+| Piezas colgadas | `src/lib/hanging.ts` (capturas que ganan material y mate en una): avisos en las partidas contra bots (`hangingHelp`) y ejercicio de visión |
+| Tiempo | `src/lib/clock.ts` (relojes `%clk` del PGN; Lichess se importa con `clocks=true`), `timing` en `AnalysisSummary` (los antiguos se completan con `backfillTiming`) |
+| Resumen semanal | `src/lib/weekly.ts`, `src/components/WeeklyCard.tsx` |
+| Visión del tablero | `src/lib/vision.ts` (mejores marcas `visionBest`, con regla en `MERGERS`), `src/views/Vision.tsx` (dentro de Aprender, como Lessons y Openings). `Board` acepta `onSelect` y `coordinates` |
 | Sincronización | `src/lib/sync.ts` (Supabase con fetch: auth y storage; con la huella `syncHash` no fusiona ni sube si nada ha cambiado, y solo un «no encontrado» cuenta como nube vacía), `src/components/SyncCard.tsx`, guía en `docs/SINCRONIZACION.md` |
 
 Reglas de negocio a respetar:

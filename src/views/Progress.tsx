@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { View } from '../App'
 import { TrendChart } from '../components/TrendChart'
-import { allSummaries } from '../lib/games'
+import { WeeklyCard } from '../components/WeeklyCard'
+import { formatSeconds, timingAdvice, type TimingSummary, totalTiming } from '../lib/clock'
+import { allSummaries, backfillTiming } from '../lib/games'
 import { isOnlineGame, openingStats, ratingSeries, results, score, themeTotals, timeClasses, weeklyAccuracy } from '../lib/progress'
 import { themeName } from '../lib/puzzles'
 import { usePersistentState } from '../lib/storage'
@@ -39,7 +41,17 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
   const [storedTc, setTc] = usePersistentState('progressTimeClass', '')
   const tc = tcs.some((t) => t.tc === storedTc) ? storedTc : (tcs[0]?.tc ?? '')
 
-  const summaries = useMemo(() => new Map(allSummaries().map((s) => [s.id, s])), [])
+  const [summaries, setSummaries] = useState(() => new Map(allSummaries().map((s) => [s.id, s])))
+  // Los análisis guardados antes de medir el tiempo se completan al abrir la pantalla.
+  useEffect(() => {
+    let cancelled = false
+    void backfillTiming().then((n) => {
+      if (n && !cancelled) setSummaries(new Map(allSummaries().map((s) => [s.id, s])))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const [now] = useState(() => Date.now())
   const since = days ? now - days * 86_400_000 : 0
   const inPeriod = online.filter((g) => g.date >= since)
@@ -69,6 +81,9 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
   const analyzed = inPeriod.filter((g) => summaries.has(g.id))
   const avgAcc = analyzed.length ? analyzed.reduce((s, g) => s + summaries.get(g.id)!.accuracy[g.userColor!], 0) / analyzed.length : null
   const themes = themeTotals(inPeriod, summaries).slice(0, 6)
+  const timing = totalTiming(inPeriod.map((g) => summaries.get(g.id)?.timing).filter((x): x is TimingSummary => Boolean(x)))
+  const advice = timingAdvice(timing)
+  const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : '-')
   const openings = openingStats(inPeriod)
   const worst = openings.filter((o) => o.score < 50).slice(0, 5)
   const best = [...openings].sort((a, b) => b.score - a.score || b.n - a.n).filter((o) => o.score >= 50).slice(0, 3)
@@ -107,6 +122,8 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
           {analyzed.length < inPeriod.length && `Precisión de las ${analyzed.length} partidas ya analizadas.`}
         </p>
       </section>
+
+      <WeeklyCard games={games} />
 
       <section className="card">
         <h2>Rating</h2>
@@ -174,6 +191,35 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
           </div>
         ) : (
           <p className="muted small">Aún no hay partidas analizadas en este periodo.</p>
+        )}
+      </section>
+
+      <section className="card">
+        <h2>Gestión del tiempo</h2>
+        {timing.games ? (
+          <>
+            <div className="kpis">
+              <div className="kpi">
+                <span className="kpi-value">{pct(timing.quickErrors, timing.errors)}</span>
+                <span className="kpi-label">Errores con prisa</span>
+              </div>
+              <div className="kpi">
+                <span className="kpi-value">{timing.moves ? formatSeconds(timing.spent / timing.moves) : '-'}</span>
+                <span className="kpi-label">Por jugada</span>
+              </div>
+              <div className="kpi">
+                <span className="kpi-value">{timing.lostOnTimeGames}</span>
+                <span className="kpi-label">Derrotas por tiempo</span>
+              </div>
+            </div>
+            <p className="muted small">
+              En {timing.games} {timing.games === 1 ? 'partida analizada' : 'partidas analizadas'} con reloj. Con prisa es menos del 1 % del tiempo inicial (6 segundos en una partida
+              de 10 minutos): así jugaste el {pct(timing.quick, timing.moves)} de tus jugadas, y con poco tiempo en el reloj, el {pct(timing.low, timing.moves)}.
+            </p>
+            {advice && <p className="msg info">{advice}</p>}
+          </>
+        ) : (
+          <p className="muted small">Aún no hay partidas analizadas con reloj en este periodo. Las de Chess.com lo traen; las de Lichess, desde las que se importen a partir de ahora.</p>
         )}
       </section>
 

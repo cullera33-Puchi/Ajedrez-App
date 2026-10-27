@@ -1,5 +1,6 @@
 import { Chess, type Move, type PieceSymbol, type Square } from 'chess.js'
 import { type Classification, type GameAnalysis, materialBalance, type ParsedGame, parsePgn, playLine } from './analysis'
+import { timingFor, type TimingSummary } from './clock'
 import { loadReport } from './coach'
 import { getSummary } from './games'
 import type { GameSummary } from './types'
@@ -125,6 +126,8 @@ export interface AnalysisSummary {
   analyzedAt: number
   /** Ya se generaron los problemas con los errores de esta partida. */
   puzzlesDone?: boolean
+  /** Uso del tiempo (src/lib/clock.ts); null si la partida no tiene reloj, sin calcular si falta. */
+  timing?: TimingSummary | null
 }
 
 export function buildSummary(game: GameSummary, parsed: ParsedGame, analysis: GameAnalysis): AnalysisSummary {
@@ -137,6 +140,7 @@ export function buildSummary(game: GameSummary, parsed: ParsedGame, analysis: Ga
     counts: analysis.counts,
     themes: sorted(counts),
     analyzedAt: Date.now(),
+    timing: timingFor(game, analysis),
   }
 }
 

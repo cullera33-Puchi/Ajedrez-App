@@ -277,7 +277,7 @@ export async function nowPlaying(): Promise<{ gameId: string; color: Color; oppo
 
 /** Descarga la partida terminada para guardarla en Mis partidas. */
 export async function exportFinishedGame(id: string, username: string): Promise<GameSummary | null> {
-  const res = await fetch(`${LICHESS}/game/export/${id}?pgnInJson=true&opening=true&clocks=false&evals=false`, { headers: { Accept: 'application/json', ...auth() } })
+  const res = await fetch(`${LICHESS}/game/export/${id}?pgnInJson=true&opening=true&clocks=true&evals=false`, { headers: { Accept: 'application/json', ...auth() } })
   if (!res.ok) return null
   return normalizeLichessGame((await res.json()) as LiGame, username)
 }

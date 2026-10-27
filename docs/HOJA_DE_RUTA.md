@@ -26,6 +26,11 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 | Código de acceso de 4 cifras | Se pide al abrir la app la primera vez en cada dispositivo. El código es un secreto de GitHub (`APP_PIN`) y en la app solo va su huella; 5 fallos bloquean 30 segundos. Barrera sencilla: para un cierre real, Cloudflare Access (ver *Por analizar*) |
 | Búsqueda de rival en Lichess corregida | La conexión de la búsqueda queda abierta mientras se espera (antes Lichess la retiraba sin avisar); se relanza sola si se corta, recoge la partida aunque se pierda el aviso y muestra el tiempo de espera |
 | Supabase con tu proyecto | Dirección y clave publishable ya puestas en la tarjeta de sincronización; guía actualizada al formato nuevo de clave y con el paso de cerrar el alta de usuarios |
+| Importación automática | Al abrir la app y al volver a ella tras media hora, trae tus partidas nuevas de Chess.com y Lichess sin pulsar nada y avisa de cuántas hay; el análisis en segundo plano se encarga de ellas. Solo si ya importaste alguna vez a mano |
+| Avisos de pieza colgada contra los bots | Antes de jugar, si la jugada deja una pieza colgada (o se pierde material en el cambio) o permite mate en una, la app avisa y deja pensar otra o jugarla igualmente. Se puede quitar en Jugar |
+| Gestión del tiempo | Con los relojes de las partidas de Chess.com y Lichess: tiempo pensado en cada jugada en el análisis (y aviso si un error fue con prisa) y tarjeta en Tu progreso con errores con prisa, tiempo medio y derrotas por tiempo, con un consejo |
+| Resumen semanal | Tarjeta *Tu semana* en Inicio y Tu progreso: partidas, precisión, problemas, días entrenados, rating y tema más fallado, frente a la semana anterior |
+| Visión del tablero | En Aprender (y como extra en Entrenar): coordenadas en 30 segundos y piezas colgadas en 5 posiciones, con mejores marcas sincronizadas |
 | Iconos del menú | Juego de iconos propio de trazo fino en el color del texto (antes, mezcla de símbolos y emojis de colores). En tinta, nada a color: los avatares de los bots en gris |
 | Iconos de navegación del análisis | Inicio, anterior, siguiente y final dibujados en SVG con el color del texto: en el iPhone ya no salen como emoji azules |
 | Menú lateral en el móvil | La barra de pestañas pasa a un menú que se abre deslizando desde el borde izquierdo (el panel sigue al dedo); sin botón fijo, que era redundante. Sin pantalla gris al deslizar en el iPhone. En análisis gana unos 50 px de zona de jugadas. En PC y tablet, sin cambios |
@@ -62,7 +67,8 @@ Leyenda: **Hecho**, **Pendiente**, **Por analizar** (necesita definir el enfoque
 |---|---|---|---|---|
 | 1 | Terminar las pruebas reales: búsqueda de rival en Lichess tras la corrección (2.4), escáner con capturas de Chess.com (5.9), importación de Lichess (5.1), modo Tinta en la BOOX (5.8) y comprobar que la app pide el código de acceso | Es lo único que no se puede probar desde aquí | Bajo | Sí |
 | 2 | Usar unos días el entrenamiento diario y contarme qué sobra o falta (duración, número de problemas, orden de los pasos) | Ajustarlo a cómo entrenas de verdad | Bajo | Sí |
-| 3 | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
+| 3 | Contarme qué tal los avisos de pieza colgada y los ejercicios de visión (si avisan demasiado o poco) | Ajustar los umbrales a tu juego | Bajo | Sí |
+| 3b | **Análisis rápido en el móvil** (5.3): usar la evaluación en la nube de Lichess (gratuita) cuando la posición ya está calculada allí, y Stockfish solo para el resto | El análisis de una partida en el iPhone pasaría de minutos a segundos | Medio | Probarlo tú |
 | 4 | Ajuste de los bots con tus valoraciones (1.8) | Que cada nivel juegue como un jugador real de ese Elo | Bajo | Sí, con *Copiar para Claude* |
 | 5 | Estudios de Lichess por temas (6.1) | Temario estructurado con práctica | Alto | Elegir estudios |
 | 6 | Aperturas, versión 2 (4.5) y más lecciones (4.7) | Completar lo que ya funciona | Medio y alto | No |

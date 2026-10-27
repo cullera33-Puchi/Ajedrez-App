@@ -13,6 +13,7 @@ import { useBackHandler } from '../lib/nav'
 import { usePersistentState } from '../lib/storage'
 import { Chess } from 'chess.js'
 import { analyzeGame, CLASS_LABEL, CLASS_SYMBOL, formatEval, type GameAnalysis, parsePgn, toSpanishSan, winPercent } from '../lib/analysis'
+import { formatClock, formatSeconds, parseClocks, quickLimit } from '../lib/clock'
 import { getEngine } from '../lib/engine'
 import { type CoachReport, loadReport } from '../lib/coach'
 import { loadAnalysis, saveAnalysis } from '../lib/games'
@@ -112,6 +113,7 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
       return null
     }
   }, [game.pgn])
+  const clock = useMemo(() => parseClocks(game.pgn), [game.pgn])
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(null)
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -264,6 +266,14 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
 
   // Momentos clave: errores y errores graves del usuario (o de ambos si no se sabe quién es).
   const userSide = game.userColor === 'white' ? 'w' : game.userColor === 'black' ? 'b' : undefined
+  // Tiempo pensado en la jugada actual (si la partida trae los relojes).
+  const timeSpent = clock && ply > 0 && ply <= clock.left.length ? { spent: clock.spent[ply - 1], left: clock.left[ply - 1] } : null
+  const rushed =
+    timeSpent !== null &&
+    clock !== null &&
+    timeSpent.spent < quickLimit(clock.base) &&
+    (moveAnalysis?.classification === 'error' || moveAnalysis?.classification === 'grave') &&
+    (!userSide || move?.color === userSide)
   const keyMoments = analysis?.moves.filter(
     (m) => (m.classification === 'grave' || m.classification === 'error') && (!userSide || m.color === userSide),
   )
@@ -463,6 +473,13 @@ function GameAnalysisView({ game, settings, onSettings, onPractice, onPlayFrom, 
           ) : (
             <>
               <p>{moveAnalysis ? moveAnalysis.comment : 'Esperando al análisis…'}</p>
+              {timeSpent && (
+                <p className={`small move-time ${rushed ? 'rushed' : 'muted'}`}>
+                  {rushed
+                    ? `Jugada deprisa: en ${formatSeconds(timeSpent.spent)}, con ${formatClock(timeSpent.left)} en el reloj. Unos segundos para mirar qué ataca el rival suelen evitar este error.`
+                    : `Pensada en ${formatSeconds(timeSpent.spent)}; quedaban ${formatClock(timeSpent.left)}.`}
+                </p>
+              )}
               {canRetry && (
                 <button className="btn small primary retry-btn" onClick={startRetry}>
                   Inténtalo tú

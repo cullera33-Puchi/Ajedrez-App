@@ -1,4 +1,5 @@
 import type { GameAnalysis } from './analysis'
+import { timingFor } from './clock'
 import { db } from './db'
 import type { AnalysisSummary } from './recommend'
 import { listKeys, load, remove } from './storage'
@@ -104,6 +105,22 @@ export async function saveAnalysis(id: string, analysis: GameAnalysis, summary: 
 export async function updateSummary(summary: AnalysisSummary): Promise<void> {
   summaries.set(summary.id, summary)
   await (await db()).putMany('summaries', [[summary.id, summary]])
+}
+
+/**
+ * Calcula el uso del tiempo de los análisis guardados antes de que existiera (una vez por partida).
+ * Devuelve cuántos resúmenes ha completado.
+ */
+export async function backfillTiming(): Promise<number> {
+  let n = 0
+  for (const s of [...summaries.values()]) {
+    if (s.timing !== undefined) continue
+    const game = games.find((g) => g.id === s.id)
+    const analysis = game ? await loadAnalysis(s.id) : null
+    await updateSummary({ ...s, timing: game && analysis ? timingFor(game, analysis) : null })
+    n++
+  }
+  return n
 }
 
 /** Solo para pruebas. */

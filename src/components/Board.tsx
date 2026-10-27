@@ -26,6 +26,10 @@ interface Props {
   onMove?: (from: string, to: string) => void
   /** Cambiar este valor fuerza a redibujar la posición aunque la FEN no cambie (por ejemplo, tras una jugada incorrecta). */
   resetKey?: number
+  /** Toque en cualquier casilla (para los ejercicios de visión del tablero). */
+  onSelect?: (square: string) => void
+  /** Letras y números del borde (se fija al crear el tablero). */
+  coordinates?: boolean
 }
 
 export function legalDests(fen: string): Dests {
@@ -38,15 +42,18 @@ export function legalDests(fen: string): Dests {
   return dests
 }
 
-export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove, resetKey }: Props) {
+export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove, resetKey, onSelect, coordinates = true }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
   const onMoveRef = useRef(onMove)
+  const onSelectRef = useRef(onSelect)
   const initialFen = useRef(fen)
   const initialOrientation = useRef(orientation)
+  const initialCoordinates = useRef(coordinates)
   useEffect(() => {
     onMoveRef.current = onMove
-  }, [onMove])
+    onSelectRef.current = onSelect
+  }, [onMove, onSelect])
 
   useEffect(() => {
     if (!el.current) return
@@ -57,7 +64,9 @@ export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove
       animation: { enabled: !isEink(), duration: 180 },
       highlight: { lastMove: true, check: true },
       premovable: { enabled: false },
+      coordinates: initialCoordinates.current,
       movable: { free: false, showDests: true, events: { after: (o, d) => onMoveRef.current?.(o, d) } },
+      events: { select: (key) => onSelectRef.current?.(key) },
     })
     const ro = new ResizeObserver(() => api.current?.redrawAll())
     ro.observe(el.current)

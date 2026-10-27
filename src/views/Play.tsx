@@ -23,6 +23,8 @@ import {
   saveBotGame,
 } from '../lib/bots'
 import { getEngine, releaseEngine } from '../lib/engine'
+import { toSpanishSan } from '../lib/analysis'
+import { dangerAfterMove, describeDanger } from '../lib/hanging'
 import type { Settings } from '../lib/settings'
 import { addFeedback, type BotFeel, FEEL_LABEL, feedbackReport, loadFeedback } from '../lib/botFeedback'
 import { copyText } from '../lib/coach'
@@ -78,6 +80,9 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   const [record, setRecord] = useState(loadBotRecord)
   const [flipped, setFlipped] = useState(false)
   const [mode, setMode] = usePersistentState<'bots' | 'online'>('playMode', 'bots')
+  // Avisos antes de dejar una pieza colgada o un mate (se pueden quitar).
+  const [helpOn, setHelpOn] = usePersistentState('hangingHelp', true)
+  const [warning, setWarning] = useState<{ text: string; from: string; to: string; promotion?: string } | null>(null)
 
   const chess = useMemo(() => replay(game?.moves ?? [], game?.startFen), [game])
   const fen = chess.fen()
@@ -148,14 +153,32 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
     setFlipped(false)
   }
 
-  const playUser = (from: string, to: string, promotion?: string) => {
+  const playUser = (from: string, to: string, promotion?: string, confirmed = false) => {
     if (!game || !userTurn) return
+    let m
     try {
-      const m = new Chess(fen).move({ from, to, promotion })
-      apply(game, m.lan)
+      m = new Chess(fen).move({ from, to, promotion })
     } catch {
       setResetKey((k) => k + 1)
+      return
     }
+    // Con los avisos activados, antes de jugar se mira si la jugada deja algo colgado.
+    const danger = helpOn && !confirmed ? dangerAfterMove(fen, m.lan) : null
+    if (danger) {
+      setWarning({ text: describeDanger(danger, toSpanishSan(m.san)), from, to, promotion })
+      return
+    }
+    apply(game, m.lan)
+  }
+
+  const rethink = () => {
+    setWarning(null)
+    setResetKey((k) => k + 1)
+  }
+  const playAnyway = () => {
+    if (!warning) return
+    setWarning(null)
+    playUser(warning.from, warning.to, warning.promotion, true)
   }
 
   const onMove = (from: string, to: string) => {
@@ -317,6 +340,9 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
               </button>
             ))}
           </div>
+          <label className="check">
+            <input type="checkbox" checked={helpOn} onChange={(e) => setHelpOn(e.target.checked)} /> Avisarme si una jugada deja una pieza colgada o un mate
+          </label>
           <button className="btn primary play-start" onClick={() => start()}>
             Jugar contra {bot.name} ({bot.elo})
           </button>
@@ -344,7 +370,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
         <Board
           fen={fen}
           orientation={orientation}
-          movableColor={userTurn && !thinking ? game.userColor : undefined}
+          movableColor={userTurn && !thinking && !warning ? game.userColor : undefined}
           lastMove={last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
           onMove={onMove}
           resetKey={resetKey}
@@ -398,8 +424,24 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
                 '…'
               )}
             </p>
+            {warning && (
+              <div className="msg error hanging-warning">
+                <p>{warning.text}</p>
+                <div className="toolbar">
+                  <button className="btn primary small" onClick={rethink}>
+                    Pensar otra jugada
+                  </button>
+                  <button className="btn small" onClick={playAnyway}>
+                    Jugarla igualmente
+                  </button>
+                </div>
+              </div>
+            )}
             {msg && <p className="muted small">{msg}</p>}
-            {!msg && <p className="muted small">La partida se guarda sola: puedes salir y continuarla más tarde.</p>}
+            {!msg && !warning && <p className="muted small">La partida se guarda sola: puedes salir y continuarla más tarde.</p>}
+            <label className="check small">
+              <input type="checkbox" checked={helpOn} onChange={(e) => setHelpOn(e.target.checked)} /> Avisarme si dejo una pieza colgada o un mate
+            </label>
           </section>
         )}
         <section className="card">
@@ -414,10 +456,10 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
 
       {!finished && (
         <div className="play-actions">
-          <button className="btn" onClick={undo} disabled={thinking || !game.moves.length}>
+          <button className="btn" onClick={undo} disabled={thinking || Boolean(warning) || !game.moves.length}>
             ↶ Deshacer
           </button>
-          <button className="btn" onClick={offerDraw} disabled={thinking}>
+          <button className="btn" onClick={offerDraw} disabled={thinking || Boolean(warning)}>
             ½ Tablas
           </button>
           <button className="btn" onClick={resign}>

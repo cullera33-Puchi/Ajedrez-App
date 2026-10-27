@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js'
 import type { RatingInfo } from './chesscom'
 import type { Puzzle } from './puzzles'
+import { load, save } from './storage'
 import type { GameSummary, Result } from './types'
 
 // API de Lichess: https://lichess.org/api
@@ -72,7 +73,8 @@ export function normalizeLichessGame(g: LiGame, username: string): GameSummary |
  */
 export async function fetchLichessGames(username: string, max = 300, since?: number): Promise<GameSummary[]> {
   const user = username.trim()
-  const params = new URLSearchParams({ max: String(max), pgnInJson: 'true', opening: 'true', clocks: 'false', evals: 'false' })
+  // Con los relojes en el PGN se puede ver cuánto tiempo pensaste cada jugada (src/lib/clock.ts).
+  const params = new URLSearchParams({ max: String(max), pgnInJson: 'true', opening: 'true', clocks: 'true', evals: 'false' })
   if (since) params.set('since', String(since + 1))
   const res = await request(`${BASE}/api/games/user/${encodeURIComponent(user)}?${params}`, {
     headers: { Accept: 'application/x-ndjson' },
@@ -84,6 +86,22 @@ export async function fetchLichessGames(username: string, max = 300, since?: num
     .map((l) => normalizeLichessGame(JSON.parse(l) as LiGame, user))
     .filter((g): g is GameSummary => g !== null)
 }
+
+/**
+ * Importa solo lo nuevo de Lichess. Se guarda hasta dónde se importó (no la fecha de la última
+ * partida guardada: las jugadas desde la app también son de Lichess y harían saltarse el historial).
+ */
+export async function importLichessNew(username: string, max = 300): Promise<GameSummary[]> {
+  const user = username.trim().toLowerCase()
+  const until = load<Record<string, number>>('lichessImportedUntil', {})
+  const g = await fetchLichessGames(username, max, until[user])
+  const newest = Math.max(until[user] ?? 0, ...g.map((x) => x.date))
+  if (newest) save('lichessImportedUntil', { ...load<Record<string, number>>('lichessImportedUntil', {}), [user]: newest })
+  return g
+}
+
+/** ¿Se ha importado ya alguna vez de Lichess con este usuario? */
+export const lichessImported = (username: string) => Boolean(load<Record<string, number>>('lichessImportedUntil', {})[username.trim().toLowerCase()])
 
 export async function fetchLichessStats(username: string): Promise<RatingInfo[]> {
   const res = await request(`${BASE}/api/user/${encodeURIComponent(username.trim())}`)

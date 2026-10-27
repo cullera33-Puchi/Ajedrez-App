@@ -48,6 +48,7 @@ interface Props {
   onOpenGame: (id: string) => void
   onOpenLesson: (id: string) => void
   onOpenOpening: (id: string) => void
+  onOpenVision: (kind: 'coords' | 'hanging') => void
   onStartSession: () => void
 }
 
@@ -83,7 +84,7 @@ async function todayPlan(games: GameSummary[]): Promise<TrainingPlan> {
   return fresh
 }
 
-export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, onOpenOpening, onStartSession }: Props) {
+export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, onOpenOpening, onOpenVision, onStartSession }: Props) {
   const [plan, setPlanState] = useState<TrainingPlan | null>(null)
   const [active, setActive] = useState<StepId | null>(null)
   const reviewOnly = reviewGameId ? (games.find((g) => g.id === reviewGameId) ?? null) : null
@@ -179,7 +180,7 @@ export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, on
   if (active === 'mistakes') return <MistakesStep plan={plan} header={back} onProgress={update} onContinue={continueAfter} />
   if (active === 'puzzles') return <ThemeStep plan={plan} header={back} onProgress={update} onContinue={continueAfter} />
 
-  return <Overview plan={plan} onStart={setActive} onOpenLesson={onOpenLesson} onOpenOpening={onOpenOpening} />
+  return <Overview plan={plan} onStart={setActive} onOpenLesson={onOpenLesson} onOpenOpening={onOpenOpening} onOpenVision={onOpenVision} />
 }
 
 // ---------------------------------------------------------------------------
@@ -203,7 +204,15 @@ function stepText(plan: TrainingPlan, s: Step): { title: string; detail: string 
   }
 }
 
-function Overview({ plan, onStart, onOpenLesson, onOpenOpening }: { plan: TrainingPlan; onStart: (s: StepId) => void; onOpenLesson: (id: string) => void; onOpenOpening: (id: string) => void }) {
+interface OverviewProps {
+  plan: TrainingPlan
+  onStart: (s: StepId) => void
+  onOpenLesson: (id: string) => void
+  onOpenOpening: (id: string) => void
+  onOpenVision: (kind: 'coords' | 'hanging') => void
+}
+
+function Overview({ plan, onStart, onOpenLesson, onOpenOpening, onOpenVision }: OverviewProps) {
   const steps = planSteps(plan)
   const doneSteps = steps.filter(stepComplete).length
   const days = streak(loadDays())
@@ -268,6 +277,18 @@ function Overview({ plan, onStart, onOpenLesson, onOpenOpening }: { plan: Traini
             )
           })}
         </ol>
+      </section>
+      <section className="card">
+        <h3>Extra: visión del tablero</h3>
+        <p className="muted small">Un minuto para calentar o para rematar la sesión. No cuenta para la racha.</p>
+        <div className="toolbar">
+          <button className="btn small" onClick={() => onOpenVision('coords')}>
+            Coordenadas
+          </button>
+          <button className="btn small" onClick={() => onOpenVision('hanging')}>
+            Piezas colgadas
+          </button>
+        </div>
       </section>
     </div>
   )

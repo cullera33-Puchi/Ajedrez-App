@@ -3,6 +3,8 @@ import { ResourceLinks } from '../components/ResourceLinks'
 import { type Lesson, LESSONS } from '../lib/lessons'
 import { LessonList, LessonPlayer } from './Lessons'
 import { OpeningDetail, OpeningsCard } from './Openings'
+import { VisionCard, VisionDrill } from './Vision'
+import type { VisionBest } from '../lib/vision'
 import { getGames } from '../lib/games'
 import { type OpeningGroup, topOpenings } from '../lib/openings'
 
@@ -10,7 +12,7 @@ interface Props {
   onPractice: (theme: string) => void
   onPlayFrom: (fen: string) => void
   /** Lección o apertura que se abre directamente (desde el entrenamiento de hoy). */
-  target?: { kind: 'lesson' | 'opening'; id: string } | null
+  target?: { kind: 'lesson' | 'opening' | 'vision'; id: string } | null
   /** Vuelta al entrenamiento cuando se ha abierto desde allí. */
   onReturn?: () => void
 }
@@ -46,9 +48,12 @@ export function LearnView({ onPractice, onPlayFrom, target, onReturn }: Props) {
     const top = topOpenings(getGames())
     return [...top.white, ...top.black].find((o) => o.id === target.id) ?? null
   })
+  const [vision, setVision] = useState<keyof VisionBest | null>(() => (target?.kind === 'vision' ? (target.id as keyof VisionBest) : null))
   // Abierto desde el entrenamiento: al salir se vuelve allí.
   const fromTraining = Boolean(target && onReturn)
   const close = (clear: () => void) => (fromTraining ? onReturn!() : clear())
+  if (vision)
+    return <VisionDrill key={vision} kind={vision} onBack={() => close(() => setVision(null))} backLabel={fromTraining ? 'Volver al entrenamiento' : undefined} />
   if (opening)
     return (
       <OpeningDetail
@@ -84,6 +89,12 @@ export function LearnView({ onPractice, onPlayFrom, target, onReturn }: Props) {
           <h2>Lecciones prácticas</h2>
           <p className="muted">Finales que hay que saber ganar (y uno que hay que saber defender). Juegas contra Stockfish, que defiende lo mejor posible.</p>
           <LessonList onOpen={setLesson} />
+        </section>
+
+        <section className="card span-2">
+          <h2>Visión del tablero</h2>
+          <p className="muted">Ejercicios de un minuto para ver el tablero más rápido: dónde está cada casilla y qué piezas se pueden ganar.</p>
+          <VisionCard onOpen={setVision} />
         </section>
 
         <section className="card span-2">

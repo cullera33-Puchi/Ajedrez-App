@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useReducer, useRef, useState } from 'react'
+import { autoImport } from './lib/autoImport'
 import { startBackgroundAnalysis, useBackgroundState } from './lib/background'
 import { DEMO_GAMES, getGames, mergeGames } from './lib/games'
 import { loadBotGame } from './lib/bots'
@@ -55,7 +56,7 @@ interface NavState {
   /** En Entrenar: repaso guiado de la partida `gameId` en lugar de la sesión del día. */
   review: boolean
   /** En Aprender: lección o apertura que se abre directamente (desde el entrenamiento). */
-  learnTarget: { kind: 'lesson' | 'opening'; id: string } | null
+  learnTarget: { kind: 'lesson' | 'opening' | 'vision'; id: string } | null
 }
 
 export default function App() {
@@ -131,6 +132,21 @@ export default function App() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Partidas nuevas de Chess.com y Lichess al abrir la app y al volver a ella tras un rato.
+  useEffect(() => {
+    const run = () =>
+      void autoImport(loadSettings(), () => setGames(getGames())).then((n) => {
+        if (n) showToast(n === 1 ? 'Hay 1 partida nueva: se analizará en segundo plano.' : `Hay ${n} partidas nuevas: se analizarán en segundo plano.`)
+      })
+    const timer = setTimeout(run, 2500)
+    const onVisible = () => document.visibilityState === 'visible' && run()
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
+
   // Sincronización automática entre dispositivos (si está configurada).
   useEffect(() => {
     const stop = startAutoSync()
@@ -167,7 +183,7 @@ export default function App() {
   const openGame = (id: string) => go({ view: 'analisis', gameId: id })
   const openPuzzles = (theme: string) => go({ view: 'problemas', puzzleTheme: theme })
   const openReview = (id: string) => go({ view: 'entreno', gameId: id, review: true, learnTarget: null })
-  const openLearn = (kind: 'lesson' | 'opening', id: string) => go({ view: 'aprender', review: false, learnTarget: { kind, id } })
+  const openLearn = (kind: 'lesson' | 'opening' | 'vision', id: string) => go({ view: 'aprender', review: false, learnTarget: { kind, id } })
   const pendingBotGame = view !== 'jugar' && Boolean(loadBotGame())
   /** Prepara una partida contra un bot desde una posición. */
   const playPosition = (fen: string) => {
@@ -238,6 +254,7 @@ export default function App() {
             onOpenGame={openGame}
             onOpenLesson={(id) => openLearn('lesson', id)}
             onOpenOpening={(id) => openLearn('opening', id)}
+            onOpenVision={(kind) => openLearn('vision', kind)}
             onStartSession={() => setView('entreno')}
           />
         )}

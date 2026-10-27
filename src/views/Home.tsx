@@ -9,6 +9,7 @@ import { recommendThemes } from '../lib/recommend'
 import { isOnlineGame } from '../lib/progress'
 import { duePuzzles } from '../lib/myPuzzles'
 import { SyncCard } from '../components/SyncCard'
+import { WeeklyCard } from '../components/WeeklyCard'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
 import { backupFileName, exportBackup, importBackup, parseBackup } from '../lib/backup'
 import { allSummaries } from '../lib/games'
@@ -124,6 +125,8 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
             {training.label}
           </button>
         </section>
+
+        <WeeklyCard games={games} className="span-2" />
 
         <section className="card">
           <h2>Tus cuentas</h2>

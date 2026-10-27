@@ -898,3 +898,88 @@ describe('huella de la sincronización', () => {
     expect(a).not.toBe(c)
   })
 })
+
+describe('piezas colgadas', () => {
+  it('ve una pieza que se puede capturar gratis y una mal defendida', async () => {
+    const { winnableTargets } = await import('./hanging')
+    // Las blancas mueven: caballo negro en e5 sin defender; alfil negro en c5 defendido por el peón b6, atacado por el peón d4.
+    const t = winnableTargets('4k3/8/1p6/2b1n3/3P4/8/8/3RK3 w - - 0 1')
+    const by = Object.fromEntries(t.map((x) => [x.square, x.gain]))
+    expect(by.e5).toBe(3)
+    expect(by.c5).toBe(2)
+  })
+
+  it('avisa si tu jugada deja una pieza colgada o un mate, y no por un cambio igualado', async () => {
+    const { dangerAfterMove, describeDanger } = await import('./hanging')
+    // Dama blanca a h5, donde la captura el caballo de f6.
+    const fen = 'rnbqkb1r/pppp1ppp/5n2/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 2 3'
+    const d = dangerAfterMove(fen, 'd1h5')
+    expect(d?.kind).toBe('hanging')
+    expect(describeDanger(d!, 'Dh5')).toContain('tu dama de h5 se queda colgada')
+    // Jugada normal: sin aviso.
+    expect(dangerAfterMove(fen, 'g1f3')).toBeNull()
+    // Mate del pastor permitido: tras f3 las negras dan mate con Dh4.
+    const d2 = dangerAfterMove('rnbqkbnr/pppp1ppp/8/4p3/6P1/8/PPPPPP1P/RNBQKBNR w KQkq - 0 2', 'f2f3')
+    expect(d2).toEqual({ kind: 'mate', reply: 'Dh4#' })
+    // Capturar una pieza aunque la recuperen (alfil por caballo): no es un error.
+    expect(dangerAfterMove('r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4', 'b5c6')).toBeNull()
+  })
+})
+
+describe('gestión del tiempo', () => {
+  const pgn = `[White "anriqui"]
+[Black "rival"]
+[Result "0-1"]
+[TimeControl "600"]
+[Termination "rival won on time"]
+
+1. e4 {[%clk 0:09:58]} 1... e5 {[%clk 0:09:55]} 2. Qh5 {[%clk 0:09:56]} 2... Nc6 {[%clk 0:09:40]} 3. Qxf7+ {[%clk 0:00:30]} 0-1`
+
+  it('lee los relojes y calcula el tiempo de cada jugada', async () => {
+    const { parseClocks, quickLimit } = await import('./clock')
+    const c = parseClocks(pgn)!
+    expect(c.base).toBe(600)
+    expect(c.left).toEqual([598, 595, 596, 580, 30])
+    expect(c.spent).toEqual([2, 5, 2, 15, 566])
+    expect(quickLimit(600)).toBe(6)
+    expect(parseClocks('[TimeControl "1/259200"]\n\n1. e4 *')).toBeNull()
+  })
+
+  it('cuenta los errores hechos con prisa y la derrota por tiempo', async () => {
+    const { timingFor } = await import('./clock')
+    const m = (ply: number, color: 'w' | 'b', classification: MoveAnalysis['classification']) => ({ ply, color, classification }) as MoveAnalysis
+    const game = { id: 'x', source: 'chesscom', white: { name: 'anriqui' }, black: { name: 'rival' }, result: '0-1', userColor: 'white', date: 0, pgn } as GameSummary
+    const t = timingFor(game, { moves: [m(1, 'w', 'mejor'), m(2, 'b', 'buena'), m(3, 'w', 'grave'), m(4, 'b', 'buena'), m(5, 'w', 'error')] } as GameAnalysis)!
+    expect(t).toMatchObject({ moves: 3, quick: 2, errors: 2, quickErrors: 1, low: 1, lowErrors: 1, lostOnTime: true })
+  })
+})
+
+describe('resumen semanal', () => {
+  it('compara la semana actual con la anterior', async () => {
+    const { weeklySummary } = await import('./weekly')
+    const now = new Date('2026-10-28T12:00:00').getTime() // miércoles
+    const g = (id: string, iso: string, result: GameSummary['result'], rating: number): GameSummary => ({
+      id, source: 'chesscom', white: { name: 'anriqui', rating }, black: { name: 'r' }, result, userColor: 'white', timeClass: 'rapid', date: new Date(iso).getTime(), pgn: '',
+    })
+    const games = [g('a', '2026-10-27T10:00:00', '1-0', 520), g('b', '2026-10-26T10:00:00', '0-1', 505), g('c', '2026-10-21T10:00:00', '1-0', 500)]
+    const log: PuzzleAttempt[] = [
+      { t: new Date('2026-10-27T09:00:00').getTime(), win: true, source: 'local', difficulty: 600, prev: 600, rating: 615 },
+      { t: new Date('2026-10-28T09:00:00').getTime(), win: false, source: 'local', difficulty: 700, prev: 615, rating: 605 },
+    ]
+    const w = weeklySummary(now, games, new Map(), log, ['2026-10-26', '2026-10-27', '2026-10-20'])
+    expect(w.days).toBe(3)
+    expect(w.current).toMatchObject({ games: 2, w: 1, l: 1, rating: 520, ratingDelta: 20, puzzles: 2, puzzleWins: 1, puzzleRating: 605, puzzleDelta: 5, trainingDays: 2 })
+    expect(w.previous).toMatchObject({ games: 1, trainingDays: 1 })
+  })
+})
+
+describe('visión del tablero', () => {
+  it('comprueba las piezas marcadas y fusiona las mejores marcas', async () => {
+    const { checkHanging, mergeVisionBest, randomSquare } = await import('./vision')
+    const pos = { fen: '', targets: [{ square: 'e5' }, { square: 'c5' }] } as never
+    expect(checkHanging(pos, ['e5', 'c5']).perfect).toBe(true)
+    expect(checkHanging(pos, ['e5', 'a1'])).toMatchObject({ hits: ['e5'], wrong: ['a1'], missed: ['c5'], perfect: false })
+    expect(mergeVisionBest({ coords: 12, hanging: 2 }, { coords: 9, hanging: 4 })).toEqual({ coords: 12, hanging: 4 })
+    expect(randomSquare('e4', () => 0.5)).toMatch(/^[a-h][1-8]$/)
+  })
+})

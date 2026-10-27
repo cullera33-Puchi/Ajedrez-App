@@ -2862,3 +2862,33 @@ label {
 :root[data-theme='eink'] .drawer-item .nav-icon {
   color: inherit;
 }
+
+/* Visión del tablero */
+.vision-target {
+  font-size: 3rem;
+  font-weight: 800;
+  text-align: center;
+  margin: 0.4rem 0;
+  letter-spacing: 0.05em;
+}
+
+/* Aviso de pieza colgada en las partidas contra bots */
+.hanging-warning p {
+  margin: 0 0 0.5rem;
+}
+.hanging-warning .toolbar {
+  margin: 0;
+}
+
+/* Tiempo pensado en el análisis */
+.move-time {
+  margin-top: 0.4rem;
+}
+.move-time.rushed {
+  color: var(--c-error);
+  font-weight: 600;
+}
+:root[data-theme='eink'] .move-time.rushed {
+  color: inherit;
+  text-decoration: underline;
+}
