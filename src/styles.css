@@ -714,6 +714,7 @@ td.c-grave,
 }
 .chip {
   background: var(--bg-2);
+  color: var(--text);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.25rem 0.6rem;
@@ -2695,9 +2696,11 @@ label {
     color: var(--accent);
     font-weight: 700;
   }
-  /* Las barras de abajo (análisis y partidas) bajan hasta el borde de la pantalla */
+  /* Las barras de abajo (análisis y partidas) van pegadas al borde de la pantalla: el fondo cubre
+     la zona segura y no queda hueco por debajo por el que se vea pasar el contenido */
   .analysis .nav-controls,
   .page.play .play-actions {
+    bottom: 0;
     padding-bottom: calc(6px + var(--safe-bottom));
   }
   .content {
