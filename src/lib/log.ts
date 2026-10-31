@@ -76,7 +76,11 @@ export function setLogView(name: string) {
 
 /** Captura los errores no controlados (fallos de código y promesas rechazadas sin tratar). */
 export function installLogCapture() {
-  window.addEventListener('error', (e) => logError(e.message || 'Error sin mensaje', e.error ?? `${e.filename}:${e.lineno}:${e.colno}`))
+  window.addEventListener('error', (e) => {
+    // Aviso inofensivo del navegador cuando un cambio de tamaño se encadena con otro: no es un fallo.
+    if (/ResizeObserver loop/.test(e.message)) return
+    logError(e.message || 'Error sin mensaje', e.error ?? `${e.filename}:${e.lineno}:${e.colno}`)
+  })
   window.addEventListener('unhandledrejection', (e) => {
     const r = e.reason as { name?: string; message?: string } | undefined
     // Las búsquedas canceladas a propósito no son errores.

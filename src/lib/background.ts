@@ -32,6 +32,9 @@ let state: BackgroundState = { enabled: load('bgAnalysis', true), pending: 0, an
 let started = false
 
 function emit(patch: Partial<BackgroundState>) {
+  // Sin cambios no se avisa: cada aviso redibuja toda la app.
+  const same = (Object.keys(patch) as (keyof BackgroundState)[]).every((k) => JSON.stringify(state[k]) === JSON.stringify(patch[k]))
+  if (same) return
   state = { ...state, ...patch }
   for (const l of listeners) l(state)
 }

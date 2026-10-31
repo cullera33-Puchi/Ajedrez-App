@@ -80,9 +80,17 @@ export function mergeGames(incoming: GameSummary[]): GameSummary[] {
 /** Vuelve a leer partidas y resúmenes de la base de datos (tras recibir datos de otro dispositivo). */
 export async function reloadStore(): Promise<void> {
   const store = await db()
-  games = (await store.getAll<GameSummary>('games')).sort(byDate)
+  const [fromDb, sumDb] = await Promise.all([store.getAll<GameSummary>('games'), store.getAll<AnalysisSummary>('summaries')])
+  // Lo de la base de datos manda, pero se conserva lo que haya entrado en memoria mientras se leía
+  // (importación automática o análisis en segundo plano a la vez que la sincronización).
+  const ids = new Set(fromDb.map((g) => g.id))
+  const all = [...fromDb, ...games.filter((g) => !ids.has(g.id))]
+  const urls = new Set(all.filter((g) => g.url && !g.id.startsWith('pgn-')).map((g) => g.url))
+  games = all.filter((g) => !(g.id.startsWith('pgn-') && g.url && urls.has(g.url))).sort(byDate)
+  const fresh = new Map(sumDb.map((x) => [x.id, x]))
+  for (const [id, x] of summaries) if (!fresh.has(id)) fresh.set(id, x)
   summaries.clear()
-  for (const s of await store.getAll<AnalysisSummary>('summaries')) summaries.set(s.id, s)
+  for (const [id, x] of fresh) summaries.set(id, x)
 }
 
 export const getSummary = (id: string) => summaries.get(id)

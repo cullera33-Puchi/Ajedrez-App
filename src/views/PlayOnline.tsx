@@ -6,6 +6,9 @@ import { MoveList } from '../components/MoveList'
 import { Captured, PlayNav } from '../components/PlayExtras'
 import { materialInfo, positionAt, useMoveBrowser } from '../lib/playView'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
+import { IconCheck, IconClose, IconFlag } from '../components/GameIcons'
+import { useWakeLock } from '../lib/wakeLock'
+import { toSpanishSan } from '../lib/analysis'
 import { setBusy } from '../lib/activity'
 import { fetchAccount, type LichessAccount, loadLichessToken, revokeLichess, saveLichessToken, startLichessLogin, tokenCreateUrl } from '../lib/lichessAuth'
 import {
@@ -88,6 +91,9 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
   const [rated, setRated] = usePersistentState('lichessRated', false)
   const [aiLevel, setAiLevel] = usePersistentState('lichessAiLevel', 2)
   const [color, setColor] = usePersistentState<Color | 'random'>('lichessColor', 'random')
+  const [confirmMove, setConfirmMove] = usePersistentState('confirmMove', true)
+  const [premove, setPremove] = usePersistentState('premove', true)
+  const [autoQueen, setAutoQueen] = usePersistentState('autoQueen', true)
   const [friend, setFriend] = useState('')
   const [pasted, setPasted] = useState('')
 
@@ -333,6 +339,17 @@ export function PlayOnline({ onSaveGame, onAnalyze, header }: Props) {
               </div>
               <p className="muted small">Minutos por jugador y segundos que se suman en cada jugada. Desde apps como esta, Lichess permite partidas rápidas y clásicas.</p>
 
+              <h3>Durante la partida</h3>
+              <label className="check">
+                <input type="checkbox" checked={confirmMove} onChange={(e) => setConfirmMove(e.target.checked)} /> Confirmar cada jugada antes de enviarla
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={premove} onChange={(e) => setPremove(e.target.checked)} /> Permitir premovimientos (preparar tu jugada mientras piensa el rival)
+              </label>
+              <label className="check">
+                <input type="checkbox" checked={autoQueen} onChange={(e) => setAutoQueen(e.target.checked)} /> Coronar siempre a dama, sin preguntar
+              </label>
+
               <h3>Contra una persona</h3>
               <label className="check">
                 <input type="checkbox" checked={rated} onChange={(e) => setRated(e.target.checked)} /> Con puntuación (cambia tu rating de Lichess)
@@ -434,6 +451,11 @@ function LiveGameView({
   /** Jugada enviada y aún sin confirmar, con la posición en la lista de jugadas que ocupará. */
   const [pending, setPending] = useState<{ uci: string; at: number } | null>(null)
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null)
+  /** Jugada hecha en el tablero y pendiente de confirmar (con la opción de confirmar activada). */
+  const [candidate, setCandidate] = useState<{ from: string; to: string; promotion?: string; san: string; fen: string } | null>(null)
+  const [confirmMove] = usePersistentState('confirmMove', true)
+  const [premove] = usePersistentState('premove', true)
+  const [autoQueen] = usePersistentState('autoQueen', true)
   const [resetKey, setResetKey] = useState(0)
   const [saved, setSaved] = useState<string | null>(null)
   const [flipped, setFlipped] = useState(false)
@@ -453,6 +475,7 @@ function LiveGameView({
   }, [id, account.id])
 
   const finished = game ? isFinished(game.status) : false
+  useWakeLock(Boolean(game && !finished))
   useBackGuard(Boolean(game && !finished), 'Partida online en curso. Para salir, termínala (o ríndete).')
   useEffect(() => {
     setBusy('play', Boolean(game && !finished))
@@ -493,6 +516,12 @@ function LiveGameView({
   }, [game, pending])
   const sans = useMemo(() => chess.history(), [chess])
   const browse = useMoveBrowser(sans.length)
+  // Si la partida cambia mientras se decide (fin por tiempo, rival que abandona), se olvida la jugada.
+  const [movesSeen, setMovesSeen] = useState({ n: sans.length, finished })
+  if (movesSeen.n !== sans.length || movesSeen.finished !== finished) {
+    setMovesSeen({ n: sans.length, finished })
+    if (candidate) setCandidate(null)
+  }
 
   // Cuando Lichess confirma la jugada, deja de ser «pendiente».
   useEffect(() => {
@@ -545,10 +574,31 @@ function LiveGameView({
     }
   }
 
-  const onMove = (from: string, to: string) => {
+  /** Envía la jugada o, con la confirmación activada, la deja a la espera. Los premovimientos no esperan. */
+  const decide = (from: string, to: string, promotion?: string, wasPremove = false) => {
+    if (!confirmMove || wasPremove) return void play(from, to, promotion)
+    try {
+      const c = new Chess(chess.fen())
+      const m = c.move({ from, to, promotion })
+      setCandidate({ from, to, promotion, san: m.san, fen: c.fen() })
+    } catch {
+      setResetKey((k) => k + 1)
+    }
+  }
+  const onMove = (from: string, to: string, wasPremove?: boolean) => {
     const piece = chess.get(from as Parameters<Chess['get']>[0])
-    if (needsPromotion(chess.fen(), from, to, piece?.type)) setPromo({ from, to })
-    else void play(from, to)
+    if (!needsPromotion(chess.fen(), from, to, piece?.type)) decide(from, to, undefined, wasPremove)
+    else if (autoQueen || wasPremove) decide(from, to, 'q', wasPremove)
+    else setPromo({ from, to })
+  }
+  const confirmCandidate = () => {
+    if (!candidate) return
+    setCandidate(null)
+    void play(candidate.from, candidate.to, candidate.promotion)
+  }
+  const cancelCandidate = () => {
+    setCandidate(null)
+    setResetKey((k) => k + 1)
   }
 
   const act = async (fn: () => Promise<unknown>) => {
@@ -583,10 +633,11 @@ function LiveGameView({
       <div className="play-board">
         {playerLine(orientation === 'white' ? 'black' : 'white')}
         <Board
-          fen={shown?.fen ?? chess.fen()}
+          fen={candidate?.fen ?? shown?.fen ?? chess.fen()}
           orientation={orientation}
-          movableColor={myTurn && !browse.viewing ? game.color : undefined}
-          lastMove={shown ? shown.lastMove : last ? [last.from, last.to] : undefined}
+          movableColor={!finished && !browse.viewing && !candidate && (myTurn || premove) ? game.color : undefined}
+          premove={premove}
+          lastMove={candidate ? [candidate.from, candidate.to] : shown ? shown.lastMove : last ? [last.from, last.to] : undefined}
           onMove={onMove}
           resetKey={resetKey}
         />
@@ -617,7 +668,8 @@ function LiveGameView({
         ) : (
           <section className="card play-status">
             <p>
-              <strong>{myTurn ? 'Te toca mover.' : pending ? 'Enviando tu jugada…' : 'Juega tu rival…'}</strong> {game.rated ? 'Partida con puntuación.' : 'Partida amistosa.'}
+              <strong>{candidate ? `¿Confirmas ${toSpanishSan(candidate.san)}?` : myTurn ? 'Te toca mover.' : pending ? 'Enviando tu jugada…' : 'Juega tu rival…'}</strong>{' '}
+              {candidate ? 'Pulsa Confirmar abajo, o Cancelar para pensar otra.' : game.rated ? 'Partida con puntuación.' : 'Partida amistosa.'}
             </p>
             {oppOffersDraw && (
               <div className="msg info">
@@ -646,11 +698,21 @@ function LiveGameView({
         </div>
       </div>
 
-      {!finished && (
+      {!finished && candidate && (
+        <div className="play-actions confirm-actions">
+          <button className="btn" onClick={cancelCandidate}>
+            <IconClose /> Cancelar
+          </button>
+          <button className="btn primary" onClick={confirmCandidate}>
+            <IconCheck /> Confirmar
+          </button>
+        </div>
+      )}
+      {!finished && !candidate && (
         <div className="play-actions">
           {canAbort ? (
             <button className="btn" onClick={() => void act(() => abortGame(game.id))}>
-              ✕ Anular
+              <IconClose /> Anular
             </button>
           ) : (
             <button className="btn" onClick={() => void act(() => answerDraw(game.id, true))} disabled={iOfferDraw || Boolean(game.black.aiLevel || game.white.aiLevel)}>
@@ -658,7 +720,7 @@ function LiveGameView({
             </button>
           )}
           <button className="btn" onClick={() => window.confirm('¿Seguro que quieres rendirte?') && void act(() => resignGame(game.id))}>
-            ⚑ Rendirse
+            <IconFlag /> Rendirse
           </button>
         </div>
       )}
@@ -673,7 +735,7 @@ function LiveGameView({
           onPick={(p) => {
             const { from, to } = promo
             setPromo(null)
-            void play(from, to, p)
+            decide(from, to, p)
           }}
         />
       )}

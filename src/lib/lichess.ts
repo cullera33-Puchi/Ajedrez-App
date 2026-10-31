@@ -71,11 +71,12 @@ export function normalizeLichessGame(g: LiGame, username: string): GameSummary |
  * Partidas de Lichess. Con `since` (milisegundos) solo trae las posteriores a esa fecha, así las
  * importaciones siguientes descargan solo lo nuevo.
  */
-export async function fetchLichessGames(username: string, max = 300, since?: number): Promise<GameSummary[]> {
+export async function fetchLichessGames(username: string, max = 300, since?: number, until?: number): Promise<GameSummary[]> {
   const user = username.trim()
   // Con los relojes en el PGN se puede ver cuánto tiempo pensaste cada jugada (src/lib/clock.ts).
   const params = new URLSearchParams({ max: String(max), pgnInJson: 'true', opening: 'true', clocks: 'true', evals: 'false' })
   if (since) params.set('since', String(since + 1))
+  if (until) params.set('until', String(until))
   const res = await request(`${BASE}/api/games/user/${encodeURIComponent(user)}?${params}`, {
     headers: { Accept: 'application/x-ndjson' },
   })
@@ -95,6 +96,13 @@ export async function importLichessNew(username: string, max = 300): Promise<Gam
   const user = username.trim().toLowerCase()
   const until = load<Record<string, number>>('lichessImportedUntil', {})
   const g = await fetchLichessGames(username, max, until[user])
+  // Lichess devuelve primero las más recientes: si llega el máximo, puede haber más nuevas detrás.
+  // Se piden hacia atrás (hasta 5 tandas) para no saltarse ninguna al mover la marca.
+  for (let page = 0, last = g; until[user] && last.length >= max && page < 5; page++) {
+    const oldest = Math.min(...last.map((x) => x.date))
+    last = await fetchLichessGames(username, max, until[user], oldest - 1)
+    g.push(...last)
+  }
   const newest = Math.max(until[user] ?? 0, ...g.map((x) => x.date))
   if (newest) save('lichessImportedUntil', { ...load<Record<string, number>>('lichessImportedUntil', {}), [user]: newest })
   return g

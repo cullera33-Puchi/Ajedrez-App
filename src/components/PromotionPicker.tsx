@@ -1,13 +1,14 @@
+import { createElement } from 'react'
 import type { Color } from '../lib/types'
 
-const PIECES: { p: string; white: string; black: string; label: string }[] = [
-  { p: 'q', white: '♕', black: '♛', label: 'Dama' },
-  { p: 'r', white: '♖', black: '♜', label: 'Torre' },
-  { p: 'b', white: '♗', black: '♝', label: 'Alfil' },
-  { p: 'n', white: '♘', black: '♞', label: 'Caballo' },
+const PIECES: { p: string; role: string; label: string }[] = [
+  { p: 'q', role: 'queen', label: 'Dama' },
+  { p: 'r', role: 'rook', label: 'Torre' },
+  { p: 'b', role: 'bishop', label: 'Alfil' },
+  { p: 'n', role: 'knight', label: 'Caballo' },
 ]
 
-/** Elección de pieza al coronar un peón. */
+/** Elección de pieza al coronar un peón, con las mismas figuras del tablero. */
 export function PromotionPicker({ color, onPick, onCancel }: { color: Color; onPick: (p: string) => void; onCancel: () => void }) {
   return (
     <div className="promo-backdrop" onClick={onCancel}>
@@ -16,7 +17,9 @@ export function PromotionPicker({ color, onPick, onCancel }: { color: Color; onP
         <div className="promo-options">
           {PIECES.map((x) => (
             <button key={x.p} className="promo-btn" onClick={() => onPick(x.p)} title={x.label} aria-label={x.label}>
-              <span>{color === 'white' ? x.white : x.black}</span>
+              <span className="promo-piece cg-wrap" aria-hidden="true">
+                {createElement('piece', { className: `${x.role} ${color}` })}
+              </span>
               <small>{x.label}</small>
             </button>
           ))}

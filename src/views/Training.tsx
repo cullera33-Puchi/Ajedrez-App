@@ -88,13 +88,25 @@ async function todayPlan(games: GameSummary[]): Promise<TrainingPlan> {
 export function TrainingView({ games, reviewGameId, onOpenGame, onOpenLesson, onOpenOpening, onOpenVision, onStartSession }: Props) {
   const [plan, setPlanState] = useState<TrainingPlan | null>(null)
   const [active, setActive] = useState<StepId | null>(null)
+  const planRef = useRef(plan)
+  useEffect(() => {
+    planRef.current = plan
+  }, [plan])
   const reviewOnly = reviewGameId ? (games.find((g) => g.id === reviewGameId) ?? null) : null
 
   useEffect(() => {
     let cancelled = false
     void todayPlan(games).then((p) => !cancelled && setPlanState(p))
+    // Si la app vuelve a primer plano otro día con esta pantalla abierta, se prepara el plan del día nuevo.
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible') return
+      const cur = planRef.current
+      if (cur && cur.day !== today()) void todayPlan(games).then((p) => !cancelled && setPlanState(p))
+    }
+    document.addEventListener('visibilitychange', onVisible)
     return () => {
       cancelled = true
+      document.removeEventListener('visibilitychange', onVisible)
     }
     // El plan se calcula al entrar en la pantalla.
   }, []) // eslint-disable-line react-hooks/exhaustive-deps

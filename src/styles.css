@@ -1696,8 +1696,9 @@ cg-board {
 .play-status p {
   margin: 0.2rem 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.15rem 0.5rem;
 }
 .play-actions {
   display: flex;
@@ -3359,4 +3360,29 @@ button.week-day:disabled {
   background: var(--bg-2);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+.promo-btn .promo-piece.cg-wrap {
+  position: static;
+  display: block;
+  width: 48px;
+  height: 48px;
+  font-size: 0;
+}
+.promo-btn .promo-piece.cg-wrap piece {
+  position: static;
+  display: block;
+  width: 100%;
+  height: 100%;
+  z-index: auto;
+  will-change: auto;
+}
+.action-svg {
+  flex: none;
+  vertical-align: -3px;
+}
+.play-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }

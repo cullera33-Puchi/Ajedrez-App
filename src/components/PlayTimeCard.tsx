@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { activitySummary, formatMinutes, GOAL_CHOICES, loadActivityTime, loadGoal, onActivityChange, saveGoal } from '../lib/playTime'
 import type { GameSummary } from '../lib/types'
 
@@ -7,11 +7,20 @@ const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábad
 
 /** Tarjeta de Inicio y Progreso: meta del día, tiempo de la semana y del mes, y racha. */
 export function PlayTimeCard({ games, className = '' }: { games: GameSummary[]; className?: string }) {
-  const [now] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now())
   const [editing, setEditing] = useState(false)
   const [picked, setPicked] = useState<number | null>(null)
-  const [, refresh] = useReducer((x: number) => x + 1, 0)
-  useEffect(() => onActivityChange(refresh), [])
+  // Se recalcula con cada cambio y al volver a la app (puede volver otro día con Inicio abierto).
+  useEffect(() => {
+    const update = () => setNow(Date.now())
+    const onVisible = () => document.visibilityState === 'visible' && update()
+    const off = onActivityChange(update)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => {
+      off()
+      document.removeEventListener('visibilitychange', onVisible)
+    }
+  }, [])
 
   const s = activitySummary(loadActivityTime(), games, loadGoal(), now)
   const goalSecs = s.goal * 60

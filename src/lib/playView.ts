@@ -84,7 +84,10 @@ export function useMoveBrowser(total: number) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      if (e.key === 'ArrowLeft') setView((v) => Math.max(0, (v ?? total) - 1))
+      if (e.key === 'ArrowLeft') {
+        if (!total) return
+        setView((v) => Math.max(0, (v ?? total) - 1))
+      }
       else if (e.key === 'ArrowRight') setView((v) => (v === null || v + 1 >= total ? null : v + 1))
       else return
       e.preventDefault()

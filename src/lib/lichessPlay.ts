@@ -84,7 +84,7 @@ async function post(path: string, form?: Record<string, string | number | boolea
 }
 
 /** Lee un flujo NDJSON y llama a `onLine` con cada objeto. Termina cuando Lichess cierra el flujo. */
-export async function readNdjson(res: Response, onLine: (obj: Record<string, unknown>) => void) {
+export async function readNdjson(res: Response, onLine: (obj: Record<string, unknown>) => void, onData?: () => void) {
   const reader = res.body?.getReader()
   if (!reader) {
     for (const l of (await res.text()).split('\n')) if (l.trim()) onLine(JSON.parse(l))
@@ -95,6 +95,7 @@ export async function readNdjson(res: Response, onLine: (obj: Record<string, unk
   for (;;) {
     const { value, done } = await reader.read()
     if (done) break
+    onData?.()
     buf += decoder.decode(value, { stream: true })
     let i: number
     while ((i = buf.indexOf('\n')) >= 0) {
@@ -108,12 +109,17 @@ export async function readNdjson(res: Response, onLine: (obj: Record<string, unk
 
 const sleep = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve) => {
-    const t = setTimeout(resolve, ms)
-    signal?.addEventListener('abort', () => {
+    const done = () => {
       clearTimeout(t)
+      signal?.removeEventListener('abort', done)
       resolve()
-    })
+    }
+    const t = setTimeout(done, ms)
+    signal?.addEventListener('abort', done, { once: true })
   })
+
+/** Lichess manda una línea vacía cada pocos segundos: sin nada en este tiempo, la conexión se da por muerta. */
+const STALL_MS = 20_000
 
 /** Mantiene abierto un flujo y lo reabre si se corta, hasta que `signal` se cancele o `stop()` devuelva true. */
 async function keepStreaming(path: string, onLine: (obj: Record<string, unknown>) => void, signal: AbortSignal, stop: () => boolean, onError?: (msg: string) => void) {
@@ -126,8 +132,17 @@ async function keepStreaming(path: string, onLine: (obj: Record<string, unknown>
   }
   let delay = 1000
   while (!signal.aborted && !stop()) {
+    // Cada conexión tiene su propio cancelador: se corta si se queda colgada (frecuente tras bloquear el
+    // iPhone) o al volver a la app, y el bucle la reabre.
+    const conn = new AbortController()
+    const abortConn = () => conn.abort()
+    signal.addEventListener('abort', abortConn, { once: true })
+    let last = Date.now()
+    const watchdog = setInterval(() => Date.now() - last > STALL_MS && conn.abort(), 5000)
+    const onVisible = () => document.visibilityState === 'visible' && Date.now() - last > 3000 && conn.abort()
+    document.addEventListener('visibilitychange', onVisible)
     try {
-      const res = await fetch(`${LICHESS}${path}`, { headers, signal })
+      const res = await fetch(`${LICHESS}${path}`, { headers, signal: conn.signal })
       if (res.status === 401) {
         onError?.('El permiso de Lichess no es válido o ha caducado. Vuelve a conectar la cuenta.')
         return
@@ -139,12 +154,23 @@ async function keepStreaming(path: string, onLine: (obj: Record<string, unknown>
       }
       if (res.ok) {
         delay = 1000
-        await readNdjson(res, onLine)
+        await readNdjson(res, onLine, () => {
+          last = Date.now()
+        })
       }
     } catch (e) {
-      if ((e as Error).name === 'AbortError') return
+      if ((e as Error).name === 'AbortError' && signal.aborted) return
+    } finally {
+      clearInterval(watchdog)
+      document.removeEventListener('visibilitychange', onVisible)
+      signal.removeEventListener('abort', abortConn)
     }
     if (signal.aborted || stop()) return
+    // Conexión cortada por estar colgada: se reabre enseguida.
+    if (conn.signal.aborted) {
+      delay = 1000
+      continue
+    }
     await sleep(delay, signal)
     delay = Math.min(delay * 2, 15000)
   }

@@ -23,7 +23,10 @@ interface Props {
   movableColor?: Color
   lastMove?: [string, string]
   arrows?: Arrow[]
-  onMove?: (from: string, to: string) => void
+  /** `premove` indica que la jugada estaba preparada de antemano y se ha hecho al llegar el turno. */
+  onMove?: (from: string, to: string, premove?: boolean) => void
+  /** Deja preparar una jugada mientras juega el rival (se hace sola si sigue siendo legal). */
+  premove?: boolean
   /** Cambiar este valor fuerza a redibujar la posición aunque la FEN no cambie (por ejemplo, tras una jugada incorrecta). */
   resetKey?: number
   /** Toque en cualquier casilla (para los ejercicios de visión del tablero). */
@@ -42,7 +45,7 @@ export function legalDests(fen: string): Dests {
   return dests
 }
 
-export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove, resetKey, onSelect, coordinates = true }: Props) {
+export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove, resetKey, onSelect, coordinates = true, premove = false }: Props) {
   const el = useRef<HTMLDivElement>(null)
   const api = useRef<Api | null>(null)
   const onMoveRef = useRef(onMove)
@@ -65,12 +68,23 @@ export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove
       highlight: { lastMove: true, check: true },
       premovable: { enabled: false },
       coordinates: initialCoordinates.current,
-      movable: { free: false, showDests: true, events: { after: (o, d) => onMoveRef.current?.(o, d) } },
+      movable: { free: false, showDests: true, events: { after: (o, d, meta) => onMoveRef.current?.(o, d, meta.premove) } },
       events: { select: (key) => onSelectRef.current?.(key) },
     })
-    const ro = new ResizeObserver(() => api.current?.redrawAll())
+    // Se redibuja en el siguiente fotograma y solo si cambia el tamaño: redibujar dentro del aviso
+    // provoca otro aviso y el navegador se queja de un bucle («ResizeObserver loop…»).
+    let frame = 0
+    let size = ''
+    const ro = new ResizeObserver(([entry]) => {
+      const next = `${Math.round(entry.contentRect.width)}x${Math.round(entry.contentRect.height)}`
+      if (next === size) return
+      size = next
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => api.current?.redrawAll())
+    })
     ro.observe(el.current)
     return () => {
+      cancelAnimationFrame(frame)
       ro.disconnect()
       api.current?.destroy()
       api.current = null
@@ -90,9 +104,13 @@ export function Board({ fen, orientation, movableColor, lastMove, arrows, onMove
         color: movableColor,
         dests: movableColor === turnColor ? legalDests(fen) : new Map(),
       },
+      premovable: { enabled: premove },
       drawable: { autoShapes: (arrows ?? []) as DrawShape[] },
     })
-  }, [fen, orientation, movableColor, lastMove, arrows, resetKey])
+    // Jugada preparada: se hace al llegar el turno; si ya no se puede mover, se descarta.
+    if (!movableColor) api.current?.cancelPremove()
+    else if (premove && movableColor === turnColor) api.current?.playPremove()
+  }, [fen, orientation, movableColor, lastMove, arrows, resetKey, premove])
 
   return <div ref={el} className="board" />
 }

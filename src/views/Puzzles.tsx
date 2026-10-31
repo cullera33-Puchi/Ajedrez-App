@@ -18,7 +18,7 @@ import { recommendThemes } from '../lib/recommend'
 import { allMyPuzzles, duePuzzles, type MyPuzzle, recordResult, toPuzzle } from '../lib/myPuzzles'
 import { loadLog, logAttempt } from '../lib/puzzleLog'
 import { PuzzleProgress } from '../components/PuzzleProgress'
-import { usePersistentState } from '../lib/storage'
+import { load, usePersistentState } from '../lib/storage'
 
 type Phase = 'loading' | 'ready' | 'empty'
 type PuzzleSource = 'local' | 'lichess' | 'mine'
@@ -46,6 +46,10 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
   const [notice, setNotice] = useState<string | null>(null)
   // Cada problema cuenta una sola vez para el nivel (o para el repaso, si es uno de tus errores).
   const rated = useRef(false)
+  // Tus errores saltados en esta sesión: si no, «Saltar» volvería a mostrar el mismo.
+  const skipped = useRef(new Set<string>())
+  // Solo se aplica la respuesta de la última petición (al cambiar rápido de tema o de origen).
+  const request = useRef(0)
   // Cada problema monta el tablero de cero, aunque se repita el mismo.
   const [round, setRound] = useState(0)
   const recommendation = useMemo(() => recommendThemes(getGames()), [])
@@ -70,6 +74,8 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
 
   const next = useCallback(
     async (t = theme, src = source) => {
+      const id = ++request.current
+      const current = () => id === request.current
       setPhase('loading')
       setNotice(null)
       if (src === 'mine') {
@@ -81,11 +87,13 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
           setPhase('empty')
           return
         }
-        begin(toPuzzle(due[0]), due[0])
+        const pick = due.find((p) => !skipped.current.has(p.id)) ?? due[0]
+        begin(toPuzzle(pick), pick)
         return
       }
       if (src === 'local') {
         await loadPack()
+        if (!current()) return
         setPackCount(packSize())
       }
       // Si los problemas sin conexión casi no tienen ese tema, se usan los de Lichess.
@@ -93,9 +101,11 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
       if (sparse) setNotice(`Hay pocos problemas de ${themeName(t).toLowerCase()} sin conexión: se usan los de Lichess.`)
       if (src === 'lichess' || sparse) {
         try {
-          begin(await fetchLichessPuzzle(t, difficulty))
+          const p = await fetchLichessPuzzle(t, difficulty)
+          if (current()) begin(p)
           return
         } catch (e) {
+          if (!current()) return
           setNotice(`${(e as Error).message} Se usa el set de iniciación.`)
         }
       }
@@ -117,9 +127,11 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
       void recordResult(puzzle.id, win).then(() => setDueCount(duePuzzles().length))
       logAttempt({ t: Date.now(), win, source: 'mine', difficulty: null, prev: null, rating: null })
     } else {
-      const updated = updateRating(stats, puzzle, win)
+      // Se parte de lo guardado, que puede traer lo sincronizado desde otro dispositivo con la pantalla abierta.
+      const base = load<PuzzleStats>('puzzleStats', stats)
+      const updated = updateRating(base, puzzle, win)
       setStats(updated)
-      logAttempt({ t: Date.now(), win, source: puzzle.source, difficulty: puzzle.rating || null, prev: stats.rating, rating: updated.rating })
+      logAttempt({ t: Date.now(), win, source: puzzle.source, difficulty: puzzle.rating || null, prev: base.rating, rating: updated.rating })
     }
     setLog(loadLog())
   }
@@ -260,7 +272,13 @@ export function PuzzlesView({ initialTheme }: { initialTheme: string }) {
         header={notice && <p className="msg info small">{notice}</p>}
         actions={(p) =>
           (p === 'done' || p === 'playing') && (
-            <button className={`btn ${p === 'done' ? 'primary' : ''}`} onClick={() => next()}>
+            <button
+              className={`btn ${p === 'done' ? 'primary' : ''}`}
+              onClick={() => {
+                if (p === 'playing' && mine) skipped.current.add(mine.id)
+                void next()
+              }}
+            >
               {p === 'done' ? 'Siguiente problema' : 'Saltar'}
             </button>
           )

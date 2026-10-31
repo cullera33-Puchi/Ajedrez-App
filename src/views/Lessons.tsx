@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { type Arrow, Board } from '../components/Board'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
 import { setBusy } from '../lib/activity'
+import { logWarn } from '../lib/log'
 import { getEngine } from '../lib/engine'
 import { useBackGuard, useBackHandler } from '../lib/nav'
 import { checkLesson, type Lesson, lessonColor, type LessonStatus, LESSONS, loadLessonProgress, recordLesson } from '../lib/lessons'
@@ -132,8 +133,14 @@ export function LessonPlayer({ lesson, onBack, onNext, onPlayFrom, backLabel = '
   }
 
   const showHint = async () => {
-    const r = await getEngine('main').evaluate(chess.fen(), ENGINE_DEPTH)
-    if (alive.current && r.best) setHint([{ orig: r.best.slice(0, 2), dest: r.best.slice(2, 4), brush: 'green' }])
+    const at = chess.fen()
+    try {
+      const r = await getEngine('main').evaluate(at, ENGINE_DEPTH)
+      // Si ya se ha movido mientras pensaba el motor, la pista sería de otra posición.
+      if (alive.current && r.best && chess.fen() === at) setHint([{ orig: r.best.slice(0, 2), dest: r.best.slice(2, 4), brush: 'green' }])
+    } catch (e) {
+      logWarn('No se ha podido calcular la pista', e)
+    }
   }
 
   const restart = () => {

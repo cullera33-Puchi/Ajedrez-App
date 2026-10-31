@@ -4,6 +4,8 @@ import { Board } from '../components/Board'
 import { MoveList } from '../components/MoveList'
 import { Captured, PlayNav } from '../components/PlayExtras'
 import { PromotionPicker } from '../components/PromotionPicker'
+import { IconClose, IconFlag, IconUndo } from '../components/GameIcons'
+import { useWakeLock } from '../lib/wakeLock'
 import { setBusy } from '../lib/activity'
 import {
   addToRecord,
@@ -84,11 +86,13 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   const [mode, setMode] = usePersistentState<'bots' | 'online'>('playMode', 'bots')
   // Avisos antes de dejar una pieza colgada o un mate (se pueden quitar).
   const [helpOn, setHelpOn] = usePersistentState('hangingHelp', true)
+  const [autoQueen, setAutoQueen] = usePersistentState('autoQueen', true)
   const [warning, setWarning] = useState<{ text: string; from: string; to: string; promotion?: string } | null>(null)
 
   const chess = useMemo(() => replay(game?.moves ?? [], game?.startFen), [game])
   const fen = chess.fen()
   const browse = useMoveBrowser(game?.moves.length ?? 0)
+  useWakeLock(Boolean(game && !finished))
   const turn: Color = chess.turn() === 'w' ? 'white' : 'black'
   const bot = game ? makeBot(game.elo, game.style) : makeBot(elo, style)
   const userName = settings.chesscomUser || 'Tú'
@@ -186,8 +190,10 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
 
   const onMove = (from: string, to: string) => {
     const piece = chess.get(from as Parameters<typeof chess.get>[0])
-    if (piece?.type === 'p' && (to[1] === '8' || to[1] === '1')) setPromo({ from, to })
-    else playUser(from, to)
+    if (piece?.type === 'p' && (to[1] === '8' || to[1] === '1')) {
+      if (autoQueen) playUser(from, to, 'q')
+      else setPromo({ from, to })
+    } else playUser(from, to)
   }
 
   const undo = () => {
@@ -346,6 +352,9 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
           <label className="check">
             <input type="checkbox" checked={helpOn} onChange={(e) => setHelpOn(e.target.checked)} /> Avisarme si una jugada deja una pieza colgada o un mate
           </label>
+          <label className="check">
+            <input type="checkbox" checked={autoQueen} onChange={(e) => setAutoQueen(e.target.checked)} /> Coronar siempre a dama, sin preguntar
+          </label>
           <button className="btn primary play-start" onClick={() => start()}>
             Jugar contra {bot.name} ({bot.elo})
           </button>
@@ -469,16 +478,16 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
       {!finished && (
         <div className="play-actions">
           <button className="btn" onClick={undo} disabled={thinking || Boolean(warning) || !game.moves.length}>
-            ↶ Deshacer
+            <IconUndo /> Deshacer
           </button>
           <button className="btn" onClick={offerDraw} disabled={thinking || Boolean(warning)}>
             ½ Tablas
           </button>
           <button className="btn" onClick={resign}>
-            ⚑ Rendirse
+            <IconFlag /> Rendirse
           </button>
           <button className="btn" onClick={quit} title="Salir sin guardar la partida">
-            ✕ Descartar
+            <IconClose /> Descartar
           </button>
         </div>
       )}
