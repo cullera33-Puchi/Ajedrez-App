@@ -3334,3 +3334,29 @@ label {
 .play-nav.viewing .play-nav-info .link {
   font-weight: 700;
 }
+button.week-day {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+button.week-day:disabled {
+  cursor: default;
+}
+.week-day.picked .week-label {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: underline;
+}
+.week-day.picked .week-bar {
+  border: 2px solid var(--accent);
+}
+.week-detail {
+  margin: 0 0 0.4rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}

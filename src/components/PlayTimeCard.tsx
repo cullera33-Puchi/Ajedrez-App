@@ -3,11 +3,13 @@ import { activitySummary, formatMinutes, GOAL_CHOICES, loadActivityTime, loadGoa
 import type { GameSummary } from '../lib/types'
 
 const days = (n: number) => `${n} ${n === 1 ? 'día' : 'días'}`
+const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 /** Tarjeta de Inicio y Progreso: meta del día, tiempo de la semana y del mes, y racha. */
 export function PlayTimeCard({ games, className = '' }: { games: GameSummary[]; className?: string }) {
   const [now] = useState(() => Date.now())
   const [editing, setEditing] = useState(false)
+  const [picked, setPicked] = useState<number | null>(null)
   const [, refresh] = useReducer((x: number) => x + 1, 0)
   useEffect(() => onActivityChange(refresh), [])
 
@@ -44,15 +46,33 @@ export function PlayTimeCard({ games, className = '' }: { games: GameSummary[]; 
       </div>
 
       <div className="week-strip" aria-label="Días de esta semana">
-        {s.weekDays.map((d) => (
-          <div key={d.day} className={`week-day ${d.met ? 'met' : ''} ${d.today ? 'today' : ''} ${d.future ? 'future' : ''}`} title={d.future ? '' : `${formatMinutes(d.total)}${d.met ? ', meta cumplida' : ''}`}>
+        {s.weekDays.map((d, i) => (
+          <button
+            key={d.day}
+            className={`week-day ${d.met ? 'met' : ''} ${d.today ? 'today' : ''} ${d.future ? 'future' : ''} ${picked === i ? 'picked' : ''}`}
+            disabled={d.future}
+            aria-pressed={picked === i}
+            aria-label={`${DAY_NAMES[i]}: ${formatMinutes(d.total)}`}
+            onClick={() => setPicked(picked === i ? null : i)}
+          >
             <span className="week-bar">
               <span style={{ height: `${Math.min(100, Math.round((d.total / goalSecs) * 100))}%` }} />
             </span>
             <span className="week-label">{d.label}</span>
-          </div>
+          </button>
         ))}
       </div>
+      {picked !== null && (() => {
+        const d = s.weekDays[picked]
+        return (
+          <p className="week-detail small" aria-live="polite">
+            <strong>
+              {DAY_NAMES[picked]} {Number(d.day.slice(8))}: {formatMinutes(d.total)}
+            </strong>
+            {d.total > 0 && ` (${formatMinutes(d.app)} en la app y ${formatMinutes(d.games)} en partidas online)`}. {d.met ? 'Meta cumplida.' : d.today ? `Te faltan ${formatMinutes(left)} para la meta.` : 'Meta sin cumplir.'}
+          </p>
+        )
+      })()}
 
       <p className="muted small">
         {s.today.total > 0 && `Hoy: ${formatMinutes(s.today.app)} en la app y ${formatMinutes(s.today.games)} en partidas online. `}

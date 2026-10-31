@@ -192,7 +192,7 @@ export interface ActivitySummary {
   week: number
   month: number
   /** Días de esta semana, de lunes a domingo (los que aún no han llegado, con `future`). */
-  weekDays: { day: string; label: string; total: number; met: boolean; future: boolean; today: boolean }[]
+  weekDays: { day: string; label: string; total: number; app: number; games: number; met: boolean; future: boolean; today: boolean }[]
   streak: number
   best: number
 }
@@ -213,7 +213,8 @@ export function activitySummary(time: ActivityTime, games: GameSummary[], goalMi
     const day = dayKey(d)
     const future = day > todayKey
     if (!future) week += total(day)
-    weekDays.push({ day, label: LABELS[i], total: future ? 0 : total(day), met: !future && met(day), future, today: day === todayKey })
+    const a = future ? undefined : byDay.get(day)
+    weekDays.push({ day, label: LABELS[i], total: a?.total ?? 0, app: a?.app ?? 0, games: a?.games ?? 0, met: !future && met(day), future, today: day === todayKey })
   }
 
   const monthPrefix = todayKey.slice(0, 8)
