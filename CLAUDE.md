@@ -42,6 +42,7 @@ Piezas principales:
 | Valoraciones de bots | `src/lib/botFeedback.ts` (texto para pegar a Claude) |
 | Aperturas | `src/lib/openings.ts` (árbol, revisión, repertorio, repasos), `src/views/Openings.tsx` |
 | Problemas sin conexión | `scripts/build-puzzle-pack.mjs` (se ejecuta en el workflow de Pages con la base de Lichess), `src/lib/puzzlePack.ts`. `public/puzzles/` no se versiona |
+| Material y repaso en partida | `src/lib/playView.ts` (`materialInfo`: capturas y ventaja; `positionAt`; `useMoveBrowser`: repaso que vuelve a la posición actual con cada jugada nueva), `src/components/PlayExtras.tsx` (`Captured` con las figuras de chessground, `PlayNav`). Lo usan Play y PlayOnline |
 | Juego online | `src/lib/lichessAuth.ts` (OAuth PKCE y token personal), `src/lib/lichessPlay.ts` (Board API, flujos NDJSON con reconexión), `src/views/PlayOnline.tsx`, `src/components/LiveLock.tsx` (bloqueo del análisis durante la partida) |
 | Entrenamiento de hoy | `src/lib/training.ts` (plan del día, racha, momentos del repaso guiado), `src/views/Training.tsx` (sesión y repaso guiado), `PuzzleSolver`. Desde el análisis, *Repaso guiado* abre `entreno` con `review` en el estado de navegación; la apertura y la lección se abren en Aprender con `learnTarget` y vuelven al entrenamiento |
 | Importación automática | `src/lib/autoImport.ts` (al abrir y al volver tras 30 minutos; solo si ya se importó a mano; `autoImportLast` en `DEVICE_ONLY`), `importLichessNew` en `src/lib/lichess.ts` |

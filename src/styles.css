@@ -3280,3 +3280,57 @@ label {
   font-size: 1.15rem;
   white-space: nowrap;
 }
+
+/* Partidas: piezas capturadas junto al nombre y repaso de jugadas */
+.captured {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  gap: 4px;
+  margin-left: 4px;
+}
+.player-line .captured-pieces.cg-wrap {
+  display: inline-flex;
+  align-items: center;
+  position: static;
+}
+.player-line .captured-pieces.cg-wrap piece {
+  position: static;
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  margin-left: 1px;
+  z-index: auto;
+  will-change: auto;
+}
+.player-line .captured-pieces.cg-wrap piece.same {
+  margin-left: -10px;
+}
+.captured-adv {
+  font-size: 0.85em;
+  font-weight: 700;
+  color: var(--muted);
+}
+.play-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0.5rem;
+}
+.play-nav .btn {
+  flex: 0 0 auto;
+  min-width: 46px;
+  height: 36px;
+  padding: 0 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.play-nav-info {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+.play-nav.viewing .play-nav-info .link {
+  font-weight: 700;
+}

@@ -2,6 +2,7 @@ import { Chess } from 'chess.js'
 import { useEffect, useMemo, useState } from 'react'
 import { Board } from '../components/Board'
 import { MoveList } from '../components/MoveList'
+import { Captured, PlayNav } from '../components/PlayExtras'
 import { PromotionPicker } from '../components/PromotionPicker'
 import { setBusy } from '../lib/activity'
 import {
@@ -29,6 +30,7 @@ import type { Settings } from '../lib/settings'
 import { addFeedback, type BotFeel, FEEL_LABEL, feedbackReport, loadFeedback } from '../lib/botFeedback'
 import { copyText } from '../lib/coach'
 import { useBackGuard } from '../lib/nav'
+import { materialInfo, positionAt, useMoveBrowser } from '../lib/playView'
 import { liveGameId } from '../lib/lichessPlay'
 import { PlayOnline } from './PlayOnline'
 import { usePersistentState } from '../lib/storage'
@@ -86,6 +88,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
 
   const chess = useMemo(() => replay(game?.moves ?? [], game?.startFen), [game])
   const fen = chess.fen()
+  const browse = useMoveBrowser(game?.moves.length ?? 0)
   const turn: Color = chess.turn() === 'w' ? 'white' : 'black'
   const bot = game ? makeBot(game.elo, game.style) : makeBot(elo, style)
   const userName = settings.chesscomUser || 'Tú'
@@ -361,24 +364,33 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
   )
   const top = orientation === game.userColor ? botLine : userName
   const bottom = orientation === game.userColor ? userName : botLine
+  // Al repasar jugadas, el tablero enseña esa posición y no deja mover.
+  const shown = browse.viewing ? positionAt(game.moves, browse.ply, game.startFen) : null
+  const material = materialInfo(shown?.fen ?? fen, game.startFen)
+  const topSide: Color = orientation === 'white' ? 'black' : 'white'
   const userWon = finished && finished.result !== '1/2-1/2' && (finished.result === '1-0') === (game.userColor === 'white')
 
   return (
     <div className="page play" data-fen={fen}>
       <div className="play-board">
-        <div className="player-line">{top}</div>
+        <div className="player-line">
+          {top} <Captured side={topSide} material={material} />
+        </div>
         <Board
-          fen={fen}
+          fen={shown?.fen ?? fen}
           orientation={orientation}
-          movableColor={userTurn && !thinking && !warning ? game.userColor : undefined}
-          lastMove={last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
+          movableColor={userTurn && !thinking && !warning && !browse.viewing ? game.userColor : undefined}
+          lastMove={shown ? shown.lastMove : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
           onMove={onMove}
           resetKey={resetKey}
         />
-        <div className="player-line">{bottom}</div>
+        <div className="player-line">
+          {bottom} <Captured side={orientation} material={material} />
+        </div>
       </div>
 
       <div className="play-side">
+        <PlayNav ply={browse.ply} total={game.moves.length} viewing={browse.viewing} onGo={browse.go} />
         {finished ? (
           <section className={`card play-result ${userWon ? 'win' : finished.result === '1/2-1/2' ? 'draw' : 'loss'}`}>
             <h2>{userWon ? '¡Has ganado!' : finished.result === '1/2-1/2' ? 'Tablas' : `Ha ganado ${bot.name}`}</h2>
@@ -445,7 +457,7 @@ export function PlayView({ settings, onSaveGame, onAnalyze, startFen, onClearSta
           </section>
         )}
         <section className="card">
-          <MoveList sans={sans} ply={sans.length} onSelect={() => undefined} startFen={game.startFen} />
+          <MoveList sans={sans} ply={browse.ply} onSelect={browse.go} startFen={game.startFen} />
         </section>
         <div className="view-controls">
           <button className="btn small" onClick={() => setFlipped((f) => !f)}>

@@ -1044,3 +1044,26 @@ describe('tiempo jugado y meta diaria', () => {
     expect([formatMinutes(59), formatMinutes(25 * 60), formatMinutes(65 * 60), formatMinutes(120 * 60)]).toEqual(['0 min', '25 min', '1 h 5 min', '2 h'])
   })
 })
+
+describe('material en la partida', () => {
+  it('piezas capturadas y ventaja', async () => {
+    const { materialInfo, positionAt } = await import('./playView')
+    // 1. e4 d5 2. exd5 Dxd5 3. Cc3 Dxg2?? 4. Axg2: blancas ganan peón y dama, negras un peón.
+    const { fen, lastMove } = positionAt(['e2e4', 'd7d5', 'e4d5', 'd8d5', 'b1c3', 'd5g2', 'f1g2'], 7)
+    const m = materialInfo(fen)
+    expect(m.captured.white).toEqual(['p', 'q'])
+    expect(m.captured.black).toEqual(['p', 'p'])
+    expect(m.advantage).toEqual({ white: 8, black: 0 })
+    expect(lastMove).toEqual(['f1', 'g2'])
+    expect(materialInfo(positionAt(['e2e4', 'd7d5'], 1).fen).captured).toEqual({ white: [], black: [] })
+  })
+
+  it('coronar no cuenta como captura', async () => {
+    const { materialInfo } = await import('./playView')
+    // Blancas: rey y dama coronada (sin peones). Negras: rey. Desde una salida con un peón blanco.
+    const m = materialInfo('4k3/8/8/8/8/8/8/Q3K3 b - - 0 1', '4k3/P7/8/8/8/8/8/4K3 w - - 0 1')
+    expect(m.captured.white).toEqual([])
+    expect(m.captured.black).toEqual([])
+    expect(m.advantage.white).toBe(9)
+  })
+})

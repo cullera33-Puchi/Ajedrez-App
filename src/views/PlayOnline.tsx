@@ -3,6 +3,8 @@ import { Chess } from 'chess.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Board } from '../components/Board'
 import { MoveList } from '../components/MoveList'
+import { Captured, PlayNav } from '../components/PlayExtras'
+import { materialInfo, positionAt, useMoveBrowser } from '../lib/playView'
 import { needsPromotion, PromotionPicker } from '../components/PromotionPicker'
 import { setBusy } from '../lib/activity'
 import { fetchAccount, type LichessAccount, loadLichessToken, revokeLichess, saveLichessToken, startLichessLogin, tokenCreateUrl } from '../lib/lichessAuth'
@@ -490,6 +492,7 @@ function LiveGameView({
     return c
   }, [game, pending])
   const sans = useMemo(() => chess.history(), [chess])
+  const browse = useMoveBrowser(sans.length)
 
   // Cuando Lichess confirma la jugada, deja de ser «pendiente».
   useEffect(() => {
@@ -518,6 +521,10 @@ function LiveGameView({
   const canAbort = !finished && myMoves < 1
   const orientation: Color = flipped ? opponent : game.color
   const last = chess.history({ verbose: true }).pop()
+  const startFen = game.initialFen !== 'startpos' ? game.initialFen : undefined
+  // Al repasar jugadas, el tablero enseña esa posición y no deja mover (el reloj sigue corriendo).
+  const shown = browse.viewing ? positionAt([...game.moves, ...(pending ? [pending.uci] : [])], browse.ply, startFen) : null
+  const material = materialInfo(shown?.fen ?? chess.fen(), startFen)
 
   const play = async (from: string, to: string, promotion?: string) => {
     let uci: string
@@ -561,7 +568,7 @@ function LiveGameView({
       <div className={`player-line live ${active ? 'active' : ''}`}>
         <span>
           <strong>{p.name}</strong>
-          {p.rating ? <span className="muted"> ({p.rating})</span> : null}
+          {p.rating ? <span className="muted"> ({p.rating})</span> : null} <Captured side={side} material={material} />
         </span>
         <LiveClock game={game} side={side} />
       </div>
@@ -575,10 +582,18 @@ function LiveGameView({
     <div className="page play online" data-fen={chess.fen()}>
       <div className="play-board">
         {playerLine(orientation === 'white' ? 'black' : 'white')}
-        <Board fen={chess.fen()} orientation={orientation} movableColor={myTurn ? game.color : undefined} lastMove={last ? [last.from, last.to] : undefined} onMove={onMove} resetKey={resetKey} />
+        <Board
+          fen={shown?.fen ?? chess.fen()}
+          orientation={orientation}
+          movableColor={myTurn && !browse.viewing ? game.color : undefined}
+          lastMove={shown ? shown.lastMove : last ? [last.from, last.to] : undefined}
+          onMove={onMove}
+          resetKey={resetKey}
+        />
         {playerLine(orientation)}
       </div>
       <div className="play-side">
+        <PlayNav ply={browse.ply} total={sans.length} viewing={browse.viewing} onGo={browse.go} />
         {finished ? (
           <section className={`card play-result ${game.winner === game.color ? 'win' : game.winner ? 'loss' : 'draw'}`}>
             <h2>{result}</h2>
@@ -622,7 +637,7 @@ function LiveGameView({
         )}
         {error && <p className="msg error">{error}</p>}
         <section className="card">
-          <MoveList sans={sans} ply={sans.length} onSelect={() => undefined} startFen={game.initialFen !== 'startpos' ? game.initialFen : undefined} />
+          <MoveList sans={sans} ply={browse.ply} onSelect={browse.go} startFen={startFen} />
         </section>
         <div className="view-controls">
           <button className="btn small" onClick={() => setFlipped((f) => !f)}>
