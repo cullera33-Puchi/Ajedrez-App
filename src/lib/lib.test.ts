@@ -996,3 +996,51 @@ describe('registro de errores', () => {
     expect(all.map((e) => [e.level, e.msg])).toEqual([['error', 'Falló con lip_***'], ['aviso', 'Otro aviso']])
   })
 })
+
+describe('tiempo jugado y meta diaria', () => {
+  const at = (y: number, m: number, d: number, h = 12) => new Date(y, m - 1, d, h).getTime()
+  const pgn = '[TimeControl "300"]\n\n1. e4 {[%clk 0:04:50]} e5 {[%clk 0:04:40]} 2. Nf3 {[%clk 0:04:20]} Nc6 {[%clk 0:04:00]} *'
+  const online = (id: string, date: number, source: GameSummary['source'] = 'chesscom'): GameSummary =>
+    ({ id, source, white: { name: 'anriqui' }, black: { name: 'rival' }, result: '*', userColor: 'white', date, pgn }) as GameSummary
+
+  it('la duración de la partida es lo que pensaron los dos', async () => {
+    const { gameSeconds } = await import('./playTime')
+    // Blancas: 10 + 30; negras: 20 + 40.
+    expect(gameSeconds(online('t1', 0))).toBe(100)
+  })
+
+  it('suma los dispositivos y las partidas online, no las de bots', async () => {
+    const { activityByDay } = await import('./playTime')
+    const day = at(2026, 10, 28)
+    const map = activityByDay({ a: { '2026-10-28': 300 }, b: { '2026-10-28': 120 } }, [online('t2', day), online('t3', day, 'bot')])
+    expect(map.get('2026-10-28')).toEqual({ day: '2026-10-28', app: 420, games: 100, total: 520 })
+  })
+
+  it('racha, mejor racha, semana y mes', async () => {
+    const { activitySummary } = await import('./playTime')
+    // Meta de 10 min (600 s). Cumplidos: 1 y 2 de octubre (mejor racha 2) y 27 a 29 de octubre.
+    const time = { a: { '2026-10-01': 600, '2026-10-02': 700, '2026-10-26': 100, '2026-10-27': 600, '2026-10-28': 900, '2026-10-29': 650 } }
+    const s = activitySummary(time, [], 10, at(2026, 10, 30))
+    // Hoy (viernes 30) aún no se ha cumplido: la racha cuenta desde ayer.
+    expect(s.streak).toBe(3)
+    expect(s.best).toBe(3)
+    expect(s.week).toBe(100 + 600 + 900 + 650)
+    expect(s.month).toBe(600 + 700 + 100 + 600 + 900 + 650)
+    expect(s.weekDays.map((d) => d.met)).toEqual([false, true, true, true, false, false, false])
+    expect(s.weekDays.filter((d) => d.future).map((d) => d.label)).toEqual(['S', 'D'])
+    // Un día sin cumplir corta la racha.
+    expect(activitySummary(time, [], 10, at(2026, 10, 31)).streak).toBe(0)
+  })
+
+  it('fusión de copias: por dispositivo y día, el mayor; la meta, la última', async () => {
+    const { mergeActivityTime, mergeGoal } = await import('./playTime')
+    expect(mergeActivityTime({ a: { d1: 100, d2: 50 } }, { a: { d1: 80 }, b: { d1: 30 } })).toEqual({ a: { d1: 100, d2: 50 }, b: { d1: 30 } })
+    expect(mergeGoal({ minutes: 20, t: 1 }, { minutes: 30, t: 2 })).toEqual({ minutes: 30, t: 2 })
+    expect(mergeGoal({ minutes: 20, t: 3 }, { minutes: 30, t: 2 })).toEqual({ minutes: 20, t: 3 })
+  })
+
+  it('formato de minutos', async () => {
+    const { formatMinutes } = await import('./playTime')
+    expect([formatMinutes(59), formatMinutes(25 * 60), formatMinutes(65 * 60), formatMinutes(120 * 60)]).toEqual(['0 min', '25 min', '1 h 5 min', '2 h'])
+  })
+})

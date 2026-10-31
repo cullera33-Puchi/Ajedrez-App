@@ -1,4 +1,5 @@
 import type { GameAnalysis } from './analysis'
+import { mergeActivityTime, mergeGoal } from './playTime'
 import type { BotRecord } from './bots'
 import { type BotFeedback, mergeFeedback } from './botFeedback'
 import { db } from './db'
@@ -37,7 +38,7 @@ export interface ImportResult {
 }
 
 /** Datos propios de cada dispositivo que no viajan en la copia (la sesión de sincronización, entre otros). */
-const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'syncHash', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk', 'trainingPlan', 'autoImportLast', 'appLog'])
+const DEVICE_ONLY = new Set(['syncConfig', 'syncSession', 'syncLast', 'syncHash', 'botGame', 'lichessToken', 'lichessPkce', 'lichessLiveGame', 'pinOk', 'trainingPlan', 'autoImportLast', 'appLog', 'deviceId'])
 
 export async function exportBackup(includeAnalyses = true): Promise<Backup> {
   const store = await db()
@@ -143,6 +144,9 @@ const MERGERS: Rec<(current: unknown, incoming: unknown) => unknown> = {
   // Entrenamiento diario: días cumplidos y partidas ya repasadas, unión de los dos lados.
   trainingDays: mergeLists,
   reviewedGames: mergeLists,
+  // Tiempo jugado: por dispositivo y día, el mayor. Meta diaria: la última que se cambió.
+  activityTime: mergeActivityTime,
+  dailyGoal: mergeGoal,
   // Visión del tablero: la mejor marca de cada ejercicio.
   visionBest: mergeVisionBest,
   // Correcciones del escáner: unión sin repetir, con el mismo límite que en el escáner.

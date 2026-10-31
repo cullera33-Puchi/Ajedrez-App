@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { View } from '../App'
 import { TrendChart } from '../components/TrendChart'
+import { PlayTimeCard } from '../components/PlayTimeCard'
 import { WeeklyCard } from '../components/WeeklyCard'
 import { formatSeconds, timingAdvice, type TimingSummary, totalTiming } from '../lib/clock'
 import { allSummaries, backfillTiming } from '../lib/games'
@@ -69,6 +70,7 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
             Ir a mis partidas
           </button>
         </section>
+        <PlayTimeCard games={games} />
       </div>
     )
   }
@@ -123,6 +125,7 @@ export function ProgressView({ games, onNavigate, onOpenGame, onPractice }: Prop
         </p>
       </section>
 
+      <PlayTimeCard games={games} />
       <WeeklyCard games={games} />
 
       <section className="card">

@@ -10,6 +10,7 @@ import { recommendThemes } from '../lib/recommend'
 import { isOnlineGame } from '../lib/progress'
 import { duePuzzles } from '../lib/myPuzzles'
 import { SyncCard } from '../components/SyncCard'
+import { PlayTimeCard } from '../components/PlayTimeCard'
 import { WeeklyCard } from '../components/WeeklyCard'
 import { LogCard } from '../components/LogCard'
 import { loadTheme, setTheme, type ThemeChoice } from '../lib/theme'
@@ -140,6 +141,7 @@ export function HomeView({ settings, onSettings, games, onOpenGame, onNavigate, 
           </button>
         </section>
 
+        <PlayTimeCard games={games} className="span-2" />
         <WeeklyCard games={games} className="span-2" />
 
         <section className="card">

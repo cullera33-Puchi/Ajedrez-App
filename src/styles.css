@@ -3189,3 +3189,94 @@ label {
 :root[data-theme='eink'] select {
   accent-color: var(--text);
 }
+
+/* Tiempo de juego: barra de la meta de hoy y días de la semana */
+.play-time-today {
+  margin: 0.2rem 0 0.4rem;
+}
+.goal-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.goal-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+}
+.goal-bar.done > span {
+  background: var(--good);
+}
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0.6rem 0 0.4rem;
+}
+.week-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.week-bar {
+  width: 100%;
+  max-width: 34px;
+  height: 46px;
+  display: flex;
+  align-items: flex-end;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.week-bar > span {
+  display: block;
+  width: 100%;
+  background: var(--accent);
+  opacity: 0.55;
+}
+.week-day.met .week-bar > span {
+  opacity: 1;
+  background: var(--good);
+}
+.week-day.today .week-bar {
+  border: 2px solid var(--text);
+}
+.week-day.future .week-bar {
+  opacity: 0.4;
+}
+.week-label {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.week-day.today .week-label {
+  color: var(--text);
+  font-weight: 700;
+}
+.goal-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.3rem 0;
+}
+:root[data-theme='eink'] .week-bar > span {
+  opacity: 1;
+  background: repeating-linear-gradient(45deg, #000 0 2px, #fff 2px 5px);
+}
+:root[data-theme='eink'] .week-day.met .week-bar > span {
+  background: #000;
+}
+:root[data-theme='eink'][data-ink='dark'] .week-bar > span {
+  background: repeating-linear-gradient(45deg, #fff 0 2px, #000 2px 5px);
+}
+:root[data-theme='eink'][data-ink='dark'] .week-day.met .week-bar > span {
+  background: #fff;
+}
+.play-time .kpi-value {
+  font-size: 1.15rem;
+  white-space: nowrap;
+}

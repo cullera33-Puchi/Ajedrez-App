@@ -15,6 +15,7 @@ import { loadSettings, saveSettings, type Settings } from './lib/settings'
 import { onSyncMerged, startAutoSync } from './lib/sync'
 import { refreshTodayPlan } from './lib/training'
 import { setLogView } from './lib/log'
+import { flushActivity, startActivityTracker } from './lib/playTime'
 import type { GameSummary } from './lib/types'
 import { HomeView } from './views/Home'
 
@@ -49,6 +50,9 @@ const NAV: { id: View; label: string; icon: React.ReactNode }[] = [
   { id: 'problemas', label: 'Problemas', icon: <IconBulb /> },
   { id: 'aprender', label: 'Aprender', icon: <IconBook /> },
 ]
+
+/** Pantallas que cuentan como tiempo jugado. */
+const PLAY_VIEWS = new Set<View>(['entreno', 'jugar', 'analisis', 'problemas', 'aprender'])
 
 /** Nombre de cada pantalla en el registro de errores. */
 const VIEW_NAME: Record<View, string> = {
@@ -131,6 +135,9 @@ export default function App() {
   useEffect(() => {
     startBackgroundAnalysis()
   }, [])
+  // Tiempo jugado: cuenta en las pantallas de práctica; no durante una partida online, que ya se suma
+  // con su reloj al importarla.
+  useEffect(() => startActivityTracker(() => PLAY_VIEWS.has(navRef.current.view) && !isLiveActive()), [])
   // Precarga de las demás pantallas cuando el navegador esté libre.
   useEffect(() => {
     const idle = window.requestIdleCallback ?? ((fn: () => void) => setTimeout(fn, 1500))
@@ -185,6 +192,7 @@ export default function App() {
   useEffect(() => {
     window.scrollTo(0, 0)
     refreshTodayPlan()
+    flushActivity()
     setLogView(VIEW_NAME[view])
   }, [view])
 
